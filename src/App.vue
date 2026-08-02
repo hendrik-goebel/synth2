@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { MidiService } from './services/midiService'
-import { type AmplitudeModulationSettings, type OscillatorSettings, type Waveform, SynthEngine } from './services/synthEngine'
+import { createNoiseSettings, type AmplitudeModulationSettings, type NoiseSettings, type OscillatorSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
+import NoiseControls from './components/NoiseControls.vue'
 import SectionFrame from './components/SectionFrame.vue'
 
 const waveforms: OscillatorType[] = ['sine', 'triangle', 'sawtooth', 'square']
@@ -15,6 +16,7 @@ const midiStatus = ref('MIDI not connected.')
 const audioStatus = ref('Audio locked. Interact with the synth to enable audio.')
 const activeVoices = ref(0)
 const oscillators = ref<OscillatorSettings[]>([initialOscillatorSettings])
+const noise = ref<NoiseSettings | null>(null)
 const amplitudeModulation = ref<AmplitudeModulationSettings | null>(null)
 const isAmplitudeModulationBypassed = ref(false)
 const areOscillatorsCollapsed = ref(false)
@@ -134,6 +136,34 @@ function removeOscillator(index: number) {
   oscillators.value.splice(index, 1)
 }
 
+function addNoise() {
+  const settings = createNoiseSettings()
+  noise.value = settings
+  synth.addNoise(settings)
+}
+
+function removeNoise() {
+  synth.removeNoise()
+  noise.value = null
+}
+
+function updateNoiseSettings(settings: Partial<NoiseSettings>) {
+  if (!noise.value) {
+    return
+  }
+
+  noise.value = { ...noise.value, ...settings }
+  synth.setNoiseSettings(settings)
+}
+
+function toggleNoiseBypass() {
+  if (!noise.value) {
+    return
+  }
+
+  updateNoiseSettings({ bypassed: !noise.value.bypassed })
+}
+
 function addAmplitudeModulation() {
   const settings: AmplitudeModulationSettings = { rate: 5, depth: 0.5, waveform: 'sine' }
   amplitudeModulation.value = settings
@@ -226,10 +256,21 @@ onUnmounted(() => {
           />
           <div class="module-actions">
             <button type="button" class="add-oscillator-button" @click="addOscillator">Add OSC</button>
+            <button v-if="!noise" type="button" class="add-oscillator-button" @click="addNoise">Add Noise</button>
             <button v-if="!amplitudeModulation" type="button" class="add-am-button" @click="addAmplitudeModulation">Add AM</button>
           </div>
         </div>
       </section>
+
+      <NoiseControls
+        v-if="noise"
+        v-bind="noise"
+        @update:color="updateNoiseSettings({ color: $event })"
+        @update:level="updateNoiseSettings({ level: $event })"
+        @update:stereo-spread="updateNoiseSettings({ stereoSpread: $event })"
+        @toggle-bypass="toggleNoiseBypass"
+        @remove="removeNoise"
+      />
 
       <SectionFrame
         v-if="amplitudeModulation"
