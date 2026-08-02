@@ -1,0 +1,88 @@
+:root {
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  line-height: 1.4;
+  color: #e7e7e7;
+  background-color: #14171a;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.app {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.panel {
+  width: min(720px, 100%);
+  background: #1b2025;
+  border: 1px solid #2b323b;
+  border-radius: 12px;
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: #a3adb8;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.field {
+  justify-content: space-between;
+}
+
+select,
+button {
+  background: #0f1215;
+  color: inherit;
+  border: 1px solid #3d4957;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+}
+
+select {
+  min-width: 200px;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled,
+select:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.voices {
+  margin: 0;
+  color: #88c2ff;
+}
