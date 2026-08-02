@@ -6,6 +6,7 @@ type Voice = {
   amplitudeModulator?: OscillatorNode
   amplitudeModulationGain?: GainNode
   gainNode: GainNode
+  envelopeGain: GainNode
   panner: StereoPannerNode
   velocity: number
   oscillatorIndex?: number
@@ -81,6 +82,9 @@ export class SynthEngine {
   }
 
   noteOn(note: number, velocity: number): void {
+    if (!this.hasAudibleSources() || velocity <= 0) {
+      return
+    }
     if (this.activeVoices.some((active) => active.note === note)) this.stopNote(note)
     this.activeVoices.push({ note, velocity, voices: this.createVoices(note, velocity) })
   }
@@ -136,6 +140,7 @@ export class SynthEngine {
       if (changes.waveform !== undefined) this.setWaveform(oscillator, updated.waveform)
       if (changes.fmSource !== undefined && voice.modulator) this.setWaveform(voice.modulator, updated.fmSource)
     }))
+    if (!this.hasAudibleSources()) this.stopAllNotes()
   }
 
   addNoise(settings: NoiseSettings = createNoiseSettings()): void {
@@ -165,6 +170,7 @@ export class SynthEngine {
       }
       if (changes.stereoSpread !== undefined) voice.panner.pan.setTargetAtTime(this.noiseSettings!.stereoSpread, now, 0.01)
     }))
+    if (!this.hasAudibleSources()) this.stopAllNotes()
   }
 
   addAmplitudeModulation(settings: AmplitudeModulationSettings): void {
@@ -244,11 +250,15 @@ export class SynthEngine {
   private createVoice(source: AudioScheduledSourceNode, kind: Voice['kind'], velocity: number, oscillatorIndex?: number, layerIndex?: number): Voice {
     const normalizedVelocity = Math.max(0, Math.min(velocity, 127)) / 127
     const gainNode = this.audioContext.createGain()
+    const envelopeGain = this.audioContext.createGain()
     const panner = this.audioContext.createStereoPanner()
-    const voice: Voice = { source, kind, oscillator: source instanceof OscillatorNode ? source : undefined, gainNode, panner, velocity: normalizedVelocity, oscillatorIndex, layerIndex }
-    gainNode.gain.setValueAtTime(this.sourceGain(voice), this.audioContext.currentTime)
-    panner.pan.setValueAtTime(kind === 'noise' ? this.noiseSettings!.stereoSpread : this.layerPan(layerIndex!, this.settings[oscillatorIndex!].stereoSpread), this.audioContext.currentTime)
-    source.connect(gainNode).connect(panner).connect(this.destination)
+    const voice: Voice = { source, kind, oscillator: source instanceof OscillatorNode ? source : undefined, gainNode, envelopeGain, panner, velocity: normalizedVelocity, oscillatorIndex, layerIndex }
+    const now = this.audioContext.currentTime
+    gainNode.gain.setValueAtTime(this.sourceGain(voice), now)
+    envelopeGain.gain.setValueAtTime(0, now)
+    envelopeGain.gain.linearRampToValueAtTime(1, now + 0.005)
+    panner.pan.setValueAtTime(kind === 'noise' ? this.noiseSettings!.stereoSpread : this.layerPan(layerIndex!, this.settings[oscillatorIndex!].stereoSpread), now)
+    source.connect(gainNode).connect(envelopeGain).connect(panner).connect(this.destination)
     if (this.amplitudeModulation) this.createAmplitudeModulation(voice)
     return voice
   }
@@ -294,9 +304,9 @@ export class SynthEngine {
   private stopVoice(voice: Voice): void {
     const now = this.audioContext.currentTime
     const stopAt = now + 0.02
-    voice.gainNode.gain.cancelScheduledValues(now)
-    voice.gainNode.gain.setValueAtTime(voice.gainNode.gain.value, now)
-    voice.gainNode.gain.linearRampToValueAtTime(0, stopAt)
+    voice.envelopeGain.gain.cancelScheduledValues(now)
+    voice.envelopeGain.gain.setValueAtTime(voice.envelopeGain.gain.value, now)
+    voice.envelopeGain.gain.linearRampToValueAtTime(0, stopAt)
     voice.source.stop(stopAt)
     voice.source.onended = () => {
       voice.source.disconnect()
@@ -304,6 +314,7 @@ export class SynthEngine {
       voice.modulator?.disconnect()
       this.removeAmplitudeModulationFromVoice(voice)
       voice.gainNode.disconnect()
+      voice.envelopeGain.disconnect()
       voice.panner.disconnect()
     }
   }
@@ -348,6 +359,12 @@ export class SynthEngine {
     if (voice.kind === 'noise') return this.noiseSettings!.bypassed ? 0 : voice.velocity * MAX_GAIN * this.noiseSettings!.level
     const settings = this.settings[voice.oscillatorIndex!]
     return settings.bypassed ? 0 : voice.velocity * MAX_GAIN * settings.level / UNISON_LAYER_COUNT
+  }
+
+  private hasAudibleSources(): boolean {
+    const oscillatorAudible = this.settings.some((settings) => !settings.bypassed && settings.level > 0)
+    const noiseAudible = !!this.noiseSettings && !this.noiseSettings.bypassed && this.noiseSettings.level > 0
+    return oscillatorAudible || noiseAudible
   }
 
   private midiNoteToFrequency(note: number): number {
