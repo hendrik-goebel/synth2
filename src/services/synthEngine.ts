@@ -69,6 +69,7 @@ export type DelaySettings = {
   mix: number
   overdrive: number
 }
+export type EffectGroup = 'filters' | 'delays' | 'envelopes'
 
 export type AmplitudeModulationSettings = {
   rate: number
@@ -132,6 +133,7 @@ export class SynthEngine {
   private amplitudeModulation?: AmplitudeModulationSettings
   private amplitudeModulationBypassed = false
   private envelopeSettings: { settings: EnvelopeSettings; bypassed: boolean }[] = [{ settings: createEnvelopeSettings(), bypassed: false }]
+  private effectOrder: EffectGroup[] = ['filters', 'delays', 'envelopes']
 
   constructor(initialSettings: OscillatorSettings = createOscillatorSettings()) {
     this.settings = [{ ...initialSettings }]
@@ -240,6 +242,14 @@ export class SynthEngine {
     const gainNode = this.audioContext.createGain()
     this.filters.push({ node: filter, gainNode, settings: { ...settings } })
     this.applyFilterSettings(this.filters.length - 1)
+    this.routeOutput()
+  }
+
+  setEffectOrder(order: EffectGroup[]): void {
+    if (order.length !== this.effectOrder.length || new Set(order).size !== order.length || order.some((group) => !this.effectOrder.includes(group))) {
+      throw new Error('Invalid effect order')
+    }
+    this.effectOrder = [...order]
     this.routeOutput()
   }
 
@@ -379,29 +389,33 @@ export class SynthEngine {
   private routeOutput(): void {
     this.mixBus.disconnect()
     let output: AudioNode = this.mixBus
-    this.filters.forEach(({ node, gainNode, settings }) => {
-      node.disconnect()
-      gainNode.disconnect()
-      if (!settings.bypassed) {
-        output = output.connect(node).connect(gainNode)
+    this.effectOrder.forEach((group) => {
+      if (group === 'filters') {
+        this.filters.forEach(({ node, gainNode, settings }) => {
+          node.disconnect()
+          gainNode.disconnect()
+          if (!settings.bypassed) output = output.connect(node).connect(gainNode)
+        })
       }
-    })
-    this.delays.forEach((delay) => {
-      delay.node.disconnect()
-      delay.wet.disconnect()
-      delay.dry.disconnect()
-      delay.output.disconnect()
-      delay.node.connect(delay.feedback)
-      delay.feedback.disconnect()
-      delay.feedback.connect(delay.resonance).connect(delay.node)
-      if (!delay.settings.bypassed) {
-        output.connect(delay.drive)
-        output.connect(delay.dry)
-        delay.drive.connect(delay.node)
-        delay.node.connect(delay.wet)
-        delay.dry.connect(delay.output)
-        delay.wet.connect(delay.output)
-        output = delay.output
+      if (group === 'delays') {
+        this.delays.forEach((delay) => {
+          delay.node.disconnect()
+          delay.wet.disconnect()
+          delay.dry.disconnect()
+          delay.output.disconnect()
+          delay.node.connect(delay.feedback)
+          delay.feedback.disconnect()
+          delay.feedback.connect(delay.resonance).connect(delay.node)
+          if (!delay.settings.bypassed) {
+            output.connect(delay.drive)
+            output.connect(delay.dry)
+            delay.drive.connect(delay.node)
+            delay.node.connect(delay.wet)
+            delay.dry.connect(delay.output)
+            delay.wet.connect(delay.output)
+            output = delay.output
+          }
+        })
       }
     })
     output.connect(this.destination)

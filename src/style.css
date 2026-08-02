@@ -163,12 +163,40 @@ select:disabled {
   gap: 14px;
 }
 
+.effect-chain {
+  display: grid;
+  gap: 28px;
+}
+
+.effect-group {
+  min-width: 0;
+}
+
+.modulation-section {
+  order: -1;
+}
+
+.effect-order-actions {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 10px;
+}
+
+.effect-order-actions button {
+  padding: 2px 6px;
+  color: #65e6c2;
+  font-size: 0.75rem;
+}
+
 .oscillators-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: 0;
 }
 
 .oscillators-toggle {
-  width: 100%;
+  flex: 1;
   padding: 0;
   color: #9aa8bd;
   background: none;

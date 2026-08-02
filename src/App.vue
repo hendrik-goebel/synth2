@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { MidiService } from './services/midiService'
-import { createDelaySettings, createEnvelopeSettings, createFilterSettings, createNoiseSettings, type AmplitudeModulationSettings, type DelaySettings, type EnvelopeCurve, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type NoiseSettings, type OscillatorSettings, type Waveform, SynthEngine } from './services/synthEngine'
+import { createDelaySettings, createEnvelopeSettings, createFilterSettings, createNoiseSettings, type AmplitudeModulationSettings, type DelaySettings, type EffectGroup, type EnvelopeCurve, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type NoiseSettings, type OscillatorSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
 import NoiseControls from './components/NoiseControls.vue'
 import FilterControls from './components/FilterControls.vue'
@@ -25,6 +25,7 @@ const filters = ref<FilterSettings[]>([createFilterSettings()])
 const delays = ref<DelaySettings[]>([])
 const amplitudeModulation = ref<AmplitudeModulationSettings | null>(null)
 const envelopes = ref<EnvelopeModule[]>([{ ...createEnvelopeSettings(), bypassed: false }])
+const effectOrder = ref<EffectGroup[]>(['filters', 'delays', 'envelopes'])
 const isAmplitudeModulationBypassed = ref(false)
 const areOscillatorsCollapsed = ref(false)
 const areFiltersCollapsed = ref(false)
@@ -261,6 +262,16 @@ function toggleEnvelopeBypass(index: number) {
   envelopes.value[index] = { ...envelopes.value[index], bypassed }
 }
 
+function moveEffectGroup(group: EffectGroup, direction: -1 | 1) {
+  const index = effectOrder.value.indexOf(group)
+  if (index < 0) return
+  const nextOrder = [...effectOrder.value]
+  const targetIndex = (index + direction + nextOrder.length) % nextOrder.length
+  ;[nextOrder[index], nextOrder[targetIndex]] = [nextOrder[targetIndex], nextOrder[index]]
+  effectOrder.value = nextOrder
+  synth.setEffectOrder(nextOrder)
+}
+
 function updateEnvelopeSettings(index: number, settings: Partial<EnvelopeSettings>) {
   envelopes.value[index] = { ...envelopes.value[index], ...settings }
   synth.setEnvelopeSettings(index, settings)
@@ -346,7 +357,8 @@ onUnmounted(() => {
         @remove="removeNoise"
       />
 
-      <section class="oscillators-section" aria-labelledby="filters-heading">
+      <div class="effect-chain">
+      <section class="oscillators-section effect-group" :style="{ order: effectOrder.indexOf('filters') }" aria-labelledby="filters-heading">
         <h2 id="filters-heading">
           <button
             type="button"
@@ -357,6 +369,10 @@ onUnmounted(() => {
           >
             Filters
           </button>
+          <span class="effect-order-actions">
+            <button type="button" :disabled="effectOrder.indexOf('filters') === 0" aria-label="Move Filters up" @click="moveEffectGroup('filters', -1)">↑</button>
+            <button type="button" :disabled="effectOrder.indexOf('filters') === effectOrder.length - 1" aria-label="Move Filters down" @click="moveEffectGroup('filters', 1)">↓</button>
+          </span>
         </h2>
         <div v-show="!areFiltersCollapsed" id="filters-content" class="oscillators-content">
           <FilterControls
@@ -375,11 +391,15 @@ onUnmounted(() => {
         </div>
       </section>
 
-      <section class="oscillators-section" aria-labelledby="delays-heading">
+      <section class="oscillators-section effect-group" :style="{ order: effectOrder.indexOf('delays') }" aria-labelledby="delays-heading">
         <h2 id="delays-heading">
           <button type="button" class="oscillators-toggle" :aria-expanded="!areDelaysCollapsed" aria-controls="delays-content" @click="areDelaysCollapsed = !areDelaysCollapsed">
             Delays
           </button>
+          <span class="effect-order-actions">
+            <button type="button" :disabled="effectOrder.indexOf('delays') === 0" aria-label="Move Delays up" @click="moveEffectGroup('delays', -1)">↑</button>
+            <button type="button" :disabled="effectOrder.indexOf('delays') === effectOrder.length - 1" aria-label="Move Delays down" @click="moveEffectGroup('delays', 1)">↓</button>
+          </span>
         </h2>
         <div v-show="!areDelaysCollapsed" id="delays-content" class="oscillators-content">
           <DelayControls
@@ -433,7 +453,7 @@ onUnmounted(() => {
         </div>
       </SectionFrame>
 
-      <section class="oscillators-section" aria-labelledby="envelopes-heading">
+      <section class="oscillators-section effect-group" :style="{ order: effectOrder.indexOf('envelopes') }" aria-labelledby="envelopes-heading">
         <h2 id="envelopes-heading">
           <button
             type="button"
@@ -444,6 +464,10 @@ onUnmounted(() => {
           >
             Envelopes
           </button>
+          <span class="effect-order-actions">
+            <button type="button" :disabled="effectOrder.indexOf('envelopes') === 0" aria-label="Move Envelopes up" @click="moveEffectGroup('envelopes', -1)">↑</button>
+            <button type="button" :disabled="effectOrder.indexOf('envelopes') === effectOrder.length - 1" aria-label="Move Envelopes down" @click="moveEffectGroup('envelopes', 1)">↓</button>
+          </span>
         </h2>
         <div v-show="!areEnvelopesCollapsed" id="envelopes-content" class="oscillators-content">
           <SectionFrame
@@ -512,6 +536,7 @@ onUnmounted(() => {
           <button type="button" class="add-env-button" @click="addEnvelope">Add ENV</button>
         </div>
       </section>
+      </div>
 
       <div class="audio-bar">
         <button type="button" class="audio-button" @click="handleEnableAudio">Audio</button>
