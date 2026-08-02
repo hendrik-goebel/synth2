@@ -92,3 +92,32 @@ select:disabled {
   margin: 0;
   color: #88c2ff;
 }
+
+.oscillator-controls {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid #2b323b;
+  padding-top: 16px;
+}
+
+.oscillator-controls h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.control {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+}
+
+.control output {
+  color: #88c2ff;
+  font-variant-numeric: tabular-nums;
+}
+
+.control input {
+  grid-column: 1 / -1;
+  width: 100%;
+  accent-color: #88c2ff;
+}

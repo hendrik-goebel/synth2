@@ -2,14 +2,27 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { MidiService } from './services/midiService'
 import { SynthEngine } from './services/synthEngine'
+import OscillatorControls from './components/OscillatorControls.vue'
 
 const synth = new SynthEngine()
 const selectedChannel = ref(1)
 const selectedInputId = ref('')
 const midiInputs = ref<{ id: string; name: string }[]>([])
 const midiStatus = ref('MIDI not connected.')
-const audioStatus = ref('Audio locked. Click "Enable Audio" first.')
+const audioStatus = ref('Audio locked. Interact with the synth to enable audio.')
 const activeVoices = ref(0)
+const oscillatorFrequency = ref(440)
+const oscillatorDetune = ref(0)
+const oscillatorGlide = ref(0)
+const oscillatorLevel = ref(1)
+const oscillatorPhase = ref(0)
+const oscillatorWaveform = ref<OscillatorType>('sine')
+const oscillatorUnisonDetune = ref(0)
+const oscillatorStereoSpread = ref(0)
+const oscillatorFmAmount = ref(0)
+const oscillatorFmSource = ref<OscillatorType>('sine')
+let firstInteractionHandled = false
+let midiConnectionStarted = false
 
 const canSelectInput = computed(() => midiInputs.value.length > 0)
 
@@ -46,7 +59,12 @@ function handleEnableAudio() {
     })
 }
 
-function handleConnectMidi() {
+function connectMidi() {
+  if (midiConnectionStarted) {
+    return
+  }
+
+  midiConnectionStarted = true
   midiService
     .requestAccess()
     .then(() => {
@@ -58,8 +76,23 @@ function handleConnectMidi() {
       }
     })
     .catch((error: unknown) => {
+      midiConnectionStarted = false
       midiStatus.value = error instanceof Error ? error.message : 'Failed to connect MIDI.'
     })
+}
+
+function handleConnectMidi() {
+  connectMidi()
+}
+
+function handleFirstInteraction() {
+  if (firstInteractionHandled) {
+    return
+  }
+
+  firstInteractionHandled = true
+  handleEnableAudio()
+  connectMidi()
 }
 
 function handleInputChange() {
@@ -75,6 +108,21 @@ function handlePanic() {
   activeVoices.value = synth.getActiveVoiceCount()
 }
 
+function updateOscillatorSettings() {
+  synth.setOscillatorSettings({
+    frequency: oscillatorFrequency.value,
+    detune: oscillatorDetune.value,
+    glide: oscillatorGlide.value,
+    level: oscillatorLevel.value,
+    phase: oscillatorPhase.value,
+    waveform: oscillatorWaveform.value,
+    unisonDetune: oscillatorUnisonDetune.value,
+    stereoSpread: oscillatorStereoSpread.value,
+    fmAmount: oscillatorFmAmount.value,
+    fmSource: oscillatorFmSource.value,
+  })
+}
+
 onMounted(() => {
   midiService.setChannel(selectedChannel.value)
 })
@@ -86,7 +134,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="app">
+  <main class="app" @pointerdown.capture="handleFirstInteraction" @keydown.capture="handleFirstInteraction">
     <section class="panel">
       <h1>Simple Web Synth</h1>
       <p class="subtitle">Step 1: MIDI in + monophonic sine oscillator</p>
@@ -125,6 +173,29 @@ onUnmounted(() => {
       </label>
 
       <p class="voices">Active voices: {{ activeVoices }}</p>
+
+      <OscillatorControls
+        v-model:frequency="oscillatorFrequency"
+        v-model:detune="oscillatorDetune"
+        v-model:glide="oscillatorGlide"
+        v-model:level="oscillatorLevel"
+        v-model:phase="oscillatorPhase"
+        v-model:waveform="oscillatorWaveform"
+        v-model:unisonDetune="oscillatorUnisonDetune"
+        v-model:stereoSpread="oscillatorStereoSpread"
+        v-model:fmAmount="oscillatorFmAmount"
+        v-model:fmSource="oscillatorFmSource"
+        @update:frequency="updateOscillatorSettings"
+        @update:detune="updateOscillatorSettings"
+        @update:glide="updateOscillatorSettings"
+        @update:level="updateOscillatorSettings"
+        @update:phase="updateOscillatorSettings"
+        @update:waveform="updateOscillatorSettings"
+        @update:unisonDetune="updateOscillatorSettings"
+        @update:stereoSpread="updateOscillatorSettings"
+        @update:fmAmount="updateOscillatorSettings"
+        @update:fmSource="updateOscillatorSettings"
+      />
     </section>
   </main>
 </template>
