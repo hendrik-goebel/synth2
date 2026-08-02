@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { MidiService } from './services/midiService'
-import { createEnvelopeSettings, createFilterSettings, createNoiseSettings, type AmplitudeModulationSettings, type EnvelopeCurve, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type NoiseSettings, type OscillatorSettings, type Waveform, SynthEngine } from './services/synthEngine'
+import { createDelaySettings, createEnvelopeSettings, createFilterSettings, createNoiseSettings, type AmplitudeModulationSettings, type DelaySettings, type EnvelopeCurve, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type NoiseSettings, type OscillatorSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
 import NoiseControls from './components/NoiseControls.vue'
 import FilterControls from './components/FilterControls.vue'
 import SectionFrame from './components/SectionFrame.vue'
+import DelayControls from './components/DelayControls.vue'
 
 type EnvelopeModule = EnvelopeSettings & { bypassed: boolean }
 
@@ -21,11 +22,13 @@ const activeVoices = ref(0)
 const oscillators = ref<OscillatorSettings[]>([initialOscillatorSettings])
 const noise = ref<NoiseSettings | null>(null)
 const filters = ref<FilterSettings[]>([createFilterSettings()])
+const delays = ref<DelaySettings[]>([])
 const amplitudeModulation = ref<AmplitudeModulationSettings | null>(null)
 const envelopes = ref<EnvelopeModule[]>([{ ...createEnvelopeSettings(), bypassed: false }])
 const isAmplitudeModulationBypassed = ref(false)
 const areOscillatorsCollapsed = ref(false)
 const areFiltersCollapsed = ref(false)
+const areDelaysCollapsed = ref(false)
 const areEnvelopesCollapsed = ref(false)
 let firstInteractionHandled = false
 let midiConnectionStarted = false
@@ -172,6 +175,28 @@ function updateFilterSettings(index: number, settings: Partial<FilterSettings>) 
 
 function toggleFilterBypass(index: number) {
   updateFilterSettings(index, { bypassed: !filters.value[index].bypassed })
+}
+
+function addDelay() {
+  const settings = createDelaySettings()
+  delays.value.push(settings)
+  synth.addDelay(settings)
+}
+
+function removeDelay(index: number) {
+  synth.removeDelay(index)
+  delays.value.splice(index, 1)
+}
+
+function updateDelaySettings(index: number, settings: Partial<DelaySettings>) {
+  delays.value[index] = { ...delays.value[index], ...settings }
+  synth.setDelaySettings(index, settings)
+}
+
+function toggleDelayBypass(index: number) {
+  const bypassed = !delays.value[index].bypassed
+  delays.value[index] = { ...delays.value[index], bypassed }
+  synth.setDelayBypassed(index, bypassed)
 }
 
 function updateNoiseSettings(settings: Partial<NoiseSettings>) {
@@ -347,6 +372,30 @@ onUnmounted(() => {
             @remove="removeFilter(index)"
           />
           <button type="button" class="add-filter-button" @click="addFilter">Add Filter</button>
+        </div>
+      </section>
+
+      <section class="oscillators-section" aria-labelledby="delays-heading">
+        <h2 id="delays-heading">
+          <button type="button" class="oscillators-toggle" :aria-expanded="!areDelaysCollapsed" aria-controls="delays-content" @click="areDelaysCollapsed = !areDelaysCollapsed">
+            Delays
+          </button>
+        </h2>
+        <div v-show="!areDelaysCollapsed" id="delays-content" class="oscillators-content">
+          <DelayControls
+            v-for="(delaySettings, index) in delays"
+            :key="index"
+            :delay-index="index"
+            v-bind="delaySettings"
+            @update:time="updateDelaySettings(index, { time: $event })"
+            @update:feedback="updateDelaySettings(index, { feedback: $event })"
+            @update:resonance="updateDelaySettings(index, { resonance: $event })"
+            @update:mix="updateDelaySettings(index, { mix: $event })"
+            @update:overdrive="updateDelaySettings(index, { overdrive: $event })"
+            @toggle-bypass="toggleDelayBypass(index)"
+            @remove="removeDelay(index)"
+          />
+          <button type="button" class="add-filter-button" @click="addDelay">Add Delay</button>
         </div>
       </section>
 

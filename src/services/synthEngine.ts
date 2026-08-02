@@ -15,6 +15,8 @@ type Voice = {
   stopping: boolean
 }
 
+type DelayModule = { node: DelayNode; feedback: GainNode; resonance: BiquadFilterNode; drive: WaveShaperNode; wet: GainNode; dry: GainNode; output: GainNode; settings: DelaySettings }
+
 const MAX_GAIN = 0.2
 const UNISON_LAYER_COUNT = 3
 const RANDOM_WAVE_HARMONIC_COUNT = 32
@@ -59,6 +61,15 @@ export type FilterSettings = {
   gain: number
 }
 
+export type DelaySettings = {
+  bypassed: boolean
+  time: number
+  feedback: number
+  resonance: number
+  mix: number
+  overdrive: number
+}
+
 export type AmplitudeModulationSettings = {
   rate: number
   depth: number
@@ -101,6 +112,10 @@ export function createFilterSettings(): FilterSettings {
   return { bypassed: false, type: 'bandpass', cutoff: 12000, resonance: 0, gain: 0 }
 }
 
+export function createDelaySettings(): DelaySettings {
+  return { bypassed: false, time: 0.25, feedback: 0.35, resonance: 0, mix: 0.3, overdrive: 0 }
+}
+
 export function createEnvelopeSettings(): EnvelopeSettings {
   return { attack: 4, decay: 0, hold: 0, release: 80, velocity: 0, attackCurve: 'linear', releaseCurve: 'linear', destination: 'volume' }
 }
@@ -113,6 +128,7 @@ export class SynthEngine {
   private settings: OscillatorSettings[]
   private noiseSettings?: NoiseSettings
   private filters: { node: BiquadFilterNode; gainNode: GainNode; settings: FilterSettings }[] = []
+  private delays: DelayModule[] = []
   private amplitudeModulation?: AmplitudeModulationSettings
   private amplitudeModulationBypassed = false
   private envelopeSettings: { settings: EnvelopeSettings; bypassed: boolean }[] = [{ settings: createEnvelopeSettings(), bypassed: false }]
@@ -243,6 +259,49 @@ export class SynthEngine {
     this.routeOutput()
   }
 
+  addDelay(settings: DelaySettings = createDelaySettings()): void {
+    const node = this.audioContext.createDelay(2)
+    const feedback = this.audioContext.createGain()
+    const resonance = this.audioContext.createBiquadFilter()
+    const drive = this.audioContext.createWaveShaper()
+    const wet = this.audioContext.createGain()
+    const dry = this.audioContext.createGain()
+    const output = this.audioContext.createGain()
+    this.delays.push({ node, feedback, resonance, drive, wet, dry, output, settings: { ...settings } })
+    node.connect(feedback).connect(resonance).connect(node)
+    this.applyDelaySettings(this.delays[this.delays.length - 1])
+    this.routeOutput()
+  }
+
+  setDelaySettings(index: number, changes: Partial<DelaySettings>): void {
+    const delay = this.delays[index]
+    if (!delay) throw new RangeError(`Unknown delay index: ${index}`)
+    delay.settings = { ...delay.settings, ...changes }
+    this.applyDelaySettings(delay)
+  }
+
+  removeDelay(index: number): void {
+    const delay = this.delays[index]
+    if (!delay) throw new RangeError(`Unknown delay index: ${index}`)
+    delay.node.disconnect()
+    delay.feedback.disconnect()
+    delay.resonance.disconnect()
+    delay.drive.disconnect()
+    delay.drive.disconnect()
+    delay.wet.disconnect()
+    delay.dry.disconnect()
+    delay.output.disconnect()
+    this.delays.splice(index, 1)
+    this.routeOutput()
+  }
+
+  setDelayBypassed(index: number, bypassed: boolean): void {
+    const delay = this.delays[index]
+    if (!delay) throw new RangeError(`Unknown delay index: ${index}`)
+    delay.settings = { ...delay.settings, bypassed }
+    this.routeOutput()
+  }
+
   addAmplitudeModulation(settings: AmplitudeModulationSettings): void {
     if (this.amplitudeModulation) throw new Error('Amplitude modulation is already enabled')
     this.amplitudeModulation = { ...settings }
@@ -327,7 +386,45 @@ export class SynthEngine {
         output = output.connect(node).connect(gainNode)
       }
     })
+    this.delays.forEach((delay) => {
+      delay.node.disconnect()
+      delay.wet.disconnect()
+      delay.dry.disconnect()
+      delay.output.disconnect()
+      delay.node.connect(delay.feedback)
+      delay.feedback.disconnect()
+      delay.feedback.connect(delay.resonance).connect(delay.node)
+      if (!delay.settings.bypassed) {
+        output.connect(delay.drive)
+        output.connect(delay.dry)
+        delay.drive.connect(delay.node)
+        delay.node.connect(delay.wet)
+        delay.dry.connect(delay.output)
+        delay.wet.connect(delay.output)
+        output = delay.output
+      }
+    })
     output.connect(this.destination)
+  }
+
+  private applyDelaySettings(delay: DelayModule): void {
+    const { node, feedback, resonance, drive, wet, dry, settings } = delay
+    const now = this.audioContext.currentTime
+    node.delayTime.setTargetAtTime(settings.time, now, 0.08)
+    const resonantFeedback = Math.min(0.98, settings.feedback + settings.resonance * 0.3)
+    feedback.gain.setTargetAtTime(resonantFeedback, now, 0.08)
+    resonance.type = 'lowpass'
+    resonance.frequency.setTargetAtTime(3500 + (1 - settings.resonance) * 5500, now, 0.08)
+    resonance.Q.setTargetAtTime(0.0001 + settings.resonance * 4, now, 0.08)
+    wet.gain.setTargetAtTime(settings.mix, now, 0.01)
+    dry.gain.setTargetAtTime(1 - settings.mix, now, 0.01)
+    const amount = settings.overdrive * 100
+    const curve = new Float32Array(1024)
+    for (let index = 0; index < curve.length; index += 1) {
+      const input = (index * 2) / (curve.length - 1) - 1
+      curve[index] = amount === 0 ? input : Math.tanh(input * (1 + amount))
+    }
+    drive.curve = curve
   }
 
   private createVoicesForOscillator(note: number, velocity: number, oscillatorIndex: number): Voice[] {
