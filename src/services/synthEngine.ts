@@ -49,6 +49,16 @@ export type NoiseSettings = {
   stereoSpread: number
 }
 
+export type FilterType = 'lowpass' | 'highpass' | 'bandpass'
+
+export type FilterSettings = {
+  bypassed: boolean
+  type: FilterType
+  cutoff: number
+  resonance: number
+  gain: number
+}
+
 export type AmplitudeModulationSettings = {
   rate: number
   depth: number
@@ -87,6 +97,10 @@ export function createNoiseSettings(): NoiseSettings {
   return { bypassed: false, color: 'white', level: 0, stereoSpread: 0 }
 }
 
+export function createFilterSettings(): FilterSettings {
+  return { bypassed: false, type: 'bandpass', cutoff: 12000, resonance: 0, gain: 0 }
+}
+
 export function createEnvelopeSettings(): EnvelopeSettings {
   return { attack: 4, decay: 0, hold: 0, release: 80, velocity: 0, attackCurve: 'linear', releaseCurve: 'linear', destination: 'volume' }
 }
@@ -94,15 +108,18 @@ export function createEnvelopeSettings(): EnvelopeSettings {
 export class SynthEngine {
   private readonly audioContext = new AudioContext()
   private readonly destination = this.audioContext.destination
+  private readonly mixBus = this.audioContext.createGain()
   private activeVoices: { note: number; velocity: number; voices: Voice[] }[] = []
   private settings: OscillatorSettings[]
   private noiseSettings?: NoiseSettings
+  private filters: { node: BiquadFilterNode; gainNode: GainNode; settings: FilterSettings }[] = []
   private amplitudeModulation?: AmplitudeModulationSettings
   private amplitudeModulationBypassed = false
   private envelopeSettings: { settings: EnvelopeSettings; bypassed: boolean }[] = [{ settings: createEnvelopeSettings(), bypassed: false }]
 
   constructor(initialSettings: OscillatorSettings = createOscillatorSettings()) {
     this.settings = [{ ...initialSettings }]
+    this.addFilter()
   }
 
   async activate(): Promise<void> {
@@ -202,6 +219,30 @@ export class SynthEngine {
     if (!this.hasAudibleSources()) this.stopAllNotes()
   }
 
+  addFilter(settings: FilterSettings = createFilterSettings()): void {
+    const filter = this.audioContext.createBiquadFilter()
+    const gainNode = this.audioContext.createGain()
+    this.filters.push({ node: filter, gainNode, settings: { ...settings } })
+    this.applyFilterSettings(this.filters.length - 1)
+    this.routeOutput()
+  }
+
+  removeFilter(index: number): void {
+    if (!this.filters[index]) throw new RangeError(`Unknown filter index: ${index}`)
+    this.filters[index].node.disconnect()
+    this.filters[index].gainNode.disconnect()
+    this.filters.splice(index, 1)
+    this.routeOutput()
+  }
+
+  setFilterSettings(index: number, changes: Partial<FilterSettings>): void {
+    const filter = this.filters[index]
+    if (!filter) throw new RangeError(`Unknown filter index: ${index}`)
+    filter.settings = { ...filter.settings, ...changes }
+    this.applyFilterSettings(index)
+    this.routeOutput()
+  }
+
   addAmplitudeModulation(settings: AmplitudeModulationSettings): void {
     if (this.amplitudeModulation) throw new Error('Amplitude modulation is already enabled')
     this.amplitudeModulation = { ...settings }
@@ -267,6 +308,28 @@ export class SynthEngine {
     return this.noiseSettings ? [...oscillators, this.createNoiseVoice(velocity)] : oscillators
   }
 
+  private applyFilterSettings(index: number): void {
+    const filter = this.filters[index]
+    if (!filter) return
+    filter.node.type = filter.settings.type
+    filter.node.frequency.setTargetAtTime(filter.settings.cutoff, this.audioContext.currentTime, 0.01)
+    filter.node.Q.setTargetAtTime(filter.settings.resonance, this.audioContext.currentTime, 0.01)
+    filter.gainNode.gain.setTargetAtTime(10 ** (filter.settings.gain / 20), this.audioContext.currentTime, 0.01)
+  }
+
+  private routeOutput(): void {
+    this.mixBus.disconnect()
+    let output: AudioNode = this.mixBus
+    this.filters.forEach(({ node, gainNode, settings }) => {
+      node.disconnect()
+      gainNode.disconnect()
+      if (!settings.bypassed) {
+        output = output.connect(node).connect(gainNode)
+      }
+    })
+    output.connect(this.destination)
+  }
+
   private createVoicesForOscillator(note: number, velocity: number, oscillatorIndex: number): Voice[] {
     return Array.from({ length: UNISON_LAYER_COUNT }, (_, layerIndex) => this.createOscillatorVoice(note, velocity, oscillatorIndex, layerIndex))
   }
@@ -329,7 +392,7 @@ export class SynthEngine {
       envelopeGain.gain.setValueAtTime(1, now)
     }
     panner.pan.setValueAtTime(kind === 'noise' ? this.noiseSettings!.stereoSpread : this.layerPan(layerIndex!, this.settings[oscillatorIndex!].stereoSpread), now)
-    source.connect(gainNode).connect(envelopeGain).connect(panner).connect(this.destination)
+    source.connect(gainNode).connect(envelopeGain).connect(panner).connect(this.mixBus)
     if (this.amplitudeModulation) this.createAmplitudeModulation(voice)
     return voice
   }

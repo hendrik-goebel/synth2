@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { MidiService } from './services/midiService'
-import { createEnvelopeSettings, createNoiseSettings, type AmplitudeModulationSettings, type EnvelopeCurve, type EnvelopeDestination, type EnvelopeSettings, type NoiseSettings, type OscillatorSettings, type Waveform, SynthEngine } from './services/synthEngine'
+import { createEnvelopeSettings, createFilterSettings, createNoiseSettings, type AmplitudeModulationSettings, type EnvelopeCurve, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type NoiseSettings, type OscillatorSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
 import NoiseControls from './components/NoiseControls.vue'
+import FilterControls from './components/FilterControls.vue'
 import SectionFrame from './components/SectionFrame.vue'
 
 type EnvelopeModule = EnvelopeSettings & { bypassed: boolean }
@@ -19,10 +20,12 @@ const audioStatus = ref('Audio locked. Interact with the synth to enable audio.'
 const activeVoices = ref(0)
 const oscillators = ref<OscillatorSettings[]>([initialOscillatorSettings])
 const noise = ref<NoiseSettings | null>(null)
+const filters = ref<FilterSettings[]>([createFilterSettings()])
 const amplitudeModulation = ref<AmplitudeModulationSettings | null>(null)
 const envelopes = ref<EnvelopeModule[]>([{ ...createEnvelopeSettings(), bypassed: false }])
 const isAmplitudeModulationBypassed = ref(false)
 const areOscillatorsCollapsed = ref(false)
+const areFiltersCollapsed = ref(false)
 const areEnvelopesCollapsed = ref(false)
 let firstInteractionHandled = false
 let midiConnectionStarted = false
@@ -149,6 +152,26 @@ function addNoise() {
 function removeNoise() {
   synth.removeNoise()
   noise.value = null
+}
+
+function addFilter() {
+  const settings = createFilterSettings()
+  filters.value.push(settings)
+  synth.addFilter(settings)
+}
+
+function removeFilter(index: number) {
+  synth.removeFilter(index)
+  filters.value.splice(index, 1)
+}
+
+function updateFilterSettings(index: number, settings: Partial<FilterSettings>) {
+  filters.value[index] = { ...filters.value[index], ...settings }
+  synth.setFilterSettings(index, settings)
+}
+
+function toggleFilterBypass(index: number) {
+  updateFilterSettings(index, { bypassed: !filters.value[index].bypassed })
 }
 
 function updateNoiseSettings(settings: Partial<NoiseSettings>) {
@@ -297,6 +320,35 @@ onUnmounted(() => {
         @toggle-bypass="toggleNoiseBypass"
         @remove="removeNoise"
       />
+
+      <section class="oscillators-section" aria-labelledby="filters-heading">
+        <h2 id="filters-heading">
+          <button
+            type="button"
+            class="oscillators-toggle"
+            :aria-expanded="!areFiltersCollapsed"
+            aria-controls="filters-content"
+            @click="areFiltersCollapsed = !areFiltersCollapsed"
+          >
+            Filters
+          </button>
+        </h2>
+        <div v-show="!areFiltersCollapsed" id="filters-content" class="oscillators-content">
+          <FilterControls
+            v-for="(filter, index) in filters"
+            :key="index"
+            :filter-index="index"
+            v-bind="filter"
+            @update:type="updateFilterSettings(index, { type: $event })"
+            @update:cutoff="updateFilterSettings(index, { cutoff: $event })"
+            @update:resonance="updateFilterSettings(index, { resonance: $event })"
+            @update:gain="updateFilterSettings(index, { gain: $event })"
+            @toggle-bypass="toggleFilterBypass(index)"
+            @remove="removeFilter(index)"
+          />
+          <button type="button" class="add-filter-button" @click="addFilter">Add Filter</button>
+        </div>
+      </section>
 
       <SectionFrame
         v-if="amplitudeModulation"
