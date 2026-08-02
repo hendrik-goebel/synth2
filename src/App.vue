@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { MidiService } from './services/midiService'
-import { createNoiseSettings, type AmplitudeModulationSettings, type NoiseSettings, type OscillatorSettings, type Waveform, SynthEngine } from './services/synthEngine'
+import { createEnvelopeSettings, createNoiseSettings, type AmplitudeModulationSettings, type EnvelopeSettings, type NoiseSettings, type OscillatorSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
 import NoiseControls from './components/NoiseControls.vue'
 import SectionFrame from './components/SectionFrame.vue'
@@ -18,6 +18,7 @@ const activeVoices = ref(0)
 const oscillators = ref<OscillatorSettings[]>([initialOscillatorSettings])
 const noise = ref<NoiseSettings | null>(null)
 const amplitudeModulation = ref<AmplitudeModulationSettings | null>(null)
+const envelope = ref<EnvelopeSettings>(createEnvelopeSettings())
 const isAmplitudeModulationBypassed = ref(false)
 const areOscillatorsCollapsed = ref(false)
 let firstInteractionHandled = false
@@ -192,6 +193,11 @@ function toggleAmplitudeModulationBypass() {
   isAmplitudeModulationBypassed.value = bypassed
 }
 
+function updateEnvelopeSettings(settings: Partial<EnvelopeSettings>) {
+  envelope.value = { ...envelope.value, ...settings }
+  synth.setEnvelopeSettings(settings)
+}
+
 function toggleOscillatorBypass(index: number) {
   updateOscillatorSettings(index, { bypassed: !oscillators.value[index].bypassed })
 }
@@ -305,6 +311,34 @@ onUnmounted(() => {
           </label>
         </div>
       </SectionFrame>
+
+      <section class="envelopes-section" aria-labelledby="envelopes-heading">
+        <div class="section-heading">
+          <h2 id="envelopes-heading">Envelopes</h2>
+        </div>
+        <div class="modulation-controls">
+          <label class="control">
+            <span>Attack</span>
+            <output>{{ envelope.attack }} ms</output>
+            <input type="range" min="0" max="300" step="1" :value="envelope.attack" @input="updateEnvelopeSettings({ attack: Number(($event.target as HTMLInputElement).value) })">
+          </label>
+          <label class="control">
+            <span>Decay</span>
+            <output>{{ envelope.decay }} ms</output>
+            <input type="range" min="0" max="150" step="1" :value="envelope.decay" @input="updateEnvelopeSettings({ decay: Number(($event.target as HTMLInputElement).value) })">
+          </label>
+          <label class="control">
+            <span>Hold</span>
+            <output>{{ envelope.hold }} ms</output>
+            <input type="range" min="0" max="150" step="1" :value="envelope.hold" @input="updateEnvelopeSettings({ hold: Number(($event.target as HTMLInputElement).value) })">
+          </label>
+          <label class="control">
+            <span>Release</span>
+            <output>{{ envelope.release }} ms</output>
+            <input type="range" min="0" max="450" step="1" :value="envelope.release" @input="updateEnvelopeSettings({ release: Number(($event.target as HTMLInputElement).value) })">
+          </label>
+        </div>
+      </section>
 
       <div class="audio-bar">
         <button type="button" class="audio-button" @click="handleEnableAudio">Audio</button>

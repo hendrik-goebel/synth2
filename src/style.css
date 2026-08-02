@@ -330,6 +330,15 @@ select:disabled {
   gap: 18px 24px;
 }
 
+.envelopes-section {
+  display: grid;
+  gap: 14px;
+}
+
+.envelopes-section .modulation-controls {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .audio-bar {
   gap: 12px;
 }
