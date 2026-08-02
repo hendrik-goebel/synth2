@@ -96,7 +96,8 @@ export class SynthEngine {
   }
 
   private createVoices(note: number, velocity: number): Voice[] {
-    const layerCount = this.settings.unisonDetune > 0 ? 3 : 1
+    // Keep three layers allocated so unison controls can be changed while notes are held.
+    const layerCount = 3
     return Array.from({ length: layerCount }, (_, index) => this.createVoice(note, velocity, index, layerCount))
   }
 
