@@ -14,6 +14,7 @@ const MAX_GAIN = 0.2
 const UNISON_LAYER_COUNT = 3
 
 export type OscillatorSettings = {
+  bypassed: boolean
   detune: number
   glide: number
   level: number
@@ -32,6 +33,7 @@ export type AmplitudeModulationSettings = {
 
 export function createOscillatorSettings(): OscillatorSettings {
   return {
+    bypassed: false,
     detune: 0,
     glide: 0,
     level: 1,
@@ -49,6 +51,7 @@ export class SynthEngine {
   private activeVoices: { note: number; velocity: number; voices: Voice[] }[] = []
   private settings: OscillatorSettings[]
   private amplitudeModulation?: AmplitudeModulationSettings
+  private amplitudeModulationBypassed = false
 
   constructor(initialSettings: OscillatorSettings = createOscillatorSettings()) {
     this.settings = [{ ...initialSettings }]
@@ -94,6 +97,7 @@ export class SynthEngine {
     }
 
     this.amplitudeModulation = { ...settings }
+    this.amplitudeModulationBypassed = false
     this.activeVoices.forEach(({ voices }) => voices.forEach((voice) => this.createAmplitudeModulation(voice)))
   }
 
@@ -134,15 +138,24 @@ export class SynthEngine {
       })
     })
     this.amplitudeModulation = undefined
+    this.amplitudeModulationBypassed = false
+  }
+
+  setAmplitudeModulationBypassed(bypassed: boolean): void {
+    if (!this.amplitudeModulation) {
+      throw new Error('Amplitude modulation is not enabled')
+    }
+
+    this.amplitudeModulationBypassed = bypassed
+    const now = this.audioContext.currentTime
+    this.activeVoices.forEach(({ voices }) => {
+      voices.forEach((voice) => this.setAmplitudeModulationDepth(voice, now))
+    })
   }
 
   removeOscillator(oscillatorIndex: number): void {
     if (oscillatorIndex < 0 || oscillatorIndex >= this.settings.length) {
       throw new RangeError(`Unknown oscillator index: ${oscillatorIndex}`)
-    }
-
-    if (this.settings.length === 1) {
-      throw new RangeError('At least one oscillator is required')
     }
 
     this.settings.splice(oscillatorIndex, 1)
@@ -176,8 +189,8 @@ export class SynthEngine {
         if (settings.detune !== undefined || settings.unisonDetune !== undefined) {
           voice.oscillator.detune.setTargetAtTime(this.settings[oscillatorIndex].detune + layerDetune, now, 0.01)
         }
-        if (settings.level !== undefined) {
-          voice.gainNode.gain.setTargetAtTime(voice.velocity * MAX_GAIN * this.settings[oscillatorIndex].level / UNISON_LAYER_COUNT, now, 0.01)
+        if (settings.level !== undefined || settings.bypassed !== undefined) {
+          voice.gainNode.gain.setTargetAtTime(this.oscillatorGain(voice), now, 0.01)
           this.setAmplitudeModulationDepth(voice, now)
         }
         if (settings.stereoSpread !== undefined) {
@@ -215,7 +228,7 @@ export class SynthEngine {
 
     const gainNode = this.audioContext.createGain()
     const normalizedVelocity = Math.max(0, Math.min(velocity, 127)) / 127
-    gainNode.gain.setValueAtTime(normalizedVelocity * MAX_GAIN * settings.level / UNISON_LAYER_COUNT, this.audioContext.currentTime)
+    gainNode.gain.setValueAtTime(this.oscillatorGain({ velocity: normalizedVelocity, oscillatorIndex }), this.audioContext.currentTime)
     const panner = this.audioContext.createStereoPanner()
     panner.pan.setValueAtTime(this.layerPan(layerIndex, settings.stereoSpread), this.audioContext.currentTime)
 
@@ -293,7 +306,10 @@ export class SynthEngine {
     const modulationGain = this.audioContext.createGain()
     voice.amplitudeModulator = modulator
     voice.amplitudeModulationGain = modulationGain
-    modulationGain.gain.setValueAtTime(this.amplitudeModulationGain(voice), this.audioContext.currentTime)
+    modulationGain.gain.setValueAtTime(
+      this.amplitudeModulationBypassed ? 0 : this.amplitudeModulationGain(voice),
+      this.audioContext.currentTime,
+    )
     modulator.connect(modulationGain)
     modulationGain.connect(voice.gainNode.gain)
     modulator.start()
@@ -306,11 +322,17 @@ export class SynthEngine {
       return
     }
 
-    modulationGain.gain.setTargetAtTime(this.amplitudeModulationGain(voice), time, 0.01)
+    modulationGain.gain.setTargetAtTime(this.amplitudeModulationBypassed ? 0 : this.amplitudeModulationGain(voice), time, 0.01)
   }
 
   private amplitudeModulationGain(voice: Voice): number {
-    return voice.velocity * MAX_GAIN * this.settings[voice.oscillatorIndex].level * this.amplitudeModulation!.depth / UNISON_LAYER_COUNT
+    const settings = this.settings[voice.oscillatorIndex]
+    return settings.bypassed ? 0 : voice.velocity * MAX_GAIN * settings.level * this.amplitudeModulation!.depth / UNISON_LAYER_COUNT
+  }
+
+  private oscillatorGain(voice: Pick<Voice, 'velocity' | 'oscillatorIndex'>): number {
+    const settings = this.settings[voice.oscillatorIndex]
+    return settings.bypassed ? 0 : voice.velocity * MAX_GAIN * settings.level / UNISON_LAYER_COUNT
   }
 
   private layerDetune(index: number, unisonDetune: number): number {

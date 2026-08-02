@@ -147,7 +147,7 @@ select:disabled {
   opacity: 0.5;
 }
 
-.oscillator-controls {
+.section-frame {
   padding: 24px;
   background: rgba(5, 7, 11, 0.35);
   border: 1px solid rgba(152, 169, 202, 0.12);
@@ -200,15 +200,20 @@ select:disabled {
   gap: 14px;
 }
 
-.oscillator-controls h2 {
+.section-frame-heading {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
-  margin: 0 0 4px;
 }
 
-.oscillator-toggle {
+.section-frame-heading h2 {
+  margin: 0 0 4px;
   flex: 1;
+}
+
+.section-frame-toggle {
+  width: 100%;
   padding: 0;
   color: #9aa8bd;
   background: none;
@@ -221,7 +226,7 @@ select:disabled {
   text-transform: uppercase;
 }
 
-.oscillator-toggle::after {
+.section-frame-toggle::after {
   content: "−";
   float: right;
   color: #65e6c2;
@@ -229,17 +234,17 @@ select:disabled {
   line-height: 0.65rem;
 }
 
-.oscillator-toggle[aria-expanded="false"]::after {
+.section-frame-toggle[aria-expanded="false"]::after {
   content: "+";
 }
 
-.oscillator-toggle:hover {
+.section-frame-toggle:hover {
   background: none;
   border-color: transparent;
   color: #f1f4f8;
 }
 
-.oscillator-remove {
+.module-remove {
   padding: 4px 7px;
   color: #ffb7b7;
   background: rgba(162, 35, 49, 0.18);
@@ -247,7 +252,26 @@ select:disabled {
   font-size: 0.62rem;
 }
 
-.oscillator-remove:hover {
+.module-bypass {
+  padding: 4px 7px;
+  color: #b8d8ff;
+  background: rgba(60, 104, 163, 0.18);
+  border-color: rgba(117, 171, 238, 0.42);
+  font-size: 0.62rem;
+}
+
+.module-bypass:hover,
+.module-bypass[aria-pressed="true"] {
+  background: rgba(60, 104, 163, 0.32);
+  border-color: #75abee;
+}
+
+.module-heading-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.module-remove:hover {
   background: rgba(162, 35, 49, 0.32);
   border-color: #ff6470;
 }
@@ -296,40 +320,8 @@ select:disabled {
   gap: 10px;
 }
 
-.modulation-section {
-  display: grid;
-  gap: 14px;
-  padding: 22px 0 0;
-  border-top: 1px solid rgba(152, 169, 202, 0.13);
-}
-
-.modulation-section h2 {
-  margin: 0;
-  color: #9aa8bd;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
-.modulation-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.modulation-remove {
-  padding: 4px 7px;
-  color: #ffb7b7;
-  background: rgba(162, 35, 49, 0.18);
-  border-color: rgba(255, 100, 112, 0.42);
-  font-size: 0.62rem;
-}
-
-.modulation-remove:hover {
-  background: rgba(162, 35, 49, 0.32);
-  border-color: #ff6470;
+.section-frame-content {
+  padding-top: 18px;
 }
 
 .modulation-controls {

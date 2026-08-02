@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { MidiService } from './services/midiService'
 import { type AmplitudeModulationSettings, type OscillatorSettings, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
+import SectionFrame from './components/SectionFrame.vue'
 
 const waveforms: OscillatorType[] = ['sine', 'triangle', 'sawtooth', 'square']
 const initialOscillatorSettings = createRandomOscillatorSettings()
@@ -15,6 +16,7 @@ const audioStatus = ref('Audio locked. Interact with the synth to enable audio.'
 const activeVoices = ref(0)
 const oscillators = ref<OscillatorSettings[]>([initialOscillatorSettings])
 const amplitudeModulation = ref<AmplitudeModulationSettings | null>(null)
+const isAmplitudeModulationBypassed = ref(false)
 const areOscillatorsCollapsed = ref(false)
 let firstInteractionHandled = false
 let midiConnectionStarted = false
@@ -109,6 +111,7 @@ function randomInteger(min: number, max: number): number {
 
 function createRandomOscillatorSettings(): OscillatorSettings {
   return {
+    bypassed: false,
     detune: 0,
     glide: randomInteger(0, 2000),
     level: randomInteger(10, 100) / 100,
@@ -134,6 +137,7 @@ function removeOscillator(index: number) {
 function addAmplitudeModulation() {
   const settings: AmplitudeModulationSettings = { rate: 5, depth: 0.5, waveform: 'sine' }
   amplitudeModulation.value = settings
+  isAmplitudeModulationBypassed.value = false
   synth.addAmplitudeModulation(settings)
 }
 
@@ -149,6 +153,17 @@ function updateAmplitudeModulation(settings: Partial<AmplitudeModulationSettings
 function removeAmplitudeModulation() {
   synth.removeAmplitudeModulation()
   amplitudeModulation.value = null
+  isAmplitudeModulationBypassed.value = false
+}
+
+function toggleAmplitudeModulationBypass() {
+  const bypassed = !isAmplitudeModulationBypassed.value
+  synth.setAmplitudeModulationBypassed(bypassed)
+  isAmplitudeModulationBypassed.value = bypassed
+}
+
+function toggleOscillatorBypass(index: number) {
+  updateOscillatorSettings(index, { bypassed: !oscillators.value[index].bypassed })
 }
 
 function updateOscillatorSettings(index: number, settings: Partial<OscillatorSettings>) {
@@ -197,7 +212,6 @@ onUnmounted(() => {
             v-for="(oscillator, index) in oscillators"
             :key="index"
             :oscillator-index="index"
-            :can-remove="oscillators.length > 1"
             v-bind="oscillator"
             @update:detune="updateOscillatorSettings(index, { detune: $event })"
             @update:glide="updateOscillatorSettings(index, { glide: $event })"
@@ -207,6 +221,7 @@ onUnmounted(() => {
             @update:stereo-spread="updateOscillatorSettings(index, { stereoSpread: $event })"
             @update:fm-amount="updateOscillatorSettings(index, { fmAmount: $event })"
             @update:fm-source="updateOscillatorSettings(index, { fmSource: $event })"
+            @toggle-bypass="toggleOscillatorBypass(index)"
             @remove="removeOscillator(index)"
           />
           <div class="module-actions">
@@ -216,11 +231,16 @@ onUnmounted(() => {
         </div>
       </section>
 
-      <section v-if="amplitudeModulation" class="modulation-section" aria-labelledby="am-heading">
-        <div class="modulation-heading">
-          <h2 id="am-heading">Amplitude modulation</h2>
-          <button type="button" class="modulation-remove" @click="removeAmplitudeModulation">Remove</button>
-        </div>
+      <SectionFrame
+        v-if="amplitudeModulation"
+        class="modulation-section"
+        title="Amplitude modulation"
+        heading-id="am-heading"
+        content-id="am-content"
+        :bypassed="isAmplitudeModulationBypassed"
+        @toggle-bypass="toggleAmplitudeModulationBypass"
+        @remove="removeAmplitudeModulation"
+      >
         <div class="modulation-controls">
           <label class="control">
             <span>Wave</span>
@@ -242,7 +262,7 @@ onUnmounted(() => {
             <input type="range" min="0" max="1" step="0.01" :value="amplitudeModulation.depth" @input="updateAmplitudeModulation({ depth: Number(($event.target as HTMLInputElement).value) })">
           </label>
         </div>
-      </section>
+      </SectionFrame>
 
       <div class="audio-bar">
         <button type="button" class="audio-button" @click="handleEnableAudio">Audio</button>

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import SectionFrame from './SectionFrame.vue'
 
 defineProps<{
   oscillatorIndex: number
-  canRemove: boolean
+  bypassed: boolean
   detune: number
   glide: number
   level: number
@@ -23,40 +23,35 @@ const emit = defineEmits<{
   'update:stereoSpread': [value: number]
   'update:fmAmount': [value: number]
   'update:fmSource': [value: OscillatorType]
+  'toggle-bypass': []
   remove: []
 }>()
 
-const isCollapsed = ref(false)
 </script>
 
 <template>
-  <section class="oscillator-controls" :aria-labelledby="`oscillator-${oscillatorIndex}-heading`">
-    <h2 :id="`oscillator-${oscillatorIndex}-heading`">
-      <button
-        type="button"
-        class="oscillator-toggle"
-        :aria-expanded="!isCollapsed"
-        :aria-controls="`oscillator-${oscillatorIndex}-content`"
-        @click="isCollapsed = !isCollapsed"
-      >
-        Oscillator {{ oscillatorIndex + 1 }}
-      </button>
-      <button type="button" class="oscillator-remove" :disabled="!canRemove" @click="emit('remove')">Remove</button>
-    </h2>
-
-    <div v-show="!isCollapsed" :id="`oscillator-${oscillatorIndex}-content`" class="oscillator-content">
-    <label class="control">
-      <span>Wave</span>
-      <select
-        :value="waveform"
-        @change="emit('update:waveform', ($event.target as HTMLSelectElement).value as OscillatorType)"
-      >
-        <option value="sine">Sine</option>
-        <option value="triangle">Triangle</option>
-        <option value="sawtooth">Sawtooth</option>
-        <option value="square">Square</option>
-      </select>
-    </label>
+  <SectionFrame
+    class="oscillator-controls"
+    :title="`Oscillator ${oscillatorIndex + 1}`"
+    :heading-id="`oscillator-${oscillatorIndex}-heading`"
+    :content-id="`oscillator-${oscillatorIndex}-content`"
+    :bypassed="bypassed"
+    @toggle-bypass="emit('toggle-bypass')"
+    @remove="emit('remove')"
+  >
+    <div class="oscillator-content">
+      <label class="control">
+        <span>Wave</span>
+        <select
+          :value="waveform"
+          @change="emit('update:waveform', ($event.target as HTMLSelectElement).value as OscillatorType)"
+        >
+          <option value="sine">Sine</option>
+          <option value="triangle">Triangle</option>
+          <option value="sawtooth">Sawtooth</option>
+          <option value="square">Square</option>
+        </select>
+      </label>
 
     <label class="control">
       <span>Detune</span>
@@ -123,8 +118,7 @@ const isCollapsed = ref(false)
         <option value="sawtooth">Sawtooth</option>
         <option value="square">Square</option>
       </select>
-    </label>
-
+      </label>
     </div>
-  </section>
+  </SectionFrame>
 </template>
