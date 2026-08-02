@@ -136,43 +136,16 @@ onUnmounted(() => {
 <template>
   <main class="app" @pointerdown.capture="handleFirstInteraction" @keydown.capture="handleFirstInteraction">
     <section class="panel">
-      <h1>Simple Web Synth</h1>
-      <p class="subtitle">Step 1: MIDI in + monophonic sine oscillator</p>
-
-      <div class="row">
-        <button type="button" @click="handleEnableAudio">Enable Audio</button>
-        <span>{{ audioStatus }}</span>
-      </div>
-
-      <div class="row">
-        <button type="button" @click="handleConnectMidi">Connect MIDI</button>
-        <span>{{ midiStatus }}</span>
-      </div>
-
-      <div class="row">
-        <button type="button" class="panic-button" @click="handlePanic">Panic: Stop All Notes</button>
-      </div>
-
-      <label class="row field">
-        <span>MIDI Driver</span>
-        <select v-model="selectedInputId" :disabled="!canSelectInput" @change="handleInputChange">
-          <option value="" disabled>Select input</option>
-          <option v-for="input in midiInputs" :key="input.id" :value="input.id">
-            {{ input.name }}
-          </option>
-        </select>
-      </label>
-
-      <label class="row field">
-        <span>MIDI Channel</span>
-        <select v-model.number="selectedChannel" @change="handleChannelChange">
-          <option v-for="channel in 16" :key="channel" :value="channel">
-            {{ channel }}
-          </option>
-        </select>
-      </label>
-
-      <p class="voices">Active voices: {{ activeVoices }}</p>
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Web instrument</p>
+          <h1>OSC-1</h1>
+        </div>
+        <div class="topbar-actions">
+          <output class="voice-count" title="Active voices">{{ activeVoices }}</output>
+          <button type="button" class="panic-button" @click="handlePanic">Panic</button>
+        </div>
+      </header>
 
       <OscillatorControls
         v-model:frequency="oscillatorFrequency"
@@ -196,6 +169,39 @@ onUnmounted(() => {
         @update:fmAmount="updateOscillatorSettings"
         @update:fmSource="updateOscillatorSettings"
       />
+
+      <div class="audio-bar">
+        <button type="button" class="audio-button" @click="handleEnableAudio">Audio</button>
+        <span class="status" aria-live="polite">{{ audioStatus }}</span>
+      </div>
+
+      <section class="midi-controls" aria-labelledby="midi-heading">
+        <div class="section-heading">
+          <h2 id="midi-heading">MIDI</h2>
+          <button type="button" class="connect-button" @click="handleConnectMidi">Connect</button>
+        </div>
+        <div class="midi-fields">
+          <label class="field">
+            <span>Input</span>
+            <select v-model="selectedInputId" :disabled="!canSelectInput" @change="handleInputChange">
+              <option value="" disabled>Select input</option>
+              <option v-for="input in midiInputs" :key="input.id" :value="input.id">
+                {{ input.name }}
+              </option>
+            </select>
+          </label>
+
+          <label class="field channel-field">
+            <span>Ch</span>
+            <select v-model.number="selectedChannel" @change="handleChannelChange">
+              <option v-for="channel in 16" :key="channel" :value="channel">
+                {{ channel }}
+              </option>
+            </select>
+          </label>
+        </div>
+        <span class="status midi-status" aria-live="polite">{{ midiStatus }}</span>
+      </section>
     </section>
   </main>
 </template>

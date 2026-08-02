@@ -31,7 +31,7 @@ const emit = defineEmits<{
     <h2 id="oscillator-heading">Oscillator</h2>
 
     <label class="control">
-      <span>Waveform</span>
+      <span>Wave</span>
       <select
         :value="waveform"
         @change="emit('update:waveform', ($event.target as HTMLSelectElement).value as OscillatorType)"
@@ -44,7 +44,7 @@ const emit = defineEmits<{
     </label>
 
     <label class="control">
-      <span>Pitch (Hz)</span>
+      <span>Pitch</span>
       <output>{{ frequency.toFixed(2) }}</output>
       <input
         type="range"
@@ -57,7 +57,7 @@ const emit = defineEmits<{
     </label>
 
     <label class="control">
-      <span>Detune (cents)</span>
+      <span>Detune</span>
       <output>{{ detune }}</output>
       <input
         type="range"
@@ -70,7 +70,7 @@ const emit = defineEmits<{
     </label>
 
     <label class="control">
-      <span>Glide (ms)</span>
+      <span>Glide</span>
       <output>{{ glide }}</output>
       <input
         type="range"
@@ -96,7 +96,7 @@ const emit = defineEmits<{
     </label>
 
     <label class="control">
-      <span>Phase (degrees)</span>
+      <span>Phase</span>
       <output>{{ phase }}</output>
       <input
         type="range"
@@ -109,25 +109,25 @@ const emit = defineEmits<{
     </label>
 
     <label class="control">
-      <span>Unison Detune (cents)</span>
+      <span>Unison</span>
       <output>{{ unisonDetune }}</output>
       <input type="range" min="0" max="100" step="1" :value="unisonDetune" @input="emit('update:unisonDetune', Number(($event.target as HTMLInputElement).value))">
     </label>
 
     <label class="control">
-      <span>Stereo Spread</span>
+      <span>Spread</span>
       <output>{{ Math.round(stereoSpread * 100) }}%</output>
       <input type="range" min="0" max="1" step="0.01" :value="stereoSpread" @input="emit('update:stereoSpread', Number(($event.target as HTMLInputElement).value))">
     </label>
 
     <label class="control">
-      <span>FM Amount</span>
+      <span>FM</span>
       <output>{{ Math.round(fmAmount * 100) }}%</output>
       <input type="range" min="0" max="1" step="0.01" :value="fmAmount" @input="emit('update:fmAmount', Number(($event.target as HTMLInputElement).value))">
     </label>
 
     <label class="control">
-      <span>FM Source</span>
+      <span>FM Wave</span>
       <select :value="fmSource" @change="emit('update:fmSource', ($event.target as HTMLSelectElement).value as OscillatorType)">
         <option value="sine">Sine</option>
         <option value="triangle">Triangle</option>
