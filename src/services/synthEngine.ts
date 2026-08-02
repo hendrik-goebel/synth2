@@ -15,7 +15,7 @@ type Voice = {
   stopping: boolean
 }
 
-type DelayModule = { node: DelayNode; feedback: GainNode; resonance: BiquadFilterNode; drive: WaveShaperNode; wet: GainNode; dry: GainNode; output: GainNode; settings: DelaySettings }
+type DelayModule = { node: DelayNode; feedback: GainNode; resonance: BiquadFilterNode; drive: WaveShaperNode; driveGain: GainNode; wet: GainNode; dry: GainNode; output: GainNode; settings: DelaySettings }
 
 const MAX_GAIN = 0.2
 const UNISON_LAYER_COUNT = 3
@@ -274,10 +274,11 @@ export class SynthEngine {
     const feedback = this.audioContext.createGain()
     const resonance = this.audioContext.createBiquadFilter()
     const drive = this.audioContext.createWaveShaper()
+    const driveGain = this.audioContext.createGain()
     const wet = this.audioContext.createGain()
     const dry = this.audioContext.createGain()
     const output = this.audioContext.createGain()
-    this.delays.push({ node, feedback, resonance, drive, wet, dry, output, settings: { ...settings } })
+    this.delays.push({ node, feedback, resonance, drive, driveGain, wet, dry, output, settings: { ...settings } })
     node.connect(feedback).connect(resonance).connect(node)
     this.applyDelaySettings(this.delays[this.delays.length - 1])
     this.routeOutput()
@@ -297,7 +298,7 @@ export class SynthEngine {
     delay.feedback.disconnect()
     delay.resonance.disconnect()
     delay.drive.disconnect()
-    delay.drive.disconnect()
+    delay.driveGain.disconnect()
     delay.wet.disconnect()
     delay.dry.disconnect()
     delay.output.disconnect()
@@ -400,6 +401,7 @@ export class SynthEngine {
       if (group === 'delays') {
         this.delays.forEach((delay) => {
           delay.node.disconnect()
+          delay.driveGain.disconnect()
           delay.wet.disconnect()
           delay.dry.disconnect()
           delay.output.disconnect()
@@ -409,7 +411,7 @@ export class SynthEngine {
           if (!delay.settings.bypassed) {
             output.connect(delay.drive)
             output.connect(delay.dry)
-            delay.drive.connect(delay.node)
+            delay.drive.connect(delay.driveGain).connect(delay.node)
             delay.node.connect(delay.wet)
             delay.dry.connect(delay.output)
             delay.wet.connect(delay.output)
@@ -422,7 +424,7 @@ export class SynthEngine {
   }
 
   private applyDelaySettings(delay: DelayModule): void {
-    const { node, feedback, resonance, drive, wet, dry, settings } = delay
+    const { node, feedback, resonance, drive, driveGain, wet, dry, settings } = delay
     const now = this.audioContext.currentTime
     node.delayTime.setTargetAtTime(settings.time, now, 0.08)
     const resonantFeedback = Math.min(0.98, settings.feedback + settings.resonance * 0.3)
@@ -433,6 +435,8 @@ export class SynthEngine {
     wet.gain.setTargetAtTime(settings.mix, now, 0.01)
     dry.gain.setTargetAtTime(1 - settings.mix, now, 0.01)
     const amount = settings.overdrive * 100
+    const compensation = 1 / (1 + settings.overdrive * 4)
+    driveGain.gain.setTargetAtTime(compensation, now, 0.01)
     const curve = new Float32Array(1024)
     for (let index = 0; index < curve.length; index += 1) {
       const input = (index * 2) / (curve.length - 1) - 1
