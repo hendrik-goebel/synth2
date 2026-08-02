@@ -330,12 +330,7 @@ select:disabled {
   gap: 18px 24px;
 }
 
-.envelopes-section {
-  display: grid;
-  gap: 14px;
-}
-
-.envelopes-section .modulation-controls {
+.envelope-controls {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
@@ -346,7 +341,8 @@ select:disabled {
 .audio-button,
 .connect-button,
 .add-oscillator-button,
-.add-am-button {
+.add-am-button,
+.add-env-button {
   border-color: rgba(101, 230, 194, 0.34);
 }
 

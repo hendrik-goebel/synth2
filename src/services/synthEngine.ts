@@ -22,6 +22,7 @@ const ENVELOPE_ATTACK_MAX_MS = 300
 const ENVELOPE_DECAY_MAX_MS = 150
 const ENVELOPE_HOLD_MAX_MS = 150
 const ENVELOPE_RELEASE_MAX_MS = 450
+const ENVELOPE_BYPASS_RELEASE_MS = 20
 
 export type Waveform = OscillatorType | 'random'
 export type NoiseColor = 'white' | 'pink' | 'brown'
@@ -88,7 +89,8 @@ export class SynthEngine {
   private noiseSettings?: NoiseSettings
   private amplitudeModulation?: AmplitudeModulationSettings
   private amplitudeModulationBypassed = false
-  private envelopeSettings: EnvelopeSettings = createEnvelopeSettings()
+  private envelopeSettings?: EnvelopeSettings = createEnvelopeSettings()
+  private envelopeBypassed = false
 
   constructor(initialSettings: OscillatorSettings = createOscillatorSettings()) {
     this.settings = [{ ...initialSettings }]
@@ -223,12 +225,46 @@ export class SynthEngine {
   }
 
   setEnvelopeSettings(changes: Partial<EnvelopeSettings>): void {
+    if (!this.envelopeSettings) throw new Error('Envelope is not enabled')
     this.envelopeSettings = {
       attack: this.clampEnvelopeTime(changes.attack, this.envelopeSettings.attack, ENVELOPE_ATTACK_MAX_MS),
       decay: this.clampEnvelopeTime(changes.decay, this.envelopeSettings.decay, ENVELOPE_DECAY_MAX_MS),
       hold: this.clampEnvelopeTime(changes.hold, this.envelopeSettings.hold, ENVELOPE_HOLD_MAX_MS),
       release: this.clampEnvelopeTime(changes.release, this.envelopeSettings.release, ENVELOPE_RELEASE_MAX_MS),
     }
+  }
+
+  addEnvelope(settings: EnvelopeSettings = createEnvelopeSettings()): void {
+    if (this.envelopeSettings) throw new Error('Envelope is already enabled')
+    this.envelopeSettings = {
+      attack: this.clampEnvelopeTime(settings.attack, 0, ENVELOPE_ATTACK_MAX_MS),
+      decay: this.clampEnvelopeTime(settings.decay, 0, ENVELOPE_DECAY_MAX_MS),
+      hold: this.clampEnvelopeTime(settings.hold, 0, ENVELOPE_HOLD_MAX_MS),
+      release: this.clampEnvelopeTime(settings.release, 0, ENVELOPE_RELEASE_MAX_MS),
+    }
+    this.envelopeBypassed = false
+  }
+
+  removeEnvelope(): void {
+    if (!this.envelopeSettings) throw new Error('Envelope is not enabled')
+    this.envelopeSettings = undefined
+    this.envelopeBypassed = false
+    const now = this.audioContext.currentTime
+    this.activeVoices.forEach(({ voices }) => voices.forEach((voice) => {
+      voice.envelopeGain.gain.cancelScheduledValues(now)
+      voice.envelopeGain.gain.setTargetAtTime(1, now, 0.01)
+    }))
+  }
+
+  setEnvelopeBypassed(bypassed: boolean): void {
+    if (!this.envelopeSettings) throw new Error('Envelope is not enabled')
+    this.envelopeBypassed = bypassed
+    if (!bypassed) return
+    const now = this.audioContext.currentTime
+    this.activeVoices.forEach(({ voices }) => voices.forEach((voice) => {
+      voice.envelopeGain.gain.cancelScheduledValues(now)
+      voice.envelopeGain.gain.setTargetAtTime(1, now, 0.01)
+    }))
   }
 
   destroy(): void {
@@ -281,12 +317,17 @@ export class SynthEngine {
     const voice: Voice = { source, kind, oscillator: source instanceof OscillatorNode ? source : undefined, gainNode, envelopeGain, panner, velocity: normalizedVelocity, oscillatorIndex, layerIndex, stopping: false }
     const now = this.audioContext.currentTime
     gainNode.gain.setValueAtTime(this.sourceGain(voice), now)
-    envelopeGain.gain.setValueAtTime(0, now)
-    const attackStart = now + this.envelopeSettings.decay / 1000
-    const attackEnd = attackStart + this.envelopeSettings.attack / 1000
-    envelopeGain.gain.setValueAtTime(0, attackStart)
-    if (this.envelopeSettings.attack > 0) envelopeGain.gain.linearRampToValueAtTime(1, attackEnd)
-    else envelopeGain.gain.setValueAtTime(1, attackStart)
+    const envelope = this.activeEnvelopeSettings()
+    if (envelope) {
+      envelopeGain.gain.setValueAtTime(0, now)
+      const attackStart = now + envelope.decay / 1000
+      const attackEnd = attackStart + envelope.attack / 1000
+      envelopeGain.gain.setValueAtTime(0, attackStart)
+      if (envelope.attack > 0) envelopeGain.gain.linearRampToValueAtTime(1, attackEnd)
+      else envelopeGain.gain.setValueAtTime(1, attackStart)
+    } else {
+      envelopeGain.gain.setValueAtTime(1, now)
+    }
     panner.pan.setValueAtTime(kind === 'noise' ? this.noiseSettings!.stereoSpread : this.layerPan(layerIndex!, this.settings[oscillatorIndex!].stereoSpread), now)
     source.connect(gainNode).connect(envelopeGain).connect(panner).connect(this.destination)
     if (this.amplitudeModulation) this.createAmplitudeModulation(voice)
@@ -335,12 +376,14 @@ export class SynthEngine {
     if (voice.stopping) return
     voice.stopping = true
     const now = this.audioContext.currentTime
-    const holdEnd = now + this.envelopeSettings.hold / 1000
-    const stopAt = holdEnd + this.envelopeSettings.release / 1000
+    const envelope = this.activeEnvelopeSettings()
+    const holdEnd = now + (envelope?.hold ?? 0) / 1000
+    const releaseMs = envelope?.release ?? ENVELOPE_BYPASS_RELEASE_MS
+    const stopAt = holdEnd + releaseMs / 1000
     voice.envelopeGain.gain.cancelScheduledValues(now)
     voice.envelopeGain.gain.setValueAtTime(voice.envelopeGain.gain.value, now)
     voice.envelopeGain.gain.setValueAtTime(voice.envelopeGain.gain.value, holdEnd)
-    if (this.envelopeSettings.release > 0) voice.envelopeGain.gain.linearRampToValueAtTime(0, stopAt)
+    if (releaseMs > 0) voice.envelopeGain.gain.linearRampToValueAtTime(0, stopAt)
     else voice.envelopeGain.gain.setValueAtTime(0, holdEnd)
     voice.source.stop(stopAt)
     voice.source.onended = () => {
@@ -435,5 +478,10 @@ export class SynthEngine {
   private clampEnvelopeTime(value: number | undefined, fallback: number, max: number): number {
     if (value === undefined) return fallback
     return Math.max(0, Math.min(value, max))
+  }
+
+  private activeEnvelopeSettings(): EnvelopeSettings | undefined {
+    if (!this.envelopeSettings || this.envelopeBypassed) return undefined
+    return this.envelopeSettings
   }
 }

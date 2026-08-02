@@ -18,8 +18,9 @@ const activeVoices = ref(0)
 const oscillators = ref<OscillatorSettings[]>([initialOscillatorSettings])
 const noise = ref<NoiseSettings | null>(null)
 const amplitudeModulation = ref<AmplitudeModulationSettings | null>(null)
-const envelope = ref<EnvelopeSettings>(createEnvelopeSettings())
+const envelope = ref<EnvelopeSettings | null>(createEnvelopeSettings())
 const isAmplitudeModulationBypassed = ref(false)
+const isEnvelopeBypassed = ref(false)
 const areOscillatorsCollapsed = ref(false)
 let firstInteractionHandled = false
 let midiConnectionStarted = false
@@ -193,7 +194,30 @@ function toggleAmplitudeModulationBypass() {
   isAmplitudeModulationBypassed.value = bypassed
 }
 
+function addEnvelope() {
+  const settings = createEnvelopeSettings()
+  envelope.value = settings
+  isEnvelopeBypassed.value = false
+  synth.addEnvelope(settings)
+}
+
+function removeEnvelope() {
+  synth.removeEnvelope()
+  envelope.value = null
+  isEnvelopeBypassed.value = false
+}
+
+function toggleEnvelopeBypass() {
+  const bypassed = !isEnvelopeBypassed.value
+  synth.setEnvelopeBypassed(bypassed)
+  isEnvelopeBypassed.value = bypassed
+}
+
 function updateEnvelopeSettings(settings: Partial<EnvelopeSettings>) {
+  if (!envelope.value) {
+    return
+  }
+
   envelope.value = { ...envelope.value, ...settings }
   synth.setEnvelopeSettings(settings)
 }
@@ -264,6 +288,7 @@ onUnmounted(() => {
             <button type="button" class="add-oscillator-button" @click="addOscillator">Add OSC</button>
             <button v-if="!noise" type="button" class="add-oscillator-button" @click="addNoise">Add Noise</button>
             <button v-if="!amplitudeModulation" type="button" class="add-am-button" @click="addAmplitudeModulation">Add AM</button>
+            <button v-if="!envelope" type="button" class="add-env-button" @click="addEnvelope">Add ENV</button>
           </div>
         </div>
       </section>
@@ -312,11 +337,17 @@ onUnmounted(() => {
         </div>
       </SectionFrame>
 
-      <section class="envelopes-section" aria-labelledby="envelopes-heading">
-        <div class="section-heading">
-          <h2 id="envelopes-heading">Envelopes</h2>
-        </div>
-        <div class="modulation-controls">
+      <SectionFrame
+        v-if="envelope"
+        class="envelope-section"
+        title="Envelopes"
+        heading-id="envelopes-heading"
+        content-id="envelopes-content"
+        :bypassed="isEnvelopeBypassed"
+        @toggle-bypass="toggleEnvelopeBypass"
+        @remove="removeEnvelope"
+      >
+        <div class="modulation-controls envelope-controls">
           <label class="control">
             <span>Attack</span>
             <output>{{ envelope.attack }} ms</output>
@@ -338,7 +369,7 @@ onUnmounted(() => {
             <input type="range" min="0" max="450" step="1" :value="envelope.release" @input="updateEnvelopeSettings({ release: Number(($event.target as HTMLInputElement).value) })">
           </label>
         </div>
-      </section>
+      </SectionFrame>
 
       <div class="audio-bar">
         <button type="button" class="audio-button" @click="handleEnableAudio">Audio</button>
