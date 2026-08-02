@@ -61,7 +61,7 @@ export function createOscillatorSettings(): OscillatorSettings {
 }
 
 export function createNoiseSettings(): NoiseSettings {
-  return { bypassed: false, color: 'white', level: 0.5, stereoSpread: 0 }
+  return { bypassed: false, color: 'white', level: 0, stereoSpread: 0 }
 }
 
 export class SynthEngine {
