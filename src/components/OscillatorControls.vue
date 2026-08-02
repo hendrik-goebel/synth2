@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import SectionFrame from './SectionFrame.vue'
+import type { Waveform } from '../services/synthEngine'
 
 defineProps<{
   oscillatorIndex: number
@@ -7,22 +8,22 @@ defineProps<{
   detune: number
   glide: number
   level: number
-  waveform: OscillatorType
+  waveform: Waveform
   unisonDetune: number
   stereoSpread: number
   fmAmount: number
-  fmSource: OscillatorType
+  fmSource: Waveform
 }>()
 
 const emit = defineEmits<{
   'update:detune': [value: number]
   'update:glide': [value: number]
   'update:level': [value: number]
-  'update:waveform': [value: OscillatorType]
+  'update:waveform': [value: Waveform]
   'update:unisonDetune': [value: number]
   'update:stereoSpread': [value: number]
   'update:fmAmount': [value: number]
-  'update:fmSource': [value: OscillatorType]
+  'update:fmSource': [value: Waveform]
   'toggle-bypass': []
   remove: []
 }>()
@@ -44,12 +45,13 @@ const emit = defineEmits<{
         <span>Wave</span>
         <select
           :value="waveform"
-          @change="emit('update:waveform', ($event.target as HTMLSelectElement).value as OscillatorType)"
+          @change="emit('update:waveform', ($event.target as HTMLSelectElement).value as Waveform)"
         >
           <option value="sine">Sine</option>
           <option value="triangle">Triangle</option>
           <option value="sawtooth">Sawtooth</option>
           <option value="square">Square</option>
+          <option value="random">Random</option>
         </select>
       </label>
 
@@ -112,11 +114,12 @@ const emit = defineEmits<{
 
     <label class="control">
       <span>FM Wave</span>
-      <select :value="fmSource" @change="emit('update:fmSource', ($event.target as HTMLSelectElement).value as OscillatorType)">
+      <select :value="fmSource" @change="emit('update:fmSource', ($event.target as HTMLSelectElement).value as Waveform)">
         <option value="sine">Sine</option>
         <option value="triangle">Triangle</option>
         <option value="sawtooth">Sawtooth</option>
         <option value="square">Square</option>
+        <option value="random">Random</option>
       </select>
       </label>
     </div>

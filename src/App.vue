@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { MidiService } from './services/midiService'
-import { type AmplitudeModulationSettings, type OscillatorSettings, SynthEngine } from './services/synthEngine'
+import { type AmplitudeModulationSettings, type OscillatorSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
 import SectionFrame from './components/SectionFrame.vue'
 
@@ -244,11 +244,12 @@ onUnmounted(() => {
         <div class="modulation-controls">
           <label class="control">
             <span>Wave</span>
-            <select :value="amplitudeModulation.waveform" @change="updateAmplitudeModulation({ waveform: ($event.target as HTMLSelectElement).value as OscillatorType })">
+            <select :value="amplitudeModulation.waveform" @change="updateAmplitudeModulation({ waveform: ($event.target as HTMLSelectElement).value as Waveform })">
               <option value="sine">Sine</option>
               <option value="triangle">Triangle</option>
               <option value="sawtooth">Sawtooth</option>
               <option value="square">Square</option>
+              <option value="random">Random</option>
             </select>
           </label>
           <label class="control">

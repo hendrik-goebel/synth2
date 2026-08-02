@@ -12,23 +12,26 @@ type Voice = {
 
 const MAX_GAIN = 0.2
 const UNISON_LAYER_COUNT = 3
+const RANDOM_WAVE_HARMONIC_COUNT = 32
+
+export type Waveform = OscillatorType | 'random'
 
 export type OscillatorSettings = {
   bypassed: boolean
   detune: number
   glide: number
   level: number
-  waveform: OscillatorType
+  waveform: Waveform
   unisonDetune: number
   stereoSpread: number
   fmAmount: number
-  fmSource: OscillatorType
+  fmSource: Waveform
 }
 
 export type AmplitudeModulationSettings = {
   rate: number
   depth: number
-  waveform: OscillatorType
+  waveform: Waveform
 }
 
 export function createOscillatorSettings(): OscillatorSettings {
@@ -117,7 +120,7 @@ export class SynthEngine {
           this.setAmplitudeModulationDepth(voice, now)
         }
         if (settings.waveform !== undefined && voice.amplitudeModulator) {
-          voice.amplitudeModulator.type = this.amplitudeModulation!.waveform
+          this.setWaveform(voice.amplitudeModulator, this.amplitudeModulation!.waveform)
         }
       })
     })
@@ -196,6 +199,12 @@ export class SynthEngine {
         if (settings.stereoSpread !== undefined) {
           voice.panner.pan.setTargetAtTime(this.layerPan(voice.layerIndex, this.settings[oscillatorIndex].stereoSpread), now, 0.01)
         }
+        if (settings.waveform !== undefined) {
+          this.setWaveform(voice.oscillator, this.settings[oscillatorIndex].waveform)
+        }
+        if (settings.fmSource !== undefined && voice.modulator) {
+          this.setWaveform(voice.modulator, this.settings[oscillatorIndex].fmSource)
+        }
       })
     })
   }
@@ -219,7 +228,7 @@ export class SynthEngine {
   private createVoice(note: number, velocity: number, oscillatorIndex: number, layerIndex: number): Voice {
     const settings = this.settings[oscillatorIndex]
     const oscillator = this.audioContext.createOscillator()
-    oscillator.type = settings.waveform
+    this.setWaveform(oscillator, settings.waveform)
     oscillator.frequency.setValueAtTime(
       this.midiNoteToFrequency(note),
       this.audioContext.currentTime,
@@ -240,7 +249,7 @@ export class SynthEngine {
     let modulator: OscillatorNode | undefined
     if (settings.fmAmount > 0) {
       modulator = this.audioContext.createOscillator()
-      modulator.type = settings.fmSource
+      this.setWaveform(modulator, settings.fmSource)
       modulator.frequency.setValueAtTime(this.midiNoteToFrequency(note), this.audioContext.currentTime)
       const modulationGain = this.audioContext.createGain()
       modulationGain.gain.setValueAtTime(settings.fmAmount * this.midiNoteToFrequency(note), this.audioContext.currentTime)
@@ -301,7 +310,7 @@ export class SynthEngine {
     }
 
     const modulator = this.audioContext.createOscillator()
-    modulator.type = settings.waveform
+    this.setWaveform(modulator, settings.waveform)
     modulator.frequency.setValueAtTime(settings.rate, this.audioContext.currentTime)
     const modulationGain = this.audioContext.createGain()
     voice.amplitudeModulator = modulator
@@ -341,5 +350,26 @@ export class SynthEngine {
 
   private layerPan(index: number, stereoSpread: number): number {
     return index === 0 ? -stereoSpread : index === 2 ? stereoSpread : 0
+  }
+
+  private setWaveform(oscillator: OscillatorNode, waveform: Waveform): void {
+    if (waveform !== 'random') {
+      oscillator.type = waveform
+      return
+    }
+
+    oscillator.setPeriodicWave(this.createRandomPeriodicWave())
+  }
+
+  private createRandomPeriodicWave(): PeriodicWave {
+    const real = new Float32Array(RANDOM_WAVE_HARMONIC_COUNT)
+    const imaginary = new Float32Array(RANDOM_WAVE_HARMONIC_COUNT)
+
+    for (let harmonic = 1; harmonic < RANDOM_WAVE_HARMONIC_COUNT; harmonic += 1) {
+      real[harmonic] = Math.random() * 2 - 1
+      imaginary[harmonic] = Math.random() * 2 - 1
+    }
+
+    return this.audioContext.createPeriodicWave(real, imaginary)
   }
 }
