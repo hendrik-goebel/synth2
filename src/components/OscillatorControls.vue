@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+
 defineProps<{
-  frequency: number
+  oscillatorIndex: number
+  canRemove: boolean
   detune: number
   glide: number
   level: number
-  phase: number
   waveform: OscillatorType
   unisonDetune: number
   stereoSpread: number
@@ -13,23 +15,36 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'update:frequency': [value: number]
   'update:detune': [value: number]
   'update:glide': [value: number]
   'update:level': [value: number]
-  'update:phase': [value: number]
   'update:waveform': [value: OscillatorType]
   'update:unisonDetune': [value: number]
   'update:stereoSpread': [value: number]
   'update:fmAmount': [value: number]
   'update:fmSource': [value: OscillatorType]
+  remove: []
 }>()
+
+const isCollapsed = ref(false)
 </script>
 
 <template>
-  <section class="oscillator-controls" aria-labelledby="oscillator-heading">
-    <h2 id="oscillator-heading">Oscillator</h2>
+  <section class="oscillator-controls" :aria-labelledby="`oscillator-${oscillatorIndex}-heading`">
+    <h2 :id="`oscillator-${oscillatorIndex}-heading`">
+      <button
+        type="button"
+        class="oscillator-toggle"
+        :aria-expanded="!isCollapsed"
+        :aria-controls="`oscillator-${oscillatorIndex}-content`"
+        @click="isCollapsed = !isCollapsed"
+      >
+        Oscillator {{ oscillatorIndex + 1 }}
+      </button>
+      <button type="button" class="oscillator-remove" :disabled="!canRemove" @click="emit('remove')">Remove</button>
+    </h2>
 
+    <div v-show="!isCollapsed" :id="`oscillator-${oscillatorIndex}-content`" class="oscillator-content">
     <label class="control">
       <span>Wave</span>
       <select
@@ -41,19 +56,6 @@ const emit = defineEmits<{
         <option value="sawtooth">Sawtooth</option>
         <option value="square">Square</option>
       </select>
-    </label>
-
-    <label class="control">
-      <span>Pitch</span>
-      <output>{{ frequency.toFixed(2) }}</output>
-      <input
-        type="range"
-        min="20"
-        max="2000"
-        step="0.01"
-        :value="frequency"
-        @input="emit('update:frequency', Number(($event.target as HTMLInputElement).value))"
-      >
     </label>
 
     <label class="control">
@@ -96,19 +98,6 @@ const emit = defineEmits<{
     </label>
 
     <label class="control">
-      <span>Phase</span>
-      <output>{{ phase }}</output>
-      <input
-        type="range"
-        min="0"
-        max="360"
-        step="1"
-        :value="phase"
-        @input="emit('update:phase', Number(($event.target as HTMLInputElement).value))"
-      >
-    </label>
-
-    <label class="control">
       <span>Unison</span>
       <output>{{ unisonDetune }}</output>
       <input type="range" min="0" max="100" step="1" :value="unisonDetune" @input="emit('update:unisonDetune', Number(($event.target as HTMLInputElement).value))">
@@ -135,5 +124,6 @@ const emit = defineEmits<{
         <option value="square">Square</option>
       </select>
     </label>
+    </div>
   </section>
 </template>
