@@ -35,15 +35,21 @@ export class SynthEngine {
     this.activeVoice = null
   }
 
+  stopAllNotes(): void {
+    if (!this.activeVoice) {
+      return
+    }
+
+    this.stopVoice(this.activeVoice.voice)
+    this.activeVoice = null
+  }
+
   getActiveVoiceCount(): number {
     return this.activeVoice ? 1 : 0
   }
 
   destroy(): void {
-    if (this.activeVoice) {
-      this.stopVoice(this.activeVoice.voice)
-      this.activeVoice = null
-    }
+    this.stopAllNotes()
     void this.audioContext.close()
   }
 

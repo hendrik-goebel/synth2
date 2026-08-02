@@ -70,6 +70,11 @@ function handleChannelChange() {
   midiService.setChannel(selectedChannel.value)
 }
 
+function handlePanic() {
+  synth.stopAllNotes()
+  activeVoices.value = synth.getActiveVoiceCount()
+}
+
 onMounted(() => {
   midiService.setChannel(selectedChannel.value)
 })
@@ -94,6 +99,10 @@ onUnmounted(() => {
       <div class="row">
         <button type="button" @click="handleConnectMidi">Connect MIDI</button>
         <span>{{ midiStatus }}</span>
+      </div>
+
+      <div class="row">
+        <button type="button" class="panic-button" @click="handlePanic">Panic: Stop All Notes</button>
       </div>
 
       <label class="row field">

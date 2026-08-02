@@ -76,6 +76,12 @@ button {
   cursor: pointer;
 }
 
+.panic-button {
+  background: #7f1d1d;
+  border-color: #ef4444;
+  font-weight: 600;
+}
+
 button:disabled,
 select:disabled {
   cursor: not-allowed;
