@@ -11,6 +11,7 @@ type Voice = {
   velocity: number
   oscillatorIndex?: number
   layerIndex?: number
+  baseDetune?: number
   stopping: boolean
 }
 
@@ -23,6 +24,8 @@ const ENVELOPE_DECAY_MAX_MS = 150
 const ENVELOPE_HOLD_MAX_MS = 150
 const ENVELOPE_RELEASE_MAX_MS = 450
 const ENVELOPE_BYPASS_RELEASE_MS = 20
+const ENVELOPE_GAIN_EPSILON = 0.0001
+const PITCH_ENVELOPE_DEPTH_CENTS = 240
 
 export type Waveform = OscillatorType | 'random'
 export type NoiseColor = 'white' | 'pink' | 'brown'
@@ -52,11 +55,18 @@ export type AmplitudeModulationSettings = {
   waveform: Waveform
 }
 
+export type EnvelopeCurve = 'linear' | 'exponential'
+export type EnvelopeDestination = 'volume' | 'pitch' | 'amDepth' | 'noiseLevel'
+
 export type EnvelopeSettings = {
   attack: number
   decay: number
   hold: number
   release: number
+  velocity: number
+  attackCurve: EnvelopeCurve
+  releaseCurve: EnvelopeCurve
+  destination: EnvelopeDestination
 }
 
 export function createOscillatorSettings(): OscillatorSettings {
@@ -78,7 +88,7 @@ export function createNoiseSettings(): NoiseSettings {
 }
 
 export function createEnvelopeSettings(): EnvelopeSettings {
-  return { attack: 4, decay: 0, hold: 0, release: 80 }
+  return { attack: 4, decay: 0, hold: 0, release: 80, velocity: 0, attackCurve: 'linear', releaseCurve: 'linear', destination: 'volume' }
 }
 
 export class SynthEngine {
@@ -89,8 +99,7 @@ export class SynthEngine {
   private noiseSettings?: NoiseSettings
   private amplitudeModulation?: AmplitudeModulationSettings
   private amplitudeModulationBypassed = false
-  private envelopeSettings?: EnvelopeSettings = createEnvelopeSettings()
-  private envelopeBypassed = false
+  private envelopeSettings: { settings: EnvelopeSettings; bypassed: boolean }[] = [{ settings: createEnvelopeSettings(), bypassed: false }]
 
   constructor(initialSettings: OscillatorSettings = createOscillatorSettings()) {
     this.settings = [{ ...initialSettings }]
@@ -149,7 +158,8 @@ export class SynthEngine {
       const oscillator = voice.oscillator!
       const updated = this.settings[oscillatorIndex]
       if (changes.detune !== undefined || changes.unisonDetune !== undefined) {
-        oscillator.detune.setTargetAtTime(updated.detune + this.layerDetune(voice.layerIndex!, updated.unisonDetune), now, 0.01)
+        voice.baseDetune = updated.detune + this.layerDetune(voice.layerIndex!, updated.unisonDetune)
+        oscillator.detune.setTargetAtTime(voice.baseDetune, now, 0.01)
       }
       if (changes.level !== undefined || changes.bypassed !== undefined) {
         voice.gainNode.gain.setTargetAtTime(this.sourceGain(voice), now, 0.01)
@@ -224,47 +234,27 @@ export class SynthEngine {
     this.activeVoices.forEach(({ voices }) => voices.forEach((voice) => this.setAmplitudeModulationDepth(voice, now)))
   }
 
-  setEnvelopeSettings(changes: Partial<EnvelopeSettings>): void {
-    if (!this.envelopeSettings) throw new Error('Envelope is not enabled')
-    this.envelopeSettings = {
-      attack: this.clampEnvelopeTime(changes.attack, this.envelopeSettings.attack, ENVELOPE_ATTACK_MAX_MS),
-      decay: this.clampEnvelopeTime(changes.decay, this.envelopeSettings.decay, ENVELOPE_DECAY_MAX_MS),
-      hold: this.clampEnvelopeTime(changes.hold, this.envelopeSettings.hold, ENVELOPE_HOLD_MAX_MS),
-      release: this.clampEnvelopeTime(changes.release, this.envelopeSettings.release, ENVELOPE_RELEASE_MAX_MS),
-    }
+  setEnvelopeSettings(index: number, changes: Partial<EnvelopeSettings>): void {
+    const envelope = this.envelopeSettings[index]
+    if (!envelope) throw new RangeError(`Unknown envelope index: ${index}`)
+    envelope.settings = this.normalizeEnvelopeSettings(changes, envelope.settings)
   }
 
-  addEnvelope(settings: EnvelopeSettings = createEnvelopeSettings()): void {
-    if (this.envelopeSettings) throw new Error('Envelope is already enabled')
-    this.envelopeSettings = {
-      attack: this.clampEnvelopeTime(settings.attack, 0, ENVELOPE_ATTACK_MAX_MS),
-      decay: this.clampEnvelopeTime(settings.decay, 0, ENVELOPE_DECAY_MAX_MS),
-      hold: this.clampEnvelopeTime(settings.hold, 0, ENVELOPE_HOLD_MAX_MS),
-      release: this.clampEnvelopeTime(settings.release, 0, ENVELOPE_RELEASE_MAX_MS),
-    }
-    this.envelopeBypassed = false
+  addEnvelope(settings: EnvelopeSettings = createEnvelopeSettings()): number {
+    this.envelopeSettings.push({ settings: this.normalizeEnvelopeSettings(settings, createEnvelopeSettings()), bypassed: false })
+    return this.envelopeSettings.length - 1
   }
 
-  removeEnvelope(): void {
-    if (!this.envelopeSettings) throw new Error('Envelope is not enabled')
-    this.envelopeSettings = undefined
-    this.envelopeBypassed = false
-    const now = this.audioContext.currentTime
-    this.activeVoices.forEach(({ voices }) => voices.forEach((voice) => {
-      voice.envelopeGain.gain.cancelScheduledValues(now)
-      voice.envelopeGain.gain.setTargetAtTime(1, now, 0.01)
-    }))
+  removeEnvelope(index: number): void {
+    if (!this.envelopeSettings[index]) throw new RangeError(`Unknown envelope index: ${index}`)
+    this.envelopeSettings.splice(index, 1)
+    if (this.envelopeSettings.length === 0) this.envelopeSettings.push({ settings: createEnvelopeSettings(), bypassed: false })
   }
 
-  setEnvelopeBypassed(bypassed: boolean): void {
-    if (!this.envelopeSettings) throw new Error('Envelope is not enabled')
-    this.envelopeBypassed = bypassed
-    if (!bypassed) return
-    const now = this.audioContext.currentTime
-    this.activeVoices.forEach(({ voices }) => voices.forEach((voice) => {
-      voice.envelopeGain.gain.cancelScheduledValues(now)
-      voice.envelopeGain.gain.setTargetAtTime(1, now, 0.01)
-    }))
+  setEnvelopeBypassed(index: number, bypassed: boolean): void {
+    const envelope = this.envelopeSettings[index]
+    if (!envelope) throw new RangeError(`Unknown envelope index: ${index}`)
+    envelope.bypassed = bypassed
   }
 
   destroy(): void {
@@ -286,8 +276,11 @@ export class SynthEngine {
     const oscillator = this.audioContext.createOscillator()
     this.setWaveform(oscillator, settings.waveform)
     oscillator.frequency.setValueAtTime(this.midiNoteToFrequency(note), this.audioContext.currentTime)
-    oscillator.detune.setValueAtTime(settings.detune + this.layerDetune(layerIndex, settings.unisonDetune), this.audioContext.currentTime)
+    const baseDetune = settings.detune + this.layerDetune(layerIndex, settings.unisonDetune)
+    oscillator.detune.setValueAtTime(baseDetune, this.audioContext.currentTime)
     const voice = this.createVoice(oscillator, 'oscillator', velocity, oscillatorIndex, layerIndex)
+    voice.baseDetune = baseDetune
+    this.applyPitchEnvelopeOnNoteOn(voice, this.audioContext.currentTime)
     oscillator.start()
     if (settings.fmAmount > 0) {
       const modulator = this.audioContext.createOscillator()
@@ -305,6 +298,7 @@ export class SynthEngine {
   private createNoiseVoice(velocity: number): Voice {
     const source = this.createNoiseSource()
     const voice = this.createVoice(source, 'noise', velocity)
+    this.applyNoiseLevelEnvelopeOnNoteOn(voice, this.audioContext.currentTime)
     source.start()
     return voice
   }
@@ -318,13 +312,19 @@ export class SynthEngine {
     const now = this.audioContext.currentTime
     gainNode.gain.setValueAtTime(this.sourceGain(voice), now)
     const envelope = this.activeEnvelopeSettings()
-    if (envelope) {
+    if (envelope?.destination === 'volume') {
+      const peakGain = this.envelopePeakGain(voice.velocity, envelope.velocity)
       envelopeGain.gain.setValueAtTime(0, now)
       const attackStart = now + envelope.decay / 1000
       const attackEnd = attackStart + envelope.attack / 1000
-      envelopeGain.gain.setValueAtTime(0, attackStart)
-      if (envelope.attack > 0) envelopeGain.gain.linearRampToValueAtTime(1, attackEnd)
-      else envelopeGain.gain.setValueAtTime(1, attackStart)
+      if (envelope.attackCurve === 'exponential' && envelope.attack > 0) {
+        envelopeGain.gain.setValueAtTime(ENVELOPE_GAIN_EPSILON, attackStart)
+        envelopeGain.gain.exponentialRampToValueAtTime(Math.max(peakGain, ENVELOPE_GAIN_EPSILON), attackEnd)
+      } else {
+        envelopeGain.gain.setValueAtTime(0, attackStart)
+        if (envelope.attack > 0) envelopeGain.gain.linearRampToValueAtTime(peakGain, attackEnd)
+        else envelopeGain.gain.setValueAtTime(peakGain, attackStart)
+      }
     } else {
       envelopeGain.gain.setValueAtTime(1, now)
     }
@@ -377,13 +377,18 @@ export class SynthEngine {
     voice.stopping = true
     const now = this.audioContext.currentTime
     const envelope = this.activeEnvelopeSettings()
-    const holdEnd = now + (envelope?.hold ?? 0) / 1000
-    const releaseMs = envelope?.release ?? ENVELOPE_BYPASS_RELEASE_MS
+    const volumeEnvelope = envelope?.destination === 'volume' ? envelope : undefined
+    const holdEnd = now + (volumeEnvelope?.hold ?? 0) / 1000
+    const releaseMs = volumeEnvelope?.release ?? ENVELOPE_BYPASS_RELEASE_MS
     const stopAt = holdEnd + releaseMs / 1000
+    const currentGain = Math.max(voice.envelopeGain.gain.value, 0)
     voice.envelopeGain.gain.cancelScheduledValues(now)
-    voice.envelopeGain.gain.setValueAtTime(voice.envelopeGain.gain.value, now)
-    voice.envelopeGain.gain.setValueAtTime(voice.envelopeGain.gain.value, holdEnd)
-    if (releaseMs > 0) voice.envelopeGain.gain.linearRampToValueAtTime(0, stopAt)
+    voice.envelopeGain.gain.setValueAtTime(currentGain, now)
+    voice.envelopeGain.gain.setValueAtTime(currentGain, holdEnd)
+    if (releaseMs > 0 && volumeEnvelope?.releaseCurve === 'exponential' && currentGain > ENVELOPE_GAIN_EPSILON) {
+      voice.envelopeGain.gain.exponentialRampToValueAtTime(ENVELOPE_GAIN_EPSILON, stopAt)
+      voice.envelopeGain.gain.setValueAtTime(0, stopAt)
+    } else if (releaseMs > 0) voice.envelopeGain.gain.linearRampToValueAtTime(0, stopAt)
     else voice.envelopeGain.gain.setValueAtTime(0, holdEnd)
     voice.source.stop(stopAt)
     voice.source.onended = () => {
@@ -409,11 +414,14 @@ export class SynthEngine {
     this.setWaveform(modulator, this.amplitudeModulation!.waveform)
     modulator.frequency.setValueAtTime(this.amplitudeModulation!.rate, this.audioContext.currentTime)
     const gain = this.audioContext.createGain()
-    gain.gain.setValueAtTime(this.amplitudeModulationBypassed ? 0 : this.amplitudeModulationGain(voice), this.audioContext.currentTime)
+    const envelope = this.activeEnvelopeSettings()
+    const initialDepth = this.amplitudeModulationBypassed || envelope?.destination === 'amDepth' ? 0 : this.amplitudeModulationGain(voice)
+    gain.gain.setValueAtTime(initialDepth, this.audioContext.currentTime)
     modulator.connect(gain).connect(voice.gainNode.gain)
     modulator.start()
     voice.amplitudeModulator = modulator
     voice.amplitudeModulationGain = gain
+    this.applyAmplitudeModulationDepthEnvelopeOnNoteOn(voice, this.audioContext.currentTime)
   }
 
   private removeAmplitudeModulationFromVoice(voice: Voice): void {
@@ -480,8 +488,146 @@ export class SynthEngine {
     return Math.max(0, Math.min(value, max))
   }
 
-  private activeEnvelopeSettings(): EnvelopeSettings | undefined {
-    if (!this.envelopeSettings || this.envelopeBypassed) return undefined
-    return this.envelopeSettings
+  private clampUnit(value: number | undefined, fallback: number): number {
+    if (value === undefined) return fallback
+    return Math.max(0, Math.min(value, 1))
+  }
+
+  private clampEnvelopeCurve(value: EnvelopeCurve | undefined, fallback: EnvelopeCurve): EnvelopeCurve {
+    return value === 'linear' || value === 'exponential' ? value : fallback
+  }
+
+  private clampEnvelopeDestination(value: EnvelopeDestination | undefined, fallback: EnvelopeDestination): EnvelopeDestination {
+    return value === 'volume' || value === 'pitch' || value === 'amDepth' || value === 'noiseLevel' ? value : fallback
+  }
+
+  private envelopePeakGain(velocity: number, velocityAmount: number): number {
+    return Math.max(0, Math.min(1, (1 - velocityAmount) + velocity * velocityAmount))
+  }
+
+  private applyPitchEnvelopeOnNoteOn(voice: Voice, now: number): void {
+    const envelope = this.activeEnvelopeSettings()
+    if (!envelope || envelope.destination !== 'pitch' || !voice.oscillator || voice.baseDetune === undefined) {
+      return
+    }
+    const depth = PITCH_ENVELOPE_DEPTH_CENTS * this.envelopePeakGain(voice.velocity, envelope.velocity)
+    const baseDetune = voice.baseDetune
+    const peakDetune = voice.baseDetune + depth
+    const attackStart = now
+    const attackDuration = envelope.attack / 1000
+    const decayDuration = (envelope.decay > 0 ? envelope.decay : envelope.release) / 1000
+    const holdDuration = envelope.hold / 1000
+    const detune = voice.oscillator.detune
+
+    detune.cancelScheduledValues(now)
+    detune.setValueAtTime(baseDetune, now)
+    if (attackDuration <= 0) {
+      detune.setValueAtTime(peakDetune, attackStart)
+    } else if (envelope.attackCurve === 'linear') {
+      detune.linearRampToValueAtTime(peakDetune, attackStart + attackDuration)
+    } else {
+      const pointCount = 32
+      const curve = new Float32Array(pointCount)
+      for (let index = 0; index < pointCount; index += 1) {
+        const t = index / (pointCount - 1)
+        const eased = Math.pow(t, 2.5)
+        curve[index] = baseDetune + (peakDetune - baseDetune) * eased
+      }
+      detune.setValueCurveAtTime(curve, attackStart, attackDuration)
+    }
+
+    const decayStart = attackStart + attackDuration
+    const decayEnd = decayStart + holdDuration + decayDuration
+    detune.setValueAtTime(peakDetune, decayStart + holdDuration)
+    if (decayDuration <= 0) {
+      detune.setValueAtTime(baseDetune, decayStart + holdDuration)
+      return
+    }
+
+    if (envelope.releaseCurve === 'linear') {
+      detune.linearRampToValueAtTime(baseDetune, decayEnd)
+      return
+    }
+
+    const pointCount = 32
+    const curve = new Float32Array(pointCount)
+    for (let index = 0; index < pointCount; index += 1) {
+      const t = index / (pointCount - 1)
+      const eased = Math.pow(t, 2.5)
+      curve[index] = peakDetune + (baseDetune - peakDetune) * eased
+    }
+    detune.setValueCurveAtTime(curve, decayStart + holdDuration, decayDuration)
+  }
+
+  private applyAmplitudeModulationDepthEnvelopeOnNoteOn(voice: Voice, now: number): void {
+    const envelope = this.activeEnvelopeSettings()
+    if (!envelope || envelope.destination !== 'amDepth' || !voice.amplitudeModulationGain || this.amplitudeModulationBypassed) {
+      return
+    }
+    const peak = this.amplitudeModulationGain(voice) * this.envelopePeakGain(voice.velocity, envelope.velocity)
+    this.applyPositiveEnvelopeOnNoteOn(voice.amplitudeModulationGain.gain, now, envelope, 0, peak)
+  }
+
+  private applyNoiseLevelEnvelopeOnNoteOn(voice: Voice, now: number): void {
+    const envelope = this.activeEnvelopeSettings()
+    if (!envelope || envelope.destination !== 'noiseLevel' || voice.kind !== 'noise') {
+      return
+    }
+    const peak = this.sourceGain(voice) * this.envelopePeakGain(voice.velocity, envelope.velocity)
+    this.applyPositiveEnvelopeOnNoteOn(voice.gainNode.gain, now, envelope, 0, peak)
+  }
+
+  private applyPositiveEnvelopeOnNoteOn(param: AudioParam, now: number, envelope: EnvelopeSettings, baseValue: number, peakValue: number): void {
+    const attackDuration = envelope.attack / 1000
+    const holdDuration = envelope.hold / 1000
+    const decayDuration = (envelope.decay > 0 ? envelope.decay : envelope.release) / 1000
+    const attackEnd = now + attackDuration
+    const decayStart = attackEnd + holdDuration
+    const decayEnd = decayStart + decayDuration
+    const safeBase = Math.max(baseValue, ENVELOPE_GAIN_EPSILON)
+    const safePeak = Math.max(peakValue, ENVELOPE_GAIN_EPSILON)
+
+    param.cancelScheduledValues(now)
+    if (attackDuration <= 0) {
+      param.setValueAtTime(peakValue, now)
+    } else if (envelope.attackCurve === 'exponential' && peakValue > ENVELOPE_GAIN_EPSILON) {
+      param.setValueAtTime(safeBase, now)
+      param.exponentialRampToValueAtTime(safePeak, attackEnd)
+      if (baseValue === 0) param.setValueAtTime(0, now)
+    } else {
+      param.setValueAtTime(baseValue, now)
+      param.linearRampToValueAtTime(peakValue, attackEnd)
+    }
+
+    param.setValueAtTime(peakValue, decayStart)
+    if (decayDuration <= 0) {
+      param.setValueAtTime(baseValue, decayStart)
+      return
+    }
+
+    if (envelope.releaseCurve === 'exponential' && peakValue > ENVELOPE_GAIN_EPSILON) {
+      param.exponentialRampToValueAtTime(safeBase, decayEnd)
+      if (baseValue === 0) param.setValueAtTime(0, decayEnd)
+      return
+    }
+
+    param.linearRampToValueAtTime(baseValue, decayEnd)
+  }
+
+  private normalizeEnvelopeSettings(changes: Partial<EnvelopeSettings>, fallback: EnvelopeSettings): EnvelopeSettings {
+    return {
+      attack: this.clampEnvelopeTime(changes.attack, fallback.attack, ENVELOPE_ATTACK_MAX_MS),
+      decay: this.clampEnvelopeTime(changes.decay, fallback.decay, ENVELOPE_DECAY_MAX_MS),
+      hold: this.clampEnvelopeTime(changes.hold, fallback.hold, ENVELOPE_HOLD_MAX_MS),
+      release: this.clampEnvelopeTime(changes.release, fallback.release, ENVELOPE_RELEASE_MAX_MS),
+      velocity: this.clampUnit(changes.velocity, fallback.velocity),
+      attackCurve: this.clampEnvelopeCurve(changes.attackCurve, fallback.attackCurve),
+      releaseCurve: this.clampEnvelopeCurve(changes.releaseCurve, fallback.releaseCurve),
+      destination: this.clampEnvelopeDestination(changes.destination, fallback.destination),
+    }
+  }
+
+  private activeEnvelopeSettings(destination?: EnvelopeDestination): EnvelopeSettings | undefined {
+    return this.envelopeSettings.find((envelope) => !envelope.bypassed && (!destination || envelope.settings.destination === destination))?.settings
   }
 }

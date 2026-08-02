@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { MidiService } from './services/midiService'
-import { createEnvelopeSettings, createNoiseSettings, type AmplitudeModulationSettings, type EnvelopeSettings, type NoiseSettings, type OscillatorSettings, type Waveform, SynthEngine } from './services/synthEngine'
+import { createEnvelopeSettings, createNoiseSettings, type AmplitudeModulationSettings, type EnvelopeCurve, type EnvelopeDestination, type EnvelopeSettings, type NoiseSettings, type OscillatorSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
 import NoiseControls from './components/NoiseControls.vue'
 import SectionFrame from './components/SectionFrame.vue'
+
+type EnvelopeModule = EnvelopeSettings & { bypassed: boolean }
 
 const waveforms: OscillatorType[] = ['sine', 'triangle', 'sawtooth', 'square']
 const initialOscillatorSettings = createRandomOscillatorSettings()
@@ -18,10 +20,10 @@ const activeVoices = ref(0)
 const oscillators = ref<OscillatorSettings[]>([initialOscillatorSettings])
 const noise = ref<NoiseSettings | null>(null)
 const amplitudeModulation = ref<AmplitudeModulationSettings | null>(null)
-const envelope = ref<EnvelopeSettings | null>(createEnvelopeSettings())
+const envelopes = ref<EnvelopeModule[]>([{ ...createEnvelopeSettings(), bypassed: false }])
 const isAmplitudeModulationBypassed = ref(false)
-const isEnvelopeBypassed = ref(false)
 const areOscillatorsCollapsed = ref(false)
+const areEnvelopesCollapsed = ref(false)
 let firstInteractionHandled = false
 let midiConnectionStarted = false
 
@@ -195,31 +197,25 @@ function toggleAmplitudeModulationBypass() {
 }
 
 function addEnvelope() {
-  const settings = createEnvelopeSettings()
-  envelope.value = settings
-  isEnvelopeBypassed.value = false
+  const settings = { ...createEnvelopeSettings(), bypassed: false }
   synth.addEnvelope(settings)
+  envelopes.value.push(settings)
 }
 
-function removeEnvelope() {
-  synth.removeEnvelope()
-  envelope.value = null
-  isEnvelopeBypassed.value = false
+function removeEnvelope(index: number) {
+  synth.removeEnvelope(index)
+  envelopes.value.splice(index, 1)
 }
 
-function toggleEnvelopeBypass() {
-  const bypassed = !isEnvelopeBypassed.value
-  synth.setEnvelopeBypassed(bypassed)
-  isEnvelopeBypassed.value = bypassed
+function toggleEnvelopeBypass(index: number) {
+  const bypassed = !envelopes.value[index].bypassed
+  synth.setEnvelopeBypassed(index, bypassed)
+  envelopes.value[index] = { ...envelopes.value[index], bypassed }
 }
 
-function updateEnvelopeSettings(settings: Partial<EnvelopeSettings>) {
-  if (!envelope.value) {
-    return
-  }
-
-  envelope.value = { ...envelope.value, ...settings }
-  synth.setEnvelopeSettings(settings)
+function updateEnvelopeSettings(index: number, settings: Partial<EnvelopeSettings>) {
+  envelopes.value[index] = { ...envelopes.value[index], ...settings }
+  synth.setEnvelopeSettings(index, settings)
 }
 
 function toggleOscillatorBypass(index: number) {
@@ -288,7 +284,6 @@ onUnmounted(() => {
             <button type="button" class="add-oscillator-button" @click="addOscillator">Add OSC</button>
             <button v-if="!noise" type="button" class="add-oscillator-button" @click="addNoise">Add Noise</button>
             <button v-if="!amplitudeModulation" type="button" class="add-am-button" @click="addAmplitudeModulation">Add AM</button>
-            <button v-if="!envelope" type="button" class="add-env-button" @click="addEnvelope">Add ENV</button>
           </div>
         </div>
       </section>
@@ -337,39 +332,85 @@ onUnmounted(() => {
         </div>
       </SectionFrame>
 
-      <SectionFrame
-        v-if="envelope"
-        class="envelope-section"
-        title="Envelopes"
-        heading-id="envelopes-heading"
-        content-id="envelopes-content"
-        :bypassed="isEnvelopeBypassed"
-        @toggle-bypass="toggleEnvelopeBypass"
-        @remove="removeEnvelope"
-      >
-        <div class="modulation-controls envelope-controls">
+      <section class="oscillators-section" aria-labelledby="envelopes-heading">
+        <h2 id="envelopes-heading">
+          <button
+            type="button"
+            class="oscillators-toggle"
+            :aria-expanded="!areEnvelopesCollapsed"
+            aria-controls="envelopes-content"
+            @click="areEnvelopesCollapsed = !areEnvelopesCollapsed"
+          >
+            Envelopes
+          </button>
+        </h2>
+        <div v-show="!areEnvelopesCollapsed" id="envelopes-content" class="oscillators-content">
+          <SectionFrame
+            v-for="(envelope, index) in envelopes"
+            :key="index"
+            class="envelope-section"
+            :title="`Envelope ${index + 1}`"
+            :heading-id="`envelope-${index}-heading`"
+            :content-id="`envelope-${index}-content`"
+            :bypassed="envelope.bypassed"
+            @toggle-bypass="toggleEnvelopeBypass(index)"
+            @remove="removeEnvelope(index)"
+          >
+            <div class="modulation-controls envelope-controls">
           <label class="control">
             <span>Attack</span>
             <output>{{ envelope.attack }} ms</output>
-            <input type="range" min="0" max="300" step="1" :value="envelope.attack" @input="updateEnvelopeSettings({ attack: Number(($event.target as HTMLInputElement).value) })">
+            <input type="range" min="0" max="300" step="1" :value="envelope.attack" @input="updateEnvelopeSettings(index, { attack: Number(($event.target as HTMLInputElement).value) })">
           </label>
           <label class="control">
             <span>Decay</span>
             <output>{{ envelope.decay }} ms</output>
-            <input type="range" min="0" max="150" step="1" :value="envelope.decay" @input="updateEnvelopeSettings({ decay: Number(($event.target as HTMLInputElement).value) })">
+            <input type="range" min="0" max="150" step="1" :value="envelope.decay" @input="updateEnvelopeSettings(index, { decay: Number(($event.target as HTMLInputElement).value) })">
           </label>
           <label class="control">
             <span>Hold</span>
             <output>{{ envelope.hold }} ms</output>
-            <input type="range" min="0" max="150" step="1" :value="envelope.hold" @input="updateEnvelopeSettings({ hold: Number(($event.target as HTMLInputElement).value) })">
+            <input type="range" min="0" max="150" step="1" :value="envelope.hold" @input="updateEnvelopeSettings(index, { hold: Number(($event.target as HTMLInputElement).value) })">
           </label>
           <label class="control">
             <span>Release</span>
             <output>{{ envelope.release }} ms</output>
-            <input type="range" min="0" max="450" step="1" :value="envelope.release" @input="updateEnvelopeSettings({ release: Number(($event.target as HTMLInputElement).value) })">
+            <input type="range" min="0" max="450" step="1" :value="envelope.release" @input="updateEnvelopeSettings(index, { release: Number(($event.target as HTMLInputElement).value) })">
           </label>
+          <label class="control">
+            <span>Velocity</span>
+            <output>{{ Math.round(envelope.velocity * 100) }}%</output>
+            <input type="range" min="0" max="1" step="0.01" :value="envelope.velocity" @input="updateEnvelopeSettings(index, { velocity: Number(($event.target as HTMLInputElement).value) })">
+          </label>
+          <label class="control">
+            <span>Attack Curve</span>
+            <select :value="envelope.attackCurve" @change="updateEnvelopeSettings(index, { attackCurve: ($event.target as HTMLSelectElement).value as EnvelopeCurve })">
+              <option value="linear">Linear</option>
+              <option value="exponential">Exponential</option>
+            </select>
+          </label>
+          <label class="control">
+            <span>Release Curve</span>
+            <select :value="envelope.releaseCurve" @change="updateEnvelopeSettings(index, { releaseCurve: ($event.target as HTMLSelectElement).value as EnvelopeCurve })">
+              <option value="linear">Linear</option>
+              <option value="exponential">Exponential</option>
+            </select>
+          </label>
+          <label class="control">
+            <span>Destination</span>
+            <select :value="envelope.destination" @change="updateEnvelopeSettings(index, { destination: ($event.target as HTMLSelectElement).value as EnvelopeDestination })">
+              <option value="volume">Volume</option>
+              <option value="pitch">Pitch</option>
+              <option value="amDepth">AM Depth</option>
+              <option value="noiseLevel">Noise Level</option>
+            </select>
+          </label>
+            </div>
+          </SectionFrame>
+
+          <button type="button" class="add-env-button" @click="addEnvelope">Add ENV</button>
         </div>
-      </SectionFrame>
+      </section>
 
       <div class="audio-bar">
         <button type="button" class="audio-button" @click="handleEnableAudio">Audio</button>
