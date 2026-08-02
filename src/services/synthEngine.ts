@@ -1,6 +1,8 @@
 type Voice = {
   oscillator: OscillatorNode
   modulator?: OscillatorNode
+  amplitudeModulator?: OscillatorNode
+  amplitudeModulationGain?: GainNode
   gainNode: GainNode
   panner: StereoPannerNode
   velocity: number
@@ -22,6 +24,12 @@ export type OscillatorSettings = {
   fmSource: OscillatorType
 }
 
+export type AmplitudeModulationSettings = {
+  rate: number
+  depth: number
+  waveform: OscillatorType
+}
+
 export function createOscillatorSettings(): OscillatorSettings {
   return {
     detune: 0,
@@ -40,6 +48,7 @@ export class SynthEngine {
   private readonly destination = this.audioContext.destination
   private activeVoices: { note: number; velocity: number; voices: Voice[] }[] = []
   private settings: OscillatorSettings[]
+  private amplitudeModulation?: AmplitudeModulationSettings
 
   constructor(initialSettings: OscillatorSettings = createOscillatorSettings()) {
     this.settings = [{ ...initialSettings }]
@@ -77,6 +86,54 @@ export class SynthEngine {
     this.activeVoices.forEach((activeVoice) => {
       activeVoice.voices.push(...this.createVoicesForOscillator(activeVoice.note, activeVoice.velocity, oscillatorIndex))
     })
+  }
+
+  addAmplitudeModulation(settings: AmplitudeModulationSettings): void {
+    if (this.amplitudeModulation) {
+      throw new Error('Amplitude modulation is already enabled')
+    }
+
+    this.amplitudeModulation = { ...settings }
+    this.activeVoices.forEach(({ voices }) => voices.forEach((voice) => this.createAmplitudeModulation(voice)))
+  }
+
+  setAmplitudeModulationSettings(settings: Partial<AmplitudeModulationSettings>): void {
+    if (!this.amplitudeModulation) {
+      throw new Error('Amplitude modulation is not enabled')
+    }
+
+    this.amplitudeModulation = { ...this.amplitudeModulation, ...settings }
+    const now = this.audioContext.currentTime
+    this.activeVoices.forEach(({ voices }) => {
+      voices.forEach((voice) => {
+        if (settings.rate !== undefined) {
+          voice.amplitudeModulator?.frequency.setTargetAtTime(this.amplitudeModulation!.rate, now, 0.01)
+        }
+        if (settings.depth !== undefined) {
+          this.setAmplitudeModulationDepth(voice, now)
+        }
+        if (settings.waveform !== undefined && voice.amplitudeModulator) {
+          voice.amplitudeModulator.type = this.amplitudeModulation!.waveform
+        }
+      })
+    })
+  }
+
+  removeAmplitudeModulation(): void {
+    if (!this.amplitudeModulation) {
+      throw new Error('Amplitude modulation is not enabled')
+    }
+
+    this.activeVoices.forEach(({ voices }) => {
+      voices.forEach((voice) => {
+        voice.amplitudeModulator?.stop()
+        voice.amplitudeModulator?.disconnect()
+        voice.amplitudeModulationGain?.disconnect()
+        voice.amplitudeModulator = undefined
+        voice.amplitudeModulationGain = undefined
+      })
+    })
+    this.amplitudeModulation = undefined
   }
 
   removeOscillator(oscillatorIndex: number): void {
@@ -121,6 +178,7 @@ export class SynthEngine {
         }
         if (settings.level !== undefined) {
           voice.gainNode.gain.setTargetAtTime(voice.velocity * MAX_GAIN * this.settings[oscillatorIndex].level / UNISON_LAYER_COUNT, now, 0.01)
+          this.setAmplitudeModulationDepth(voice, now)
         }
         if (settings.stereoSpread !== undefined) {
           voice.panner.pan.setTargetAtTime(this.layerPan(voice.layerIndex, this.settings[oscillatorIndex].stereoSpread), now, 0.01)
@@ -178,7 +236,20 @@ export class SynthEngine {
       modulator.start()
     }
 
-    return { oscillator, modulator, gainNode, panner, velocity: normalizedVelocity, oscillatorIndex, layerIndex }
+    const voice: Voice = {
+      oscillator,
+      modulator,
+      gainNode,
+      panner,
+      velocity: normalizedVelocity,
+      oscillatorIndex,
+      layerIndex,
+    }
+    if (this.amplitudeModulation) {
+      this.createAmplitudeModulation(voice)
+    }
+
+    return voice
   }
 
   private midiNoteToFrequency(note: number): number {
@@ -195,6 +266,9 @@ export class SynthEngine {
       voice.oscillator.disconnect()
       voice.modulator?.stop()
       voice.modulator?.disconnect()
+      voice.amplitudeModulator?.stop()
+      voice.amplitudeModulator?.disconnect()
+      voice.amplitudeModulationGain?.disconnect()
       voice.gainNode.disconnect()
       voice.panner.disconnect()
     }
@@ -205,6 +279,38 @@ export class SynthEngine {
     if (!active) return
     active.voices.forEach((voice) => this.stopVoice(voice))
     this.activeVoices = this.activeVoices.filter((voice) => voice !== active)
+  }
+
+  private createAmplitudeModulation(voice: Voice): void {
+    const settings = this.amplitudeModulation
+    if (!settings) {
+      return
+    }
+
+    const modulator = this.audioContext.createOscillator()
+    modulator.type = settings.waveform
+    modulator.frequency.setValueAtTime(settings.rate, this.audioContext.currentTime)
+    const modulationGain = this.audioContext.createGain()
+    voice.amplitudeModulator = modulator
+    voice.amplitudeModulationGain = modulationGain
+    modulationGain.gain.setValueAtTime(this.amplitudeModulationGain(voice), this.audioContext.currentTime)
+    modulator.connect(modulationGain)
+    modulationGain.connect(voice.gainNode.gain)
+    modulator.start()
+  }
+
+  private setAmplitudeModulationDepth(voice: Voice, time: number): void {
+    const depth = this.amplitudeModulation?.depth
+    const modulationGain = voice.amplitudeModulationGain
+    if (depth === undefined || !modulationGain) {
+      return
+    }
+
+    modulationGain.gain.setTargetAtTime(this.amplitudeModulationGain(voice), time, 0.01)
+  }
+
+  private amplitudeModulationGain(voice: Voice): number {
+    return voice.velocity * MAX_GAIN * this.settings[voice.oscillatorIndex].level * this.amplitudeModulation!.depth / UNISON_LAYER_COUNT
   }
 
   private layerDetune(index: number, unisonDetune: number): number {

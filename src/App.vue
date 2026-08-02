@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { MidiService } from './services/midiService'
-import { type OscillatorSettings, SynthEngine } from './services/synthEngine'
+import { type AmplitudeModulationSettings, type OscillatorSettings, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
 
 const waveforms: OscillatorType[] = ['sine', 'triangle', 'sawtooth', 'square']
@@ -14,6 +14,7 @@ const midiStatus = ref('MIDI not connected.')
 const audioStatus = ref('Audio locked. Interact with the synth to enable audio.')
 const activeVoices = ref(0)
 const oscillators = ref<OscillatorSettings[]>([initialOscillatorSettings])
+const amplitudeModulation = ref<AmplitudeModulationSettings | null>(null)
 const areOscillatorsCollapsed = ref(false)
 let firstInteractionHandled = false
 let midiConnectionStarted = false
@@ -130,6 +131,26 @@ function removeOscillator(index: number) {
   oscillators.value.splice(index, 1)
 }
 
+function addAmplitudeModulation() {
+  const settings: AmplitudeModulationSettings = { rate: 5, depth: 0.5, waveform: 'sine' }
+  amplitudeModulation.value = settings
+  synth.addAmplitudeModulation(settings)
+}
+
+function updateAmplitudeModulation(settings: Partial<AmplitudeModulationSettings>) {
+  if (!amplitudeModulation.value) {
+    return
+  }
+
+  amplitudeModulation.value = { ...amplitudeModulation.value, ...settings }
+  synth.setAmplitudeModulationSettings(settings)
+}
+
+function removeAmplitudeModulation() {
+  synth.removeAmplitudeModulation()
+  amplitudeModulation.value = null
+}
+
 function updateOscillatorSettings(index: number, settings: Partial<OscillatorSettings>) {
   oscillators.value[index] = { ...oscillators.value[index], ...settings }
   synth.setOscillatorSettings(index, settings)
@@ -188,7 +209,38 @@ onUnmounted(() => {
             @update:fm-source="updateOscillatorSettings(index, { fmSource: $event })"
             @remove="removeOscillator(index)"
           />
-          <button type="button" class="add-oscillator-button" @click="addOscillator">Add OSC</button>
+          <div class="module-actions">
+            <button type="button" class="add-oscillator-button" @click="addOscillator">Add OSC</button>
+            <button v-if="!amplitudeModulation" type="button" class="add-am-button" @click="addAmplitudeModulation">Add AM</button>
+          </div>
+        </div>
+      </section>
+
+      <section v-if="amplitudeModulation" class="modulation-section" aria-labelledby="am-heading">
+        <div class="modulation-heading">
+          <h2 id="am-heading">Amplitude modulation</h2>
+          <button type="button" class="modulation-remove" @click="removeAmplitudeModulation">Remove</button>
+        </div>
+        <div class="modulation-controls">
+          <label class="control">
+            <span>Wave</span>
+            <select :value="amplitudeModulation.waveform" @change="updateAmplitudeModulation({ waveform: ($event.target as HTMLSelectElement).value as OscillatorType })">
+              <option value="sine">Sine</option>
+              <option value="triangle">Triangle</option>
+              <option value="sawtooth">Sawtooth</option>
+              <option value="square">Square</option>
+            </select>
+          </label>
+          <label class="control">
+            <span>Rate</span>
+            <output>{{ amplitudeModulation.rate }} Hz</output>
+            <input type="range" min="1" max="30" step="1" :value="amplitudeModulation.rate" @input="updateAmplitudeModulation({ rate: Number(($event.target as HTMLInputElement).value) })">
+          </label>
+          <label class="control">
+            <span>Depth</span>
+            <output>{{ Math.round(amplitudeModulation.depth * 100) }}%</output>
+            <input type="range" min="0" max="1" step="0.01" :value="amplitudeModulation.depth" @input="updateAmplitudeModulation({ depth: Number(($event.target as HTMLInputElement).value) })">
+          </label>
         </div>
       </section>
 
