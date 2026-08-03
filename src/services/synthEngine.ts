@@ -28,6 +28,7 @@ const ENVELOPE_RELEASE_MAX_MS = 450
 const ENVELOPE_BYPASS_RELEASE_MS = 20
 const ENVELOPE_GAIN_EPSILON = 0.0001
 const PITCH_ENVELOPE_DEPTH_CENTS = 240
+const OVERDRIVE_OUTPUT_ATTENUATION = 40
 
 export type Waveform = OscillatorType | 'random'
 export type NoiseColor = 'white' | 'pink' | 'brown'
@@ -450,7 +451,7 @@ export class SynthEngine {
   }
 
   private applyDelaySettings(delay: DelayModule): void {
-    const { node, feedback, resonance, drive, driveGain, wet, dry, settings } = delay
+    const { node, feedback, resonance, drive, driveGain, wet, dry, output, settings } = delay
     const now = this.audioContext.currentTime
     node.delayTime.setTargetAtTime(settings.time, now, 0.08)
     const resonantFeedback = Math.min(0.98, settings.feedback + settings.resonance * 0.3)
@@ -460,8 +461,10 @@ export class SynthEngine {
     resonance.Q.setTargetAtTime(0.0001 + settings.resonance * 4, now, 0.08)
     wet.gain.setTargetAtTime(settings.mix, now, 0.01)
     dry.gain.setTargetAtTime(1 - settings.mix, now, 0.01)
+    const maximumOutputGain = (1 - settings.mix) + settings.mix / (1 - resonantFeedback)
+    output.gain.setTargetAtTime(1 / maximumOutputGain, now, 0.01)
     const amount = settings.overdrive * 100
-    const compensation = 1 / (1 + settings.overdrive * 4)
+    const compensation = 1 / (1 + settings.overdrive * OVERDRIVE_OUTPUT_ATTENUATION)
     driveGain.gain.setTargetAtTime(compensation, now, 0.01)
     const curve = new Float32Array(1024)
     for (let index = 0; index < curve.length; index += 1) {
