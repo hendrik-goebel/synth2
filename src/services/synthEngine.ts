@@ -16,6 +16,22 @@ type Voice = {
 }
 
 type DelayModule = { node: DelayNode; feedback: GainNode; resonance: BiquadFilterNode; drive: WaveShaperNode; driveGain: GainNode; wet: GainNode; dry: GainNode; output: GainNode; settings: DelaySettings }
+type ReverbModule = {
+  input: GainNode
+  preDelay: DelayNode
+  convolver: ConvolverNode
+  tone: BiquadFilterNode
+  splitter: ChannelSplitterNode
+  left: GainNode
+  right: GainNode
+  leftCross: GainNode
+  rightCross: GainNode
+  merger: ChannelMergerNode
+  wet: GainNode
+  dry: GainNode
+  output: GainNode
+  settings: ReverbSettings
+}
 
 const MAX_GAIN = 0.2
 const UNISON_LAYER_COUNT = 3
@@ -70,7 +86,19 @@ export type DelaySettings = {
   mix: number
   overdrive: number
 }
-export type EffectGroup = 'filters' | 'delays'
+export type HallType = 'small-hall' | 'wooden-hall' | 'concert-hall' | 'opera-house' | 'cathedral' | 'arena'
+
+export type ReverbSettings = {
+  bypassed: boolean
+  hallType: HallType
+  decay: number
+  preDelay: number
+  damping: number
+  width: number
+  mix: number
+}
+
+export type EffectGroup = 'filters' | 'delays' | 'reverbs'
 
 export type AmplitudeModulationSettings = {
   rate: number
@@ -126,6 +154,10 @@ export function createDelaySettings(): DelaySettings {
   return { bypassed: false, time: 0.25, feedback: 0.35, resonance: 0, mix: 0.3, overdrive: 0 }
 }
 
+export function createReverbSettings(): ReverbSettings {
+  return { bypassed: false, hallType: 'concert-hall', decay: 3.5, preDelay: 0.025, damping: 0.6, width: 0.9, mix: 0.25 }
+}
+
 export function createEnvelopeSettings(): EnvelopeSettings {
   return { attack: 4, decay: 0, hold: 0, release: 80, velocity: 0, attackCurve: 'linear', releaseCurve: 'linear', destination: 'oscillatorLevel' }
 }
@@ -139,10 +171,11 @@ export class SynthEngine {
   private noiseSettings?: NoiseSettings
   private filters: { node: BiquadFilterNode; gainNode: GainNode; settings: FilterSettings }[] = []
   private delays: DelayModule[] = []
+  private reverbs: ReverbModule[] = []
   private amplitudeModulation?: AmplitudeModulationSettings
   private amplitudeModulationBypassed = false
   private envelopeSettings: { settings: EnvelopeSettings; bypassed: boolean }[] = []
-  private effectOrder: EffectGroup[] = ['filters', 'delays']
+  private effectOrder: EffectGroup[] = ['filters', 'delays', 'reverbs']
 
   constructor(initialSettings: OscillatorSettings = createOscillatorSettings()) {
     this.settings = [{ ...initialSettings }]
@@ -323,6 +356,69 @@ export class SynthEngine {
     this.routeOutput()
   }
 
+  addReverb(settings: ReverbSettings = createReverbSettings()): void {
+    const input = this.audioContext.createGain()
+    const preDelay = this.audioContext.createDelay(0.25)
+    const convolver = this.audioContext.createConvolver()
+    const tone = this.audioContext.createBiquadFilter()
+    const splitter = this.audioContext.createChannelSplitter(2)
+    const left = this.audioContext.createGain()
+    const right = this.audioContext.createGain()
+    const leftCross = this.audioContext.createGain()
+    const rightCross = this.audioContext.createGain()
+    const merger = this.audioContext.createChannelMerger(2)
+    const wet = this.audioContext.createGain()
+    const dry = this.audioContext.createGain()
+    const output = this.audioContext.createGain()
+    const reverb = { input, preDelay, convolver, tone, splitter, left, right, leftCross, rightCross, merger, wet, dry, output, settings: { ...settings } }
+
+    input.connect(preDelay).connect(convolver).connect(tone).connect(splitter)
+    splitter.connect(left, 0).connect(merger, 0, 0)
+    splitter.connect(right, 1).connect(merger, 0, 1)
+    splitter.connect(leftCross, 0).connect(merger, 0, 1)
+    splitter.connect(rightCross, 1).connect(merger, 0, 0)
+    merger.connect(wet).connect(output)
+    input.connect(dry).connect(output)
+
+    this.reverbs.push(reverb)
+    this.applyReverbSettings(reverb, true)
+    this.routeOutput()
+  }
+
+  setReverbSettings(index: number, changes: Partial<ReverbSettings>): void {
+    const reverb = this.reverbs[index]
+    if (!reverb) throw new RangeError(`Unknown reverb index: ${index}`)
+    reverb.settings = { ...reverb.settings, ...changes }
+    this.applyReverbSettings(reverb, changes.hallType !== undefined || changes.decay !== undefined)
+  }
+
+  removeReverb(index: number): void {
+    const reverb = this.reverbs[index]
+    if (!reverb) throw new RangeError(`Unknown reverb index: ${index}`)
+    reverb.input.disconnect()
+    reverb.preDelay.disconnect()
+    reverb.convolver.disconnect()
+    reverb.tone.disconnect()
+    reverb.splitter.disconnect()
+    reverb.left.disconnect()
+    reverb.right.disconnect()
+    reverb.leftCross.disconnect()
+    reverb.rightCross.disconnect()
+    reverb.merger.disconnect()
+    reverb.wet.disconnect()
+    reverb.dry.disconnect()
+    reverb.output.disconnect()
+    this.reverbs.splice(index, 1)
+    this.routeOutput()
+  }
+
+  setReverbBypassed(index: number, bypassed: boolean): void {
+    const reverb = this.reverbs[index]
+    if (!reverb) throw new RangeError(`Unknown reverb index: ${index}`)
+    reverb.settings = { ...reverb.settings, bypassed }
+    this.routeOutput()
+  }
+
   addAmplitudeModulation(settings: AmplitudeModulationSettings): void {
     if (this.amplitudeModulation) throw new Error('Amplitude modulation is already enabled')
     this.amplitudeModulation = { ...settings }
@@ -446,6 +542,15 @@ export class SynthEngine {
           }
         })
       }
+      if (group === 'reverbs') {
+        this.reverbs.forEach((reverb) => {
+          reverb.output.disconnect()
+          if (!reverb.settings.bypassed) {
+            output.connect(reverb.input)
+            output = reverb.output
+          }
+        })
+      }
     })
     output.connect(this.destination)
   }
@@ -472,6 +577,57 @@ export class SynthEngine {
       curve[index] = amount === 0 ? input : Math.tanh(input * (1 + amount))
     }
     drive.curve = curve
+  }
+
+  private applyReverbSettings(reverb: ReverbModule, replaceImpulse: boolean): void {
+    const { preDelay, convolver, tone, left, right, leftCross, rightCross, wet, dry, output, settings } = reverb
+    const now = this.audioContext.currentTime
+    preDelay.delayTime.setTargetAtTime(settings.preDelay, now, 0.02)
+    tone.type = 'lowpass'
+    tone.frequency.setTargetAtTime(13000 - settings.damping * 9500, now, 0.04)
+    tone.Q.setTargetAtTime(0.35 + settings.damping * 0.5, now, 0.04)
+    const directGain = (1 + settings.width) / 2
+    const crossGain = (1 - settings.width) / 2
+    left.gain.setTargetAtTime(directGain, now, 0.02)
+    right.gain.setTargetAtTime(directGain, now, 0.02)
+    leftCross.gain.setTargetAtTime(crossGain, now, 0.02)
+    rightCross.gain.setTargetAtTime(crossGain, now, 0.02)
+    wet.gain.setTargetAtTime(settings.mix, now, 0.02)
+    dry.gain.setTargetAtTime(1 - settings.mix, now, 0.02)
+    output.gain.setTargetAtTime(1 / Math.max(1, (1 - settings.mix) + settings.mix * 1.4), now, 0.02)
+    if (replaceImpulse) convolver.buffer = this.createHallImpulse(settings)
+  }
+
+  private createHallImpulse(settings: ReverbSettings): AudioBuffer {
+    const hallTypes: Record<HallType, { duration: number; density: number; reflections: number }> = {
+      'small-hall': { duration: 0.72, density: 0.8, reflections: 7 },
+      'wooden-hall': { duration: 0.88, density: 0.9, reflections: 10 },
+      'concert-hall': { duration: 1, density: 1, reflections: 12 },
+      'opera-house': { duration: 1.12, density: 1.05, reflections: 15 },
+      cathedral: { duration: 1.45, density: 1.2, reflections: 18 },
+      arena: { duration: 1.8, density: 1.35, reflections: 22 },
+    }
+    const hall = hallTypes[settings.hallType]
+    const duration = Math.min(12, Math.max(0.6, settings.decay * hall.duration))
+    const frameCount = Math.ceil(this.audioContext.sampleRate * duration)
+    const impulse = this.audioContext.createBuffer(2, frameCount, this.audioContext.sampleRate)
+
+    for (let channel = 0; channel < impulse.numberOfChannels; channel += 1) {
+      const data = impulse.getChannelData(channel)
+      for (let frame = 0; frame < frameCount; frame += 1) {
+        const progress = frame / frameCount
+        const envelope = Math.pow(1 - progress, 1.2 + 2.6 / settings.decay)
+        data[frame] = (Math.random() * 2 - 1) * envelope * hall.density
+      }
+
+      for (let reflection = 1; reflection <= hall.reflections; reflection += 1) {
+        const time = 0.009 * reflection * (channel === 0 ? 1 : 1.13) + (reflection % 3) * 0.0027
+        const frame = Math.floor(time * this.audioContext.sampleRate)
+        if (frame < frameCount) data[frame] += 0.4 / Math.sqrt(reflection)
+      }
+    }
+
+    return impulse
   }
 
   private createVoicesForOscillator(note: number, velocity: number, oscillatorIndex: number): Voice[] {

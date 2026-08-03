@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { MidiService } from './services/midiService'
-import { createDelaySettings, createEnvelopeSettings, createFilterSettings, createNoiseSettings, type AmplitudeModulationSettings, type DelaySettings, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type NoiseSettings, type OscillatorSettings, type Waveform, SynthEngine } from './services/synthEngine'
+import { createDelaySettings, createEnvelopeSettings, createFilterSettings, createNoiseSettings, createReverbSettings, type AmplitudeModulationSettings, type DelaySettings, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type NoiseSettings, type OscillatorSettings, type ReverbSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
 import NoiseControls from './components/NoiseControls.vue'
 import FilterControls from './components/FilterControls.vue'
 import SectionFrame from './components/SectionFrame.vue'
 import DelayControls from './components/DelayControls.vue'
 import EnvelopeControls from './components/EnvelopeControls.vue'
+import ReverbControls from './components/ReverbControls.vue'
 
 type EnvelopeModule = EnvelopeSettings & { bypassed: boolean }
 
@@ -24,13 +25,15 @@ const oscillators = ref<OscillatorSettings[]>([initialOscillatorSettings])
 const noise = ref<NoiseSettings | null>(null)
 const filters = ref<FilterSettings[]>([createFilterSettings()])
 const delays = ref<DelaySettings[]>([])
+const reverbs = ref<ReverbSettings[]>([])
 const amplitudeModulation = ref<AmplitudeModulationSettings | null>(null)
 const envelopes = ref<EnvelopeModule[]>([])
-const effectOrder = ref<EffectGroup[]>(['filters', 'delays'])
+const effectOrder = ref<EffectGroup[]>(['filters', 'delays', 'reverbs'])
 const isAmplitudeModulationBypassed = ref(false)
 const areOscillatorsCollapsed = ref(false)
 const areFiltersCollapsed = ref(false)
 const areDelaysCollapsed = ref(false)
+const areReverbsCollapsed = ref(false)
 let firstInteractionHandled = false
 let midiConnectionStarted = false
 
@@ -212,6 +215,28 @@ function toggleDelayBypass(index: number) {
   const bypassed = !delays.value[index].bypassed
   delays.value[index] = { ...delays.value[index], bypassed }
   synth.setDelayBypassed(index, bypassed)
+}
+
+function addReverb() {
+  const settings = createReverbSettings()
+  reverbs.value.push(settings)
+  synth.addReverb(settings)
+}
+
+function removeReverb(index: number) {
+  synth.removeReverb(index)
+  reverbs.value.splice(index, 1)
+}
+
+function updateReverbSettings(index: number, settings: Partial<ReverbSettings>) {
+  reverbs.value[index] = { ...reverbs.value[index], ...settings }
+  synth.setReverbSettings(index, settings)
+}
+
+function toggleReverbBypass(index: number) {
+  const bypassed = !reverbs.value[index].bypassed
+  reverbs.value[index] = { ...reverbs.value[index], bypassed }
+  synth.setReverbBypassed(index, bypassed)
 }
 
 function updateNoiseSettings(settings: Partial<NoiseSettings>) {
@@ -473,6 +498,35 @@ onUnmounted(() => {
             @remove="removeEnvelope"
             @add="addEnvelope('delayTime')"
           />
+        </div>
+      </section>
+
+      <section class="synth-section oscillators-section effect-group" :style="{ order: effectOrder.indexOf('reverbs') }" aria-labelledby="reverbs-heading">
+        <h2 id="reverbs-heading">
+          <button type="button" class="oscillators-toggle" :aria-expanded="!areReverbsCollapsed" aria-controls="reverbs-content" @click="areReverbsCollapsed = !areReverbsCollapsed">
+            Reverbs
+          </button>
+          <span class="effect-order-actions">
+            <button type="button" :disabled="effectOrder.indexOf('reverbs') === 0" aria-label="Move Reverbs up" @click="moveEffectGroup('reverbs', -1)">↑</button>
+            <button type="button" :disabled="effectOrder.indexOf('reverbs') === effectOrder.length - 1" aria-label="Move Reverbs down" @click="moveEffectGroup('reverbs', 1)">↓</button>
+          </span>
+        </h2>
+        <div v-show="!areReverbsCollapsed" id="reverbs-content" class="oscillators-content">
+          <ReverbControls
+            v-for="(reverbSettings, index) in reverbs"
+            :key="index"
+            :reverb-index="index"
+            v-bind="reverbSettings"
+            @update:hall-type="updateReverbSettings(index, { hallType: $event })"
+            @update:decay="updateReverbSettings(index, { decay: $event })"
+            @update:pre-delay="updateReverbSettings(index, { preDelay: $event })"
+            @update:damping="updateReverbSettings(index, { damping: $event })"
+            @update:width="updateReverbSettings(index, { width: $event })"
+            @update:mix="updateReverbSettings(index, { mix: $event })"
+            @toggle-bypass="toggleReverbBypass(index)"
+            @remove="removeReverb(index)"
+          />
+          <button type="button" class="add-filter-button" @click="addReverb">Add Reverb</button>
         </div>
       </section>
 
