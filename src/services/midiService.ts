@@ -3,6 +3,7 @@ type NavigatorWithMidi = Navigator & {
 }
 
 type MidiNoteEvent = {
+  channel: number
   note: number
   velocity: number
 }
@@ -25,7 +26,6 @@ export class MidiService {
   private readonly onStateChange: (state: MidiState) => void
   private midiAccess: MIDIAccess | null = null
   private selectedInputId: string | null = null
-  private selectedChannel = 1
 
   constructor(options: MidiServiceOptions) {
     this.onNoteOn = options.onNoteOn
@@ -67,8 +67,8 @@ export class MidiService {
   }
 
   setChannel(channel: number): void {
-    this.selectedChannel = Math.min(Math.max(channel, 1), 16)
-    this.publishState(`Listening on MIDI channel ${this.selectedChannel}.`)
+    const selectedChannel = Math.min(Math.max(channel, 1), 16)
+    this.publishState(`Selected MIDI channel ${selectedChannel}.`)
   }
 
   destroy(): void {
@@ -131,17 +131,13 @@ export class MidiService {
     const command = status & 0xf0
     const channel = (status & 0x0f) + 1
 
-    if (channel !== this.selectedChannel) {
-      return
-    }
-
     if (command === 0x90 && velocity > 0) {
-      this.onNoteOn({ note, velocity })
+      this.onNoteOn({ channel, note, velocity })
       return
     }
 
     if (command === 0x80 || (command === 0x90 && velocity === 0)) {
-      this.onNoteOff({ note, velocity })
+      this.onNoteOff({ channel, note, velocity })
     }
   }
 

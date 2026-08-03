@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue'
 import { MidiService } from './services/midiService'
-import { createDelaySettings, createEnvelopeSettings, createFilterSettings, createNoiseSettings, createReverbSettings, createCompressorSettings, createGateSettings, createLimiterSettings, type AmplitudeModulationSettings, type DelaySettings, type DynamicsSettings, type DynamicsSettingsChanges, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type LfoSettings, type NoiseSettings, type OscillatorSettings, type ReverbSettings, type Waveform, SynthEngine } from './services/synthEngine'
+import { createDelaySettings, createEnvelopeSettings, createFilterSettings, createNoiseSettings, createReverbSettings, createCompressorSettings, createGateSettings, createLimiterSettings, createOscillatorSettings, type AmplitudeModulationSettings, type DelaySettings, type DynamicsSettings, type DynamicsSettingsChanges, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type LfoSettings, type NoiseSettings, type OscillatorSettings, type ReverbSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
 import NoiseControls from './components/NoiseControls.vue'
 import FilterControls from './components/FilterControls.vue'
@@ -16,10 +16,25 @@ import LimiterControls from './components/LimiterControls.vue'
 
 type EnvelopeModule = EnvelopeSettings & { bypassed: boolean }
 type LfoControlModule = LfoSettings & { bypassed: boolean }
+type ChannelState = {
+  synth: SynthEngine
+  oscillators: OscillatorSettings[]
+  noise: NoiseSettings | null
+  filters: FilterSettings[]
+  delays: DelaySettings[]
+  bpm: number
+  reverbs: ReverbSettings[]
+  amplitudeModulation: AmplitudeModulationSettings | null
+  envelopes: EnvelopeModule[]
+  lfos: LfoControlModule[]
+  dynamics: DynamicsSettings[]
+  effectOrder: EffectGroup[]
+  isAmplitudeModulationBypassed: boolean
+}
 
 const waveforms: OscillatorType[] = ['sine', 'triangle', 'sawtooth', 'square']
 const initialOscillatorSettings = createRandomOscillatorSettings()
-const synth = new SynthEngine(initialOscillatorSettings)
+let activeSynth = new SynthEngine(initialOscillatorSettings)
 const selectedChannel = ref(1)
 const selectedInputId = ref('')
 const midiInputs = ref<{ id: string; name: string }[]>([])
@@ -38,6 +53,7 @@ const lfos = ref<LfoControlModule[]>([])
 const dynamics = ref<DynamicsSettings[]>([])
 const effectOrder = ref<EffectGroup[]>(['filters', 'delays', 'reverbs', 'dynamics'])
 const isAmplitudeModulationBypassed = ref(false)
+const channels = shallowRef<ChannelState[]>([])
 const areOscillatorsCollapsed = ref(false)
 const areFiltersCollapsed = ref(false)
 const areDynamicsCollapsed = ref(false)
@@ -45,6 +61,102 @@ const areDelaysCollapsed = ref(false)
 const areReverbsCollapsed = ref(false)
 let firstInteractionHandled = false
 let midiConnectionStarted = false
+let audioEnabled = false
+
+function saveActiveChannel() {
+  const channel = channels.value[selectedChannel.value - 1]
+  if (!channel) return
+  channel.synth = activeSynth
+  channel.oscillators = oscillators.value
+  channel.noise = noise.value
+  channel.filters = filters.value
+  channel.delays = delays.value
+  channel.bpm = bpm.value
+  channel.reverbs = reverbs.value
+  channel.amplitudeModulation = amplitudeModulation.value
+  channel.envelopes = envelopes.value
+  channel.lfos = lfos.value
+  channel.dynamics = dynamics.value
+  channel.effectOrder = effectOrder.value
+  channel.isAmplitudeModulationBypassed = isAmplitudeModulationBypassed.value
+}
+
+function loadChannel(channelNumber: number) {
+  const channel = channels.value[channelNumber - 1]
+  if (!channel) return
+  saveActiveChannel()
+  selectedChannel.value = channelNumber
+  activeSynth = channel.synth
+  oscillators.value = channel.oscillators
+  noise.value = channel.noise
+  filters.value = channel.filters
+  delays.value = channel.delays
+  bpm.value = channel.bpm
+  reverbs.value = channel.reverbs
+  amplitudeModulation.value = channel.amplitudeModulation
+  envelopes.value = channel.envelopes
+  lfos.value = channel.lfos
+  dynamics.value = channel.dynamics
+  effectOrder.value = channel.effectOrder
+  isAmplitudeModulationBypassed.value = channel.isAmplitudeModulationBypassed
+  activeVoices.value = activeSynth.getActiveVoiceCount()
+}
+
+function addChannel() {
+  if (channels.value.length >= 16) return
+  saveActiveChannel()
+  const oscillatorSettings = createOscillatorSettings()
+  const channel: ChannelState = {
+    synth: new SynthEngine(oscillatorSettings),
+    oscillators: [oscillatorSettings],
+    noise: null,
+    filters: [createFilterSettings()],
+    delays: [],
+    bpm: 120,
+    reverbs: [],
+    amplitudeModulation: null,
+    envelopes: [],
+    lfos: [],
+    dynamics: [],
+    effectOrder: ['filters', 'delays', 'reverbs', 'dynamics'],
+    isAmplitudeModulationBypassed: false,
+  }
+  channels.value = [...channels.value, channel]
+  if (audioEnabled) {
+    void channel.synth.activate()
+  }
+  loadChannel(channels.value.length)
+}
+
+function handleChannelKey(event: KeyboardEvent) {
+  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) return
+  const channelNumber = Number(event.key)
+  if (channelNumber >= 1 && channelNumber <= 9 && channelNumber <= channels.value.length) {
+    event.preventDefault()
+    loadChannel(channelNumber)
+  }
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  handleFirstInteraction()
+  handleChannelKey(event)
+}
+
+channels.value.push({
+  synth: activeSynth,
+  oscillators: oscillators.value,
+  noise: noise.value,
+  filters: filters.value,
+  delays: delays.value,
+  bpm: bpm.value,
+  reverbs: reverbs.value,
+  amplitudeModulation: amplitudeModulation.value,
+  envelopes: envelopes.value,
+  lfos: lfos.value,
+  dynamics: dynamics.value,
+  effectOrder: effectOrder.value,
+  isAmplitudeModulationBypassed: isAmplitudeModulationBypassed.value,
+})
 
 const canSelectInput = computed(() => midiInputs.value.length > 0)
 const oscillatorEnvelopeDestinations = [
@@ -70,13 +182,17 @@ const reverbEnvelopeDestinations = [
 ] satisfies { value: EnvelopeDestination; label: string }[]
 
 const midiService = new MidiService({
-  onNoteOn: ({ note, velocity }) => {
-    synth.noteOn(note, velocity)
-    activeVoices.value = synth.getActiveVoiceCount()
+  onNoteOn: ({ channel, note, velocity }) => {
+    const target = channels.value[channel - 1]
+    if (!target) return
+    target.synth.noteOn(note, velocity)
+    activeVoices.value = channels.value.reduce((count, item) => count + item.synth.getActiveVoiceCount(), 0)
   },
-  onNoteOff: ({ note }) => {
-    synth.noteOff(note)
-    activeVoices.value = synth.getActiveVoiceCount()
+  onNoteOff: ({ channel, note }) => {
+    const target = channels.value[channel - 1]
+    if (!target) return
+    target.synth.noteOff(note)
+    activeVoices.value = channels.value.reduce((count, item) => count + item.synth.getActiveVoiceCount(), 0)
   },
   onStateChange: (state) => {
     midiInputs.value = state.inputs
@@ -92,9 +208,9 @@ const midiService = new MidiService({
 })
 
 function handleEnableAudio() {
-  synth
-    .activate()
+  Promise.all(channels.value.map(({ synth }) => synth.activate()))
     .then(() => {
+      audioEnabled = true
       audioStatus.value = 'Audio enabled.'
     })
     .catch((error: unknown) => {
@@ -142,13 +258,15 @@ function handleInputChange() {
   midiService.setSelectedInput(selectedInputId.value || null)
 }
 
-function handleChannelChange() {
-  midiService.setChannel(selectedChannel.value)
+function handleChannelChange(event: Event) {
+  const channelNumber = Number((event.target as HTMLSelectElement).value)
+  loadChannel(channelNumber)
+  midiService.setChannel(channelNumber)
 }
 
 function handlePanic() {
-  synth.stopAllNotes()
-  activeVoices.value = synth.getActiveVoiceCount()
+  channels.value.forEach(({ synth }) => synth.stopAllNotes())
+  activeVoices.value = 0
 }
 
 function randomInteger(min: number, max: number): number {
@@ -172,42 +290,42 @@ function createRandomOscillatorSettings(): OscillatorSettings {
 function addOscillator() {
   const settings = createRandomOscillatorSettings()
   oscillators.value.push(settings)
-  synth.addOscillator(settings)
+  activeSynth.addOscillator(settings)
 }
 
 function removeOscillator(index: number) {
   removeLfosForModule('oscillator', index)
-  synth.removeOscillator(index)
+  activeSynth.removeOscillator(index)
   oscillators.value.splice(index, 1)
 }
 
 function addNoise() {
   const settings = createNoiseSettings()
   noise.value = settings
-  synth.addNoise(settings)
+  activeSynth.addNoise(settings)
 }
 
 function removeNoise() {
   removeLfosForModule('noise', 0)
-  synth.removeNoise()
+  activeSynth.removeNoise()
   noise.value = null
 }
 
 function addFilter() {
   const settings = createFilterSettings()
   filters.value.push(settings)
-  synth.addFilter(settings)
+  activeSynth.addFilter(settings)
 }
 
 function removeFilter(index: number) {
   removeLfosForModule('filter', index)
-  synth.removeFilter(index)
+  activeSynth.removeFilter(index)
   filters.value.splice(index, 1)
 }
 
 function updateFilterSettings(index: number, settings: Partial<FilterSettings>) {
   filters.value[index] = { ...filters.value[index], ...settings }
-  synth.setFilterSettings(index, settings)
+  activeSynth.setFilterSettings(index, settings)
 }
 
 function toggleFilterBypass(index: number) {
@@ -217,12 +335,12 @@ function toggleFilterBypass(index: number) {
 function addDelay() {
   const settings = createDelaySettings()
   delays.value.push(settings)
-  synth.addDelay(settings)
+  activeSynth.addDelay(settings)
 }
 
 function removeDelay(index: number) {
   removeLfosForModule('delay', index)
-  synth.removeDelay(index)
+  activeSynth.removeDelay(index)
   delays.value.splice(index, 1)
 }
 
@@ -231,7 +349,7 @@ function updateDelaySettings(index: number, settings: Partial<DelaySettings>) {
     settings = { ...settings, time: delayTimeForBpm(settings.noteTime, bpm.value) }
   }
   delays.value[index] = { ...delays.value[index], ...settings }
-  synth.setDelaySettings(index, settings)
+  activeSynth.setDelaySettings(index, settings)
 }
 
 function delayTimeForBpm(noteTime: number, tempo: number) {
@@ -243,78 +361,78 @@ function updateBpm(value: number) {
   delays.value.forEach((delay, index) => {
     const time = delayTimeForBpm(delay.noteTime, bpm.value)
     delays.value[index] = { ...delay, time }
-    synth.setDelaySettings(index, { time })
+    activeSynth.setDelaySettings(index, { time })
   })
 }
 
 function toggleDelayBypass(index: number) {
   const bypassed = !delays.value[index].bypassed
   delays.value[index] = { ...delays.value[index], bypassed }
-  synth.setDelayBypassed(index, bypassed)
+  activeSynth.setDelayBypassed(index, bypassed)
 }
 
 function addReverb() {
   const settings = createReverbSettings()
   reverbs.value.push(settings)
-  synth.addReverb(settings)
+  activeSynth.addReverb(settings)
 }
 
 function removeReverb(index: number) {
   removeLfosForModule('reverb', index)
-  synth.removeReverb(index)
+  activeSynth.removeReverb(index)
   reverbs.value.splice(index, 1)
 }
 
 function updateReverbSettings(index: number, settings: Partial<ReverbSettings>) {
   reverbs.value[index] = { ...reverbs.value[index], ...settings }
-  synth.setReverbSettings(index, settings)
+  activeSynth.setReverbSettings(index, settings)
 }
 
 function toggleReverbBypass(index: number) {
   const bypassed = !reverbs.value[index].bypassed
   reverbs.value[index] = { ...reverbs.value[index], bypassed }
-  synth.setReverbBypassed(index, bypassed)
+  activeSynth.setReverbBypassed(index, bypassed)
 }
 
 function addCompressor() {
   const settings = createCompressorSettings()
   dynamics.value.push(settings)
-  synth.addCompressor(settings)
+  activeSynth.addCompressor(settings)
 }
 
 function addGate() {
   const settings = createGateSettings()
   dynamics.value.push(settings)
-  synth.addGate(settings)
+  activeSynth.addGate(settings)
 }
 
 function addLimiter() {
   const settings = createLimiterSettings()
   dynamics.value.push(settings)
-  synth.addLimiter(settings)
+  activeSynth.addLimiter(settings)
 }
 
 function updateDynamicsSettings(index: number, settings: DynamicsSettingsChanges) {
   dynamics.value[index] = { ...dynamics.value[index], ...settings } as DynamicsSettings
-  synth.setDynamicsSettings(index, settings)
+  activeSynth.setDynamicsSettings(index, settings)
 }
 
 function removeDynamics(index: number) {
-  synth.removeDynamics(index)
+  activeSynth.removeDynamics(index)
   dynamics.value.splice(index, 1)
 }
 
 function toggleDynamicsBypass(index: number) {
   const bypassed = !dynamics.value[index].bypassed
   dynamics.value[index] = { ...dynamics.value[index], bypassed } as DynamicsSettings
-  synth.setDynamicsBypassed(index, bypassed)
+  activeSynth.setDynamicsBypassed(index, bypassed)
 }
 
 function moveDynamics(index: number, direction: -1 | 1) {
   const targetIndex = index + direction
   if (!dynamics.value[targetIndex]) return
   ;[dynamics.value[index], dynamics.value[targetIndex]] = [dynamics.value[targetIndex], dynamics.value[index]]
-  synth.moveDynamics(index, direction)
+  activeSynth.moveDynamics(index, direction)
 }
 
 function updateNoiseSettings(settings: Partial<NoiseSettings>) {
@@ -323,7 +441,7 @@ function updateNoiseSettings(settings: Partial<NoiseSettings>) {
   }
 
   noise.value = { ...noise.value, ...settings }
-  synth.setNoiseSettings(settings)
+  activeSynth.setNoiseSettings(settings)
 }
 
 function toggleNoiseBypass() {
@@ -338,7 +456,7 @@ function addAmplitudeModulation() {
   const settings: AmplitudeModulationSettings = { rate: 5, depth: 0.5, waveform: 'sine' }
   amplitudeModulation.value = settings
   isAmplitudeModulationBypassed.value = false
-  synth.addAmplitudeModulation(settings)
+  activeSynth.addAmplitudeModulation(settings)
 }
 
 function updateAmplitudeModulation(settings: Partial<AmplitudeModulationSettings>) {
@@ -347,35 +465,35 @@ function updateAmplitudeModulation(settings: Partial<AmplitudeModulationSettings
   }
 
   amplitudeModulation.value = { ...amplitudeModulation.value, ...settings }
-  synth.setAmplitudeModulationSettings(settings)
+  activeSynth.setAmplitudeModulationSettings(settings)
 }
 
 function removeAmplitudeModulation() {
-  synth.removeAmplitudeModulation()
+  activeSynth.removeAmplitudeModulation()
   amplitudeModulation.value = null
   isAmplitudeModulationBypassed.value = false
 }
 
 function toggleAmplitudeModulationBypass() {
   const bypassed = !isAmplitudeModulationBypassed.value
-  synth.setAmplitudeModulationBypassed(bypassed)
+  activeSynth.setAmplitudeModulationBypassed(bypassed)
   isAmplitudeModulationBypassed.value = bypassed
 }
 
 function addEnvelope(destination: EnvelopeDestination) {
   const settings = { ...createEnvelopeSettings(), destination, bypassed: false }
-  synth.addEnvelope(settings)
+  activeSynth.addEnvelope(settings)
   envelopes.value.push(settings)
 }
 
 function removeEnvelope(index: number) {
-  synth.removeEnvelope(index)
+  activeSynth.removeEnvelope(index)
   envelopes.value.splice(index, 1)
 }
 
 function toggleEnvelopeBypass(index: number) {
   const bypassed = !envelopes.value[index].bypassed
-  synth.setEnvelopeBypassed(index, bypassed)
+  activeSynth.setEnvelopeBypassed(index, bypassed)
   envelopes.value[index] = { ...envelopes.value[index], bypassed }
 }
 
@@ -386,7 +504,7 @@ function moveEffectGroup(group: EffectGroup, direction: -1 | 1) {
   const nextOrder = [...effectOrder.value]
   ;[nextOrder[index], nextOrder[targetIndex]] = [nextOrder[targetIndex], nextOrder[index]]
   effectOrder.value = nextOrder
-  synth.setEffectOrder(nextOrder)
+  activeSynth.setEffectOrder(nextOrder)
 }
 
 function canMoveEffectGroup(group: EffectGroup, direction: -1 | 1) {
@@ -396,7 +514,7 @@ function canMoveEffectGroup(group: EffectGroup, direction: -1 | 1) {
 
 function updateEnvelopeSettings(index: number, settings: Partial<EnvelopeSettings>) {
   envelopes.value[index] = { ...envelopes.value[index], ...settings }
-  synth.setEnvelopeSettings(index, settings)
+  activeSynth.setEnvelopeSettings(index, settings)
 }
 
 function lfoTargetOptions(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'reverb', index: number) {
@@ -418,23 +536,23 @@ function lfosForModule(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 're
 function addLfo(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'reverb', index: number) {
   const target = lfoTargetOptions(module, index)[0].value
   const settings: LfoControlModule = { waveform: 'sine', rate: 5, depth: 0.25, target, bypassed: false }
-  synth.addLfo(settings)
+  activeSynth.addLfo(settings)
   lfos.value.push(settings)
 }
 
 function updateLfo(index: number, settings: Partial<LfoSettings>) {
   lfos.value[index] = { ...lfos.value[index], ...settings }
-  synth.setLfoSettings(index, settings)
+  activeSynth.setLfoSettings(index, settings)
 }
 
 function toggleLfoBypass(index: number) {
   const bypassed = !lfos.value[index].bypassed
   lfos.value[index] = { ...lfos.value[index], bypassed }
-  synth.setLfoBypassed(index, bypassed)
+  activeSynth.setLfoBypassed(index, bypassed)
 }
 
 function removeLfo(index: number) {
-  synth.removeLfo(index)
+  activeSynth.removeLfo(index)
   lfos.value.splice(index, 1)
 }
 
@@ -459,7 +577,7 @@ function toggleOscillatorBypass(index: number) {
 
 function updateOscillatorSettings(index: number, settings: Partial<OscillatorSettings>) {
   oscillators.value[index] = { ...oscillators.value[index], ...settings }
-  synth.setOscillatorSettings(index, settings)
+  activeSynth.setOscillatorSettings(index, settings)
 }
 
 onMounted(() => {
@@ -468,12 +586,12 @@ onMounted(() => {
 
 onUnmounted(() => {
   midiService.destroy()
-  synth.destroy()
+  channels.value.forEach(({ synth }) => synth.destroy())
 })
 </script>
 
 <template>
-  <main class="app" @pointerdown.capture="handleFirstInteraction" @keydown.capture="handleFirstInteraction">
+  <main class="app" @pointerdown.capture="handleFirstInteraction" @keydown.capture="handleKeydown">
     <section class="panel">
       <header class="topbar">
         <div>
@@ -489,6 +607,26 @@ onUnmounted(() => {
           <button type="button" class="panic-button" @click="handlePanic">Panic</button>
         </div>
       </header>
+
+      <section class="channel-bar" aria-label="Synth channels">
+        <div>
+          <p class="eyebrow">Channel</p>
+          <strong class="channel-number">MIDI {{ selectedChannel }}</strong>
+        </div>
+        <div class="channel-actions">
+          <button
+            v-for="(channel, index) in channels"
+            :key="index"
+            type="button"
+            class="channel-button"
+            :class="{ 'channel-button-active': channel === channels[selectedChannel - 1] }"
+            @click="loadChannel(index + 1)"
+          >
+            {{ index + 1 }}
+          </button>
+          <button v-if="channels.length < 16" type="button" class="add-channel-button" @click="addChannel">Add Channel</button>
+        </div>
+      </section>
 
       <section class="synth-section oscillators-section" aria-labelledby="oscillators-heading">
         <h2 id="oscillators-heading">
@@ -850,8 +988,8 @@ onUnmounted(() => {
 
           <label class="field channel-field">
             <span>Ch</span>
-            <select v-model.number="selectedChannel" @change="handleChannelChange">
-              <option v-for="channel in 16" :key="channel" :value="channel">
+            <select :value="selectedChannel" @change="handleChannelChange">
+              <option v-for="channel in channels.length" :key="channel" :value="channel">
                 {{ channel }}
               </option>
             </select>
