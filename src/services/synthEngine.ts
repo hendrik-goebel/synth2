@@ -69,7 +69,7 @@ export type DelaySettings = {
   mix: number
   overdrive: number
 }
-export type EffectGroup = 'filters' | 'delays' | 'envelopes'
+export type EffectGroup = 'filters' | 'delays'
 
 export type AmplitudeModulationSettings = {
   rate: number
@@ -78,7 +78,15 @@ export type AmplitudeModulationSettings = {
 }
 
 export type EnvelopeCurve = 'linear' | 'exponential'
-export type EnvelopeDestination = 'volume' | 'pitch' | 'amDepth' | 'noiseLevel'
+export type EnvelopeDestination =
+  | 'oscillatorLevel'
+  | 'oscillatorPitch'
+  | 'noiseLevel'
+  | 'filterCutoff'
+  | 'filterResonance'
+  | 'delayTime'
+  | 'delayFeedback'
+  | 'delayMix'
 
 export type EnvelopeSettings = {
   attack: number
@@ -118,7 +126,7 @@ export function createDelaySettings(): DelaySettings {
 }
 
 export function createEnvelopeSettings(): EnvelopeSettings {
-  return { attack: 4, decay: 0, hold: 0, release: 80, velocity: 0, attackCurve: 'linear', releaseCurve: 'linear', destination: 'volume' }
+  return { attack: 4, decay: 0, hold: 0, release: 80, velocity: 0, attackCurve: 'linear', releaseCurve: 'linear', destination: 'oscillatorLevel' }
 }
 
 export class SynthEngine {
@@ -132,8 +140,8 @@ export class SynthEngine {
   private delays: DelayModule[] = []
   private amplitudeModulation?: AmplitudeModulationSettings
   private amplitudeModulationBypassed = false
-  private envelopeSettings: { settings: EnvelopeSettings; bypassed: boolean }[] = [{ settings: createEnvelopeSettings(), bypassed: false }]
-  private effectOrder: EffectGroup[] = ['filters', 'delays', 'envelopes']
+  private envelopeSettings: { settings: EnvelopeSettings; bypassed: boolean }[] = []
+  private effectOrder: EffectGroup[] = ['filters', 'delays']
 
   constructor(initialSettings: OscillatorSettings = createOscillatorSettings()) {
     this.settings = [{ ...initialSettings }]
@@ -150,6 +158,7 @@ export class SynthEngine {
     }
     if (this.activeVoices.some((active) => active.note === note)) this.stopNote(note)
     this.activeVoices.push({ note, velocity, voices: this.createVoices(note, velocity) })
+    this.applyEffectEnvelopes(this.audioContext.currentTime, velocity / 127)
   }
 
   noteOff(note: number): void {
@@ -359,7 +368,6 @@ export class SynthEngine {
   removeEnvelope(index: number): void {
     if (!this.envelopeSettings[index]) throw new RangeError(`Unknown envelope index: ${index}`)
     this.envelopeSettings.splice(index, 1)
-    if (this.envelopeSettings.length === 0) this.envelopeSettings.push({ settings: createEnvelopeSettings(), bypassed: false })
   }
 
   setEnvelopeBypassed(index: number, bypassed: boolean): void {
@@ -385,6 +393,24 @@ export class SynthEngine {
     filter.node.frequency.setTargetAtTime(filter.settings.cutoff, this.audioContext.currentTime, 0.01)
     filter.node.Q.setTargetAtTime(filter.settings.resonance, this.audioContext.currentTime, 0.01)
     filter.gainNode.gain.setTargetAtTime(10 ** (filter.settings.gain / 20), this.audioContext.currentTime, 0.01)
+  }
+
+  private applyEffectEnvelopes(now: number, velocity: number): void {
+    const cutoffEnvelope = this.activeEnvelopeSettings('filterCutoff')
+    const resonanceEnvelope = this.activeEnvelopeSettings('filterResonance')
+    this.filters.forEach((filter) => {
+      if (cutoffEnvelope) this.applyPositiveEnvelopeOnNoteOn(filter.node.frequency, now, cutoffEnvelope, 20, filter.settings.cutoff * this.envelopePeakGain(velocity, cutoffEnvelope.velocity))
+      if (resonanceEnvelope) this.applyPositiveEnvelopeOnNoteOn(filter.node.Q, now, resonanceEnvelope, 0, filter.settings.resonance * this.envelopePeakGain(velocity, resonanceEnvelope.velocity))
+    })
+
+    const timeEnvelope = this.activeEnvelopeSettings('delayTime')
+    const feedbackEnvelope = this.activeEnvelopeSettings('delayFeedback')
+    const mixEnvelope = this.activeEnvelopeSettings('delayMix')
+    this.delays.forEach((delay) => {
+      if (timeEnvelope) this.applyPositiveEnvelopeOnNoteOn(delay.node.delayTime, now, timeEnvelope, 0.01, delay.settings.time * this.envelopePeakGain(velocity, timeEnvelope.velocity))
+      if (feedbackEnvelope) this.applyPositiveEnvelopeOnNoteOn(delay.feedback.gain, now, feedbackEnvelope, 0, Math.min(0.98, delay.settings.feedback + delay.settings.resonance * 0.3) * this.envelopePeakGain(velocity, feedbackEnvelope.velocity))
+      if (mixEnvelope) this.applyPositiveEnvelopeOnNoteOn(delay.wet.gain, now, mixEnvelope, 0, delay.settings.mix * this.envelopePeakGain(velocity, mixEnvelope.velocity))
+    })
   }
 
   private routeOutput(): void {
@@ -489,8 +515,8 @@ export class SynthEngine {
     const voice: Voice = { source, kind, oscillator: source instanceof OscillatorNode ? source : undefined, gainNode, envelopeGain, panner, velocity: normalizedVelocity, oscillatorIndex, layerIndex, stopping: false }
     const now = this.audioContext.currentTime
     gainNode.gain.setValueAtTime(this.sourceGain(voice), now)
-    const envelope = this.activeEnvelopeSettings()
-    if (envelope?.destination === 'volume') {
+    const envelope = kind === 'oscillator' ? this.activeEnvelopeSettings('oscillatorLevel') : undefined
+    if (envelope) {
       const peakGain = this.envelopePeakGain(voice.velocity, envelope.velocity)
       envelopeGain.gain.setValueAtTime(0, now)
       const attackStart = now + envelope.decay / 1000
@@ -554,8 +580,7 @@ export class SynthEngine {
     if (voice.stopping) return
     voice.stopping = true
     const now = this.audioContext.currentTime
-    const envelope = this.activeEnvelopeSettings()
-    const volumeEnvelope = envelope?.destination === 'volume' ? envelope : undefined
+    const volumeEnvelope = this.activeEnvelopeSettings(voice.kind === 'oscillator' ? 'oscillatorLevel' : 'noiseLevel')
     const holdEnd = now + (volumeEnvelope?.hold ?? 0) / 1000
     const releaseMs = volumeEnvelope?.release ?? ENVELOPE_BYPASS_RELEASE_MS
     const stopAt = holdEnd + releaseMs / 1000
@@ -592,14 +617,12 @@ export class SynthEngine {
     this.setWaveform(modulator, this.amplitudeModulation!.waveform)
     modulator.frequency.setValueAtTime(this.amplitudeModulation!.rate, this.audioContext.currentTime)
     const gain = this.audioContext.createGain()
-    const envelope = this.activeEnvelopeSettings()
-    const initialDepth = this.amplitudeModulationBypassed || envelope?.destination === 'amDepth' ? 0 : this.amplitudeModulationGain(voice)
+    const initialDepth = this.amplitudeModulationBypassed ? 0 : this.amplitudeModulationGain(voice)
     gain.gain.setValueAtTime(initialDepth, this.audioContext.currentTime)
     modulator.connect(gain).connect(voice.gainNode.gain)
     modulator.start()
     voice.amplitudeModulator = modulator
     voice.amplitudeModulationGain = gain
-    this.applyAmplitudeModulationDepthEnvelopeOnNoteOn(voice, this.audioContext.currentTime)
   }
 
   private removeAmplitudeModulationFromVoice(voice: Voice): void {
@@ -676,7 +699,7 @@ export class SynthEngine {
   }
 
   private clampEnvelopeDestination(value: EnvelopeDestination | undefined, fallback: EnvelopeDestination): EnvelopeDestination {
-    return value === 'volume' || value === 'pitch' || value === 'amDepth' || value === 'noiseLevel' ? value : fallback
+    return value === 'oscillatorLevel' || value === 'oscillatorPitch' || value === 'noiseLevel' || value === 'filterCutoff' || value === 'filterResonance' || value === 'delayTime' || value === 'delayFeedback' || value === 'delayMix' ? value : fallback
   }
 
   private envelopePeakGain(velocity: number, velocityAmount: number): number {
@@ -684,8 +707,8 @@ export class SynthEngine {
   }
 
   private applyPitchEnvelopeOnNoteOn(voice: Voice, now: number): void {
-    const envelope = this.activeEnvelopeSettings()
-    if (!envelope || envelope.destination !== 'pitch' || !voice.oscillator || voice.baseDetune === undefined) {
+    const envelope = this.activeEnvelopeSettings('oscillatorPitch')
+    if (!envelope || !voice.oscillator || voice.baseDetune === undefined) {
       return
     }
     const depth = PITCH_ENVELOPE_DEPTH_CENTS * this.envelopePeakGain(voice.velocity, envelope.velocity)
@@ -737,18 +760,9 @@ export class SynthEngine {
     detune.setValueCurveAtTime(curve, decayStart + holdDuration, decayDuration)
   }
 
-  private applyAmplitudeModulationDepthEnvelopeOnNoteOn(voice: Voice, now: number): void {
-    const envelope = this.activeEnvelopeSettings()
-    if (!envelope || envelope.destination !== 'amDepth' || !voice.amplitudeModulationGain || this.amplitudeModulationBypassed) {
-      return
-    }
-    const peak = this.amplitudeModulationGain(voice) * this.envelopePeakGain(voice.velocity, envelope.velocity)
-    this.applyPositiveEnvelopeOnNoteOn(voice.amplitudeModulationGain.gain, now, envelope, 0, peak)
-  }
-
   private applyNoiseLevelEnvelopeOnNoteOn(voice: Voice, now: number): void {
-    const envelope = this.activeEnvelopeSettings()
-    if (!envelope || envelope.destination !== 'noiseLevel' || voice.kind !== 'noise') {
+    const envelope = this.activeEnvelopeSettings('noiseLevel')
+    if (!envelope || voice.kind !== 'noise') {
       return
     }
     const peak = this.sourceGain(voice) * this.envelopePeakGain(voice.velocity, envelope.velocity)

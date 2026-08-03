@@ -40,5 +40,6 @@ const emit = defineEmits<{
         <input type="range" min="-1" max="1" step="0.01" :value="stereoSpread" @input="emit('update:stereoSpread', Number(($event.target as HTMLInputElement).value))">
       </label>
     </div>
+    <slot />
   </SectionFrame>
 </template>

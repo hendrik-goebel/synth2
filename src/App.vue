@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { MidiService } from './services/midiService'
-import { createDelaySettings, createEnvelopeSettings, createFilterSettings, createNoiseSettings, type AmplitudeModulationSettings, type DelaySettings, type EffectGroup, type EnvelopeCurve, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type NoiseSettings, type OscillatorSettings, type Waveform, SynthEngine } from './services/synthEngine'
+import { createDelaySettings, createEnvelopeSettings, createFilterSettings, createNoiseSettings, type AmplitudeModulationSettings, type DelaySettings, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type NoiseSettings, type OscillatorSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
 import NoiseControls from './components/NoiseControls.vue'
 import FilterControls from './components/FilterControls.vue'
 import SectionFrame from './components/SectionFrame.vue'
 import DelayControls from './components/DelayControls.vue'
+import EnvelopeControls from './components/EnvelopeControls.vue'
 
 type EnvelopeModule = EnvelopeSettings & { bypassed: boolean }
 
@@ -24,17 +25,30 @@ const noise = ref<NoiseSettings | null>(null)
 const filters = ref<FilterSettings[]>([createFilterSettings()])
 const delays = ref<DelaySettings[]>([])
 const amplitudeModulation = ref<AmplitudeModulationSettings | null>(null)
-const envelopes = ref<EnvelopeModule[]>([{ ...createEnvelopeSettings(), bypassed: false }])
-const effectOrder = ref<EffectGroup[]>(['filters', 'delays', 'envelopes'])
+const envelopes = ref<EnvelopeModule[]>([])
+const effectOrder = ref<EffectGroup[]>(['filters', 'delays'])
 const isAmplitudeModulationBypassed = ref(false)
 const areOscillatorsCollapsed = ref(false)
 const areFiltersCollapsed = ref(false)
 const areDelaysCollapsed = ref(false)
-const areEnvelopesCollapsed = ref(false)
 let firstInteractionHandled = false
 let midiConnectionStarted = false
 
 const canSelectInput = computed(() => midiInputs.value.length > 0)
+const oscillatorEnvelopeDestinations = [
+  { value: 'oscillatorLevel', label: 'Level' },
+  { value: 'oscillatorPitch', label: 'Pitch' },
+] satisfies { value: EnvelopeDestination; label: string }[]
+const noiseEnvelopeDestinations = [{ value: 'noiseLevel', label: 'Level' }] satisfies { value: EnvelopeDestination; label: string }[]
+const filterEnvelopeDestinations = [
+  { value: 'filterCutoff', label: 'Cutoff' },
+  { value: 'filterResonance', label: 'Resonance' },
+] satisfies { value: EnvelopeDestination; label: string }[]
+const delayEnvelopeDestinations = [
+  { value: 'delayTime', label: 'Time' },
+  { value: 'delayFeedback', label: 'Feedback' },
+  { value: 'delayMix', label: 'Mix' },
+] satisfies { value: EnvelopeDestination; label: string }[]
 
 const midiService = new MidiService({
   onNoteOn: ({ note, velocity }) => {
@@ -245,8 +259,8 @@ function toggleAmplitudeModulationBypass() {
   isAmplitudeModulationBypassed.value = bypassed
 }
 
-function addEnvelope() {
-  const settings = { ...createEnvelopeSettings(), bypassed: false }
+function addEnvelope(destination: EnvelopeDestination) {
+  const settings = { ...createEnvelopeSettings(), destination, bypassed: false }
   synth.addEnvelope(settings)
   envelopes.value.push(settings)
 }
@@ -275,6 +289,10 @@ function moveEffectGroup(group: EffectGroup, direction: -1 | 1) {
 function updateEnvelopeSettings(index: number, settings: Partial<EnvelopeSettings>) {
   envelopes.value[index] = { ...envelopes.value[index], ...settings }
   synth.setEnvelopeSettings(index, settings)
+}
+
+function envelopesFor(destinations: readonly { value: EnvelopeDestination }[]) {
+  return envelopes.value.flatMap((envelope, index) => destinations.some((destination) => destination.value === envelope.destination) ? [{ ...envelope, index }] : [])
 }
 
 function toggleOscillatorBypass(index: number) {
@@ -344,18 +362,38 @@ onUnmounted(() => {
             <button v-if="!noise" type="button" class="add-oscillator-button" @click="addNoise">Add Noise</button>
             <button v-if="!amplitudeModulation" type="button" class="add-am-button" @click="addAmplitudeModulation">Add AM</button>
           </div>
+          <EnvelopeControls
+            :envelopes="envelopesFor(oscillatorEnvelopeDestinations)"
+            :destination-options="oscillatorEnvelopeDestinations"
+            id-prefix="oscillator"
+            @update="updateEnvelopeSettings($event.index, $event.settings)"
+            @toggle-bypass="toggleEnvelopeBypass"
+            @remove="removeEnvelope"
+            @add="addEnvelope('oscillatorLevel')"
+          />
         </div>
       </section>
 
-      <NoiseControls
-        v-if="noise"
-        v-bind="noise"
-        @update:color="updateNoiseSettings({ color: $event })"
-        @update:level="updateNoiseSettings({ level: $event })"
-        @update:stereo-spread="updateNoiseSettings({ stereoSpread: $event })"
-        @toggle-bypass="toggleNoiseBypass"
-        @remove="removeNoise"
-      />
+      <template v-if="noise">
+        <NoiseControls
+          v-bind="noise"
+          @update:color="updateNoiseSettings({ color: $event })"
+          @update:level="updateNoiseSettings({ level: $event })"
+          @update:stereo-spread="updateNoiseSettings({ stereoSpread: $event })"
+          @toggle-bypass="toggleNoiseBypass"
+          @remove="removeNoise"
+        >
+          <EnvelopeControls
+            :envelopes="envelopesFor(noiseEnvelopeDestinations)"
+            :destination-options="noiseEnvelopeDestinations"
+            id-prefix="noise"
+            @update="updateEnvelopeSettings($event.index, $event.settings)"
+            @toggle-bypass="toggleEnvelopeBypass"
+            @remove="removeEnvelope"
+            @add="addEnvelope('noiseLevel')"
+          />
+        </NoiseControls>
+      </template>
 
       <div class="effect-chain">
       <section class="oscillators-section effect-group" :style="{ order: effectOrder.indexOf('filters') }" aria-labelledby="filters-heading">
@@ -388,6 +426,15 @@ onUnmounted(() => {
             @remove="removeFilter(index)"
           />
           <button type="button" class="add-filter-button" @click="addFilter">Add Filter</button>
+          <EnvelopeControls
+            :envelopes="envelopesFor(filterEnvelopeDestinations)"
+            :destination-options="filterEnvelopeDestinations"
+            id-prefix="filter"
+            @update="updateEnvelopeSettings($event.index, $event.settings)"
+            @toggle-bypass="toggleEnvelopeBypass"
+            @remove="removeEnvelope"
+            @add="addEnvelope('filterCutoff')"
+          />
         </div>
       </section>
 
@@ -416,6 +463,15 @@ onUnmounted(() => {
             @remove="removeDelay(index)"
           />
           <button type="button" class="add-filter-button" @click="addDelay">Add Delay</button>
+          <EnvelopeControls
+            :envelopes="envelopesFor(delayEnvelopeDestinations)"
+            :destination-options="delayEnvelopeDestinations"
+            id-prefix="delay"
+            @update="updateEnvelopeSettings($event.index, $event.settings)"
+            @toggle-bypass="toggleEnvelopeBypass"
+            @remove="removeEnvelope"
+            @add="addEnvelope('delayTime')"
+          />
         </div>
       </section>
 
@@ -453,89 +509,6 @@ onUnmounted(() => {
         </div>
       </SectionFrame>
 
-      <section class="oscillators-section effect-group" :style="{ order: effectOrder.indexOf('envelopes') }" aria-labelledby="envelopes-heading">
-        <h2 id="envelopes-heading">
-          <button
-            type="button"
-            class="oscillators-toggle"
-            :aria-expanded="!areEnvelopesCollapsed"
-            aria-controls="envelopes-content"
-            @click="areEnvelopesCollapsed = !areEnvelopesCollapsed"
-          >
-            Envelopes
-          </button>
-          <span class="effect-order-actions">
-            <button type="button" :disabled="effectOrder.indexOf('envelopes') === 0" aria-label="Move Envelopes up" @click="moveEffectGroup('envelopes', -1)">↑</button>
-            <button type="button" :disabled="effectOrder.indexOf('envelopes') === effectOrder.length - 1" aria-label="Move Envelopes down" @click="moveEffectGroup('envelopes', 1)">↓</button>
-          </span>
-        </h2>
-        <div v-show="!areEnvelopesCollapsed" id="envelopes-content" class="oscillators-content">
-          <SectionFrame
-            v-for="(envelope, index) in envelopes"
-            :key="index"
-            class="envelope-section"
-            :title="`Envelope ${index + 1}`"
-            :heading-id="`envelope-${index}-heading`"
-            :content-id="`envelope-${index}-content`"
-            :bypassed="envelope.bypassed"
-            @toggle-bypass="toggleEnvelopeBypass(index)"
-            @remove="removeEnvelope(index)"
-          >
-            <div class="modulation-controls envelope-controls">
-          <label class="control">
-            <span>Attack</span>
-            <output>{{ envelope.attack }} ms</output>
-            <input type="range" min="0" max="300" step="1" :value="envelope.attack" @input="updateEnvelopeSettings(index, { attack: Number(($event.target as HTMLInputElement).value) })">
-          </label>
-          <label class="control">
-            <span>Decay</span>
-            <output>{{ envelope.decay }} ms</output>
-            <input type="range" min="0" max="150" step="1" :value="envelope.decay" @input="updateEnvelopeSettings(index, { decay: Number(($event.target as HTMLInputElement).value) })">
-          </label>
-          <label class="control">
-            <span>Hold</span>
-            <output>{{ envelope.hold }} ms</output>
-            <input type="range" min="0" max="150" step="1" :value="envelope.hold" @input="updateEnvelopeSettings(index, { hold: Number(($event.target as HTMLInputElement).value) })">
-          </label>
-          <label class="control">
-            <span>Release</span>
-            <output>{{ envelope.release }} ms</output>
-            <input type="range" min="0" max="450" step="1" :value="envelope.release" @input="updateEnvelopeSettings(index, { release: Number(($event.target as HTMLInputElement).value) })">
-          </label>
-          <label class="control">
-            <span>Velocity</span>
-            <output>{{ Math.round(envelope.velocity * 100) }}%</output>
-            <input type="range" min="0" max="1" step="0.01" :value="envelope.velocity" @input="updateEnvelopeSettings(index, { velocity: Number(($event.target as HTMLInputElement).value) })">
-          </label>
-          <label class="control">
-            <span>Attack Curve</span>
-            <select :value="envelope.attackCurve" @change="updateEnvelopeSettings(index, { attackCurve: ($event.target as HTMLSelectElement).value as EnvelopeCurve })">
-              <option value="linear">Linear</option>
-              <option value="exponential">Exponential</option>
-            </select>
-          </label>
-          <label class="control">
-            <span>Release Curve</span>
-            <select :value="envelope.releaseCurve" @change="updateEnvelopeSettings(index, { releaseCurve: ($event.target as HTMLSelectElement).value as EnvelopeCurve })">
-              <option value="linear">Linear</option>
-              <option value="exponential">Exponential</option>
-            </select>
-          </label>
-          <label class="control">
-            <span>Destination</span>
-            <select :value="envelope.destination" @change="updateEnvelopeSettings(index, { destination: ($event.target as HTMLSelectElement).value as EnvelopeDestination })">
-              <option value="volume">Volume</option>
-              <option value="pitch">Pitch</option>
-              <option value="amDepth">AM Depth</option>
-              <option value="noiseLevel">Noise Level</option>
-            </select>
-          </label>
-            </div>
-          </SectionFrame>
-
-          <button type="button" class="add-env-button" @click="addEnvelope">Add ENV</button>
-        </div>
-      </section>
       </div>
 
       <div class="audio-bar">
