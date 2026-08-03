@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue'
 import { MidiService } from './services/midiService'
-import { createDelaySettings, createEnvelopeSettings, createFilterSettings, createNoiseSettings, createReverbSettings, createCompressorSettings, createGateSettings, createLimiterSettings, createOscillatorSettings, type AmplitudeModulationSettings, type DelaySettings, type DynamicsSettings, type DynamicsSettingsChanges, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type LfoSettings, type NoiseSettings, type OscillatorSettings, type ReverbSettings, type Waveform, SynthEngine } from './services/synthEngine'
+import { createDelaySettings, createEnvelopeSettings, createFilterSettings, createNoiseSettings, createOverdriveSettings, createReverbSettings, createCompressorSettings, createGateSettings, createLimiterSettings, createOscillatorSettings, type AmplitudeModulationSettings, type DelaySettings, type DynamicsSettings, type DynamicsSettingsChanges, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type LfoSettings, type NoiseSettings, type OscillatorSettings, type OverdriveSettings, type ReverbSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
 import NoiseControls from './components/NoiseControls.vue'
 import FilterControls from './components/FilterControls.vue'
 import SectionFrame from './components/SectionFrame.vue'
 import DelayControls from './components/DelayControls.vue'
+import OverdriveControls from './components/OverdriveControls.vue'
 import EnvelopeControls from './components/EnvelopeControls.vue'
 import ReverbControls from './components/ReverbControls.vue'
 import LfoControls from './components/LfoControls.vue'
@@ -22,6 +23,7 @@ type ChannelState = {
   noise: NoiseSettings | null
   filters: FilterSettings[]
   delays: DelaySettings[]
+  overdrives: OverdriveSettings[]
   bpm: number
   reverbs: ReverbSettings[]
   amplitudeModulation: AmplitudeModulationSettings | null
@@ -45,19 +47,21 @@ const oscillators = ref<OscillatorSettings[]>([initialOscillatorSettings])
 const noise = ref<NoiseSettings | null>(null)
 const filters = ref<FilterSettings[]>([createFilterSettings()])
 const delays = ref<DelaySettings[]>([])
+const overdrives = ref<OverdriveSettings[]>([])
 const bpm = ref(120)
 const reverbs = ref<ReverbSettings[]>([])
 const amplitudeModulation = ref<AmplitudeModulationSettings | null>(null)
 const envelopes = ref<EnvelopeModule[]>([])
 const lfos = ref<LfoControlModule[]>([])
 const dynamics = ref<DynamicsSettings[]>([])
-const effectOrder = ref<EffectGroup[]>(['filters', 'delays', 'reverbs', 'dynamics'])
+const effectOrder = ref<EffectGroup[]>(['filters', 'overdrives', 'delays', 'reverbs', 'dynamics'])
 const isAmplitudeModulationBypassed = ref(false)
 const channels = shallowRef<ChannelState[]>([])
 const areOscillatorsCollapsed = ref(false)
 const areFiltersCollapsed = ref(false)
 const areDynamicsCollapsed = ref(false)
 const areDelaysCollapsed = ref(false)
+const areOverdrivesCollapsed = ref(false)
 const areReverbsCollapsed = ref(false)
 let firstInteractionHandled = false
 let midiConnectionStarted = false
@@ -71,6 +75,7 @@ function saveActiveChannel() {
   channel.noise = noise.value
   channel.filters = filters.value
   channel.delays = delays.value
+  channel.overdrives = overdrives.value
   channel.bpm = bpm.value
   channel.reverbs = reverbs.value
   channel.amplitudeModulation = amplitudeModulation.value
@@ -91,6 +96,7 @@ function loadChannel(channelNumber: number) {
   noise.value = channel.noise
   filters.value = channel.filters
   delays.value = channel.delays
+  overdrives.value = channel.overdrives
   bpm.value = channel.bpm
   reverbs.value = channel.reverbs
   amplitudeModulation.value = channel.amplitudeModulation
@@ -112,13 +118,14 @@ function addChannel() {
     noise: null,
     filters: [createFilterSettings()],
     delays: [],
+    overdrives: [],
     bpm: 120,
     reverbs: [],
     amplitudeModulation: null,
     envelopes: [],
     lfos: [],
     dynamics: [],
-    effectOrder: ['filters', 'delays', 'reverbs', 'dynamics'],
+    effectOrder: ['filters', 'overdrives', 'delays', 'reverbs', 'dynamics'],
     isAmplitudeModulationBypassed: false,
   }
   channels.value = [...channels.value, channel]
@@ -148,6 +155,7 @@ channels.value.push({
   noise: noise.value,
   filters: filters.value,
   delays: delays.value,
+  overdrives: overdrives.value,
   bpm: bpm.value,
   reverbs: reverbs.value,
   amplitudeModulation: amplitudeModulation.value,
@@ -371,6 +379,42 @@ function toggleDelayBypass(index: number) {
   activeSynth.setDelayBypassed(index, bypassed)
 }
 
+function addOverdrive() {
+  const settings = createOverdriveSettings()
+  overdrives.value.push(settings)
+  activeSynth.addOverdrive(settings)
+}
+
+function removeOverdrive(index: number) {
+  removeLfosForModule('overdrive', index)
+  activeSynth.removeOverdrive(index)
+  overdrives.value.splice(index, 1)
+}
+
+function updateOverdriveSettings(index: number, settings: Partial<OverdriveSettings>) {
+  overdrives.value[index] = { ...overdrives.value[index], ...settings }
+  activeSynth.setOverdriveSettings(index, settings)
+}
+
+function toggleOverdriveBypass(index: number) {
+  const bypassed = !overdrives.value[index].bypassed
+  overdrives.value[index] = { ...overdrives.value[index], bypassed }
+  activeSynth.setOverdriveBypassed(index, bypassed)
+}
+
+function moveOverdrive(index: number, direction: -1 | 1) {
+  const targetIndex = index + direction
+  if (!overdrives.value[targetIndex]) return
+  ;[overdrives.value[index], overdrives.value[targetIndex]] = [overdrives.value[targetIndex], overdrives.value[index]]
+  activeSynth.moveOverdrive(index, direction)
+  const sourcePrefix = `overdrive:${index}:`
+  const targetPrefix = `overdrive:${targetIndex}:`
+  lfos.value.forEach((lfo, lfoIndex) => {
+    if (lfo.target.startsWith(sourcePrefix)) updateLfo(lfoIndex, { target: lfo.target.replace(sourcePrefix, targetPrefix) })
+    else if (lfo.target.startsWith(targetPrefix)) updateLfo(lfoIndex, { target: lfo.target.replace(targetPrefix, sourcePrefix) })
+  })
+}
+
 function addReverb() {
   const settings = createReverbSettings()
   reverbs.value.push(settings)
@@ -517,23 +561,24 @@ function updateEnvelopeSettings(index: number, settings: Partial<EnvelopeSetting
   activeSynth.setEnvelopeSettings(index, settings)
 }
 
-function lfoTargetOptions(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'reverb', index: number) {
+function lfoTargetOptions(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'overdrive' | 'reverb', index: number) {
   const targets = {
     oscillator: [['detune', 'Detune'], ['level', 'Level'], ['stereoSpread', 'Stereo spread']],
     noise: [['level', 'Level'], ['stereoSpread', 'Stereo spread']],
     filter: [['cutoff', 'Cutoff'], ['resonance', 'Resonance'], ['gain', 'Gain']],
     delay: [['time', 'Time'], ['feedback', 'Feedback'], ['mix', 'Mix'], ['overdrive', 'Overdrive']],
+    overdrive: [['drive', 'Drive'], ['tone', 'Tone'], ['feedback', 'Feedback'], ['mix', 'Mix']],
     reverb: [['preDelay', 'Pre-delay'], ['damping', 'Damping'], ['mix', 'Mix'], ['width', 'Width']],
   } as const
   return targets[module].map(([parameter, label]) => ({ value: `${module}:${index}:${parameter}`, label }))
 }
 
-function lfosForModule(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'reverb', index: number) {
+function lfosForModule(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'overdrive' | 'reverb', index: number) {
   const prefix = `${module}:${index}:`
   return lfos.value.flatMap((lfo, lfoIndex) => lfo.target.startsWith(prefix) ? [{ ...lfo, index: lfoIndex }] : [])
 }
 
-function addLfo(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'reverb', index: number) {
+function addLfo(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'overdrive' | 'reverb', index: number) {
   const target = lfoTargetOptions(module, index)[0].value
   const settings: LfoControlModule = { waveform: 'sine', rate: 5, depth: 0.25, target, bypassed: false }
   activeSynth.addLfo(settings)
@@ -763,6 +808,51 @@ onUnmounted(() => {
             @remove="removeEnvelope"
             @add="addEnvelope('filterCutoff')"
           />
+        </div>
+      </section>
+
+      <section class="synth-section oscillators-section effect-group" :style="{ order: effectOrder.indexOf('overdrives') }" aria-labelledby="overdrives-heading">
+        <h2 id="overdrives-heading">
+          <button
+            type="button"
+            class="oscillators-toggle"
+            :aria-expanded="!areOverdrivesCollapsed"
+            aria-controls="overdrives-content"
+            @click="areOverdrivesCollapsed = !areOverdrivesCollapsed"
+          >
+            Overdrive
+          </button>
+          <span class="effect-order-actions">
+            <button type="button" :disabled="!canMoveEffectGroup('overdrives', -1)" aria-label="Move Overdrive up" @click="moveEffectGroup('overdrives', -1)">↑</button>
+            <button type="button" :disabled="!canMoveEffectGroup('overdrives', 1)" aria-label="Move Overdrive down" @click="moveEffectGroup('overdrives', 1)">↓</button>
+          </span>
+        </h2>
+        <div v-show="!areOverdrivesCollapsed" id="overdrives-content" class="oscillators-content">
+          <template v-for="(overdrive, index) in overdrives" :key="index">
+          <OverdriveControls
+            :overdrive-index="index"
+            :overdrive-count="overdrives.length"
+            v-bind="overdrive"
+            @update:drive="updateOverdriveSettings(index, { drive: $event })"
+            @update:tone="updateOverdriveSettings(index, { tone: $event })"
+            @update:feedback="updateOverdriveSettings(index, { feedback: $event })"
+            @update:mix="updateOverdriveSettings(index, { mix: $event })"
+            @toggle-bypass="toggleOverdriveBypass(index)"
+            @move-up="moveOverdrive(index, -1)"
+            @move-down="moveOverdrive(index, 1)"
+            @remove="removeOverdrive(index)"
+          />
+          <LfoControls
+            :lfos="lfosForModule('overdrive', index)"
+            :target-options="lfoTargetOptions('overdrive', index)"
+            :id-prefix="`overdrive-${index}`"
+            @update="updateLfo($event.index, $event.settings)"
+            @toggle-bypass="toggleLfoBypass"
+            @remove="removeLfo"
+            @add="addLfo('overdrive', index)"
+          />
+          </template>
+          <button type="button" class="add-filter-button" @click="addOverdrive">Add Overdrive</button>
         </div>
       </section>
 

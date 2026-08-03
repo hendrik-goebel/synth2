@@ -16,6 +16,20 @@ type Voice = {
 }
 
 type DelayModule = { node: DelayNode; feedback: GainNode; resonance: BiquadFilterNode; drive: WaveShaperNode; driveGain: GainNode; wet: GainNode; dry: GainNode; output: GainNode; settings: DelaySettings }
+type OverdriveModule = {
+  input: GainNode
+  dcBlocker: BiquadFilterNode
+  driveGain: GainNode
+  shaper: WaveShaperNode
+  tone: BiquadFilterNode
+  feedbackTone: BiquadFilterNode
+  feedbackDelay: DelayNode
+  feedbackGain: GainNode
+  wet: GainNode
+  dry: GainNode
+  output: GainNode
+  settings: OverdriveSettings
+}
 type ReverbModule = {
   input: GainNode
   preDelay: DelayNode
@@ -102,6 +116,15 @@ export type DelaySettings = {
   mix: number
   overdrive: number
 }
+
+export type OverdriveSettings = {
+  bypassed: boolean
+  drive: number
+  tone: number
+  feedback: number
+  mix: number
+}
+
 export type HallType = 'small-hall' | 'wooden-hall' | 'concert-hall' | 'opera-house' | 'cathedral' | 'arena'
 
 export type ReverbSettings = {
@@ -155,7 +178,7 @@ export type DynamicsSettingsChanges = Partial<{
   bypassed: boolean
 }>
 
-export type EffectGroup = 'filters' | 'dynamics' | 'delays' | 'reverbs'
+export type EffectGroup = 'filters' | 'overdrives' | 'dynamics' | 'delays' | 'reverbs'
 
 export type AmplitudeModulationSettings = {
   rate: number
@@ -231,6 +254,10 @@ export function createDelaySettings(): DelaySettings {
   return { bypassed: false, time: 0.25, noteTime: 16, feedback: 0.35, resonance: 0, mix: 0.3, overdrive: 0 }
 }
 
+export function createOverdriveSettings(): OverdriveSettings {
+  return { bypassed: false, drive: 0.35, tone: 0.55, feedback: 0, mix: 1 }
+}
+
 export function createReverbSettings(): ReverbSettings {
   return { bypassed: false, hallType: 'concert-hall', decay: 3.5, preDelay: 0.025, damping: 0.6, width: 0.9, mix: 0.25 }
 }
@@ -261,12 +288,13 @@ export class SynthEngine {
   private filters: { node: BiquadFilterNode; gainNode: GainNode; settings: FilterSettings }[] = []
   private dynamics: DynamicsModule[] = []
   private delays: DelayModule[] = []
+  private overdrives: OverdriveModule[] = []
   private reverbs: ReverbModule[] = []
   private amplitudeModulation?: AmplitudeModulationSettings
   private amplitudeModulationBypassed = false
   private lfos: LfoModule[] = []
   private envelopeSettings: { settings: EnvelopeSettings; bypassed: boolean }[] = []
-  private effectOrder: EffectGroup[] = ['filters', 'delays', 'reverbs', 'dynamics']
+  private effectOrder: EffectGroup[] = ['filters', 'overdrives', 'delays', 'reverbs', 'dynamics']
 
   constructor(initialSettings: OscillatorSettings = createOscillatorSettings()) {
     this.settings = [{ ...initialSettings }]
@@ -490,6 +518,68 @@ export class SynthEngine {
     this.routeOutput()
   }
 
+  addOverdrive(settings: OverdriveSettings = createOverdriveSettings()): void {
+    const input = this.audioContext.createGain()
+    const dcBlocker = this.audioContext.createBiquadFilter()
+    const driveGain = this.audioContext.createGain()
+    const shaper = this.audioContext.createWaveShaper()
+    const tone = this.audioContext.createBiquadFilter()
+    const feedbackTone = this.audioContext.createBiquadFilter()
+    const feedbackDelay = this.audioContext.createDelay(0.05)
+    const feedbackGain = this.audioContext.createGain()
+    const wet = this.audioContext.createGain()
+    const dry = this.audioContext.createGain()
+    const output = this.audioContext.createGain()
+    const overdrive = { input, dcBlocker, driveGain, shaper, tone, feedbackTone, feedbackDelay, feedbackGain, wet, dry, output, settings: { ...settings } }
+
+    input.connect(dcBlocker).connect(driveGain).connect(shaper).connect(tone).connect(wet).connect(output)
+    input.connect(dry).connect(output)
+    tone.connect(feedbackTone).connect(feedbackDelay).connect(feedbackGain).connect(dcBlocker)
+    this.overdrives.push(overdrive)
+    this.applyOverdriveSettings(overdrive)
+    this.routeOutput()
+  }
+
+  setOverdriveSettings(index: number, changes: Partial<OverdriveSettings>): void {
+    const overdrive = this.overdrives[index]
+    if (!overdrive) throw new RangeError(`Unknown overdrive index: ${index}`)
+    overdrive.settings = { ...overdrive.settings, ...changes }
+    this.applyOverdriveSettings(overdrive)
+  }
+
+  removeOverdrive(index: number): void {
+    const overdrive = this.overdrives[index]
+    if (!overdrive) throw new RangeError(`Unknown overdrive index: ${index}`)
+    overdrive.input.disconnect()
+    overdrive.dcBlocker.disconnect()
+    overdrive.driveGain.disconnect()
+    overdrive.shaper.disconnect()
+    overdrive.tone.disconnect()
+    overdrive.feedbackTone.disconnect()
+    overdrive.feedbackDelay.disconnect()
+    overdrive.feedbackGain.disconnect()
+    overdrive.wet.disconnect()
+    overdrive.dry.disconnect()
+    overdrive.output.disconnect()
+    this.overdrives.splice(index, 1)
+    this.routeOutput()
+  }
+
+  setOverdriveBypassed(index: number, bypassed: boolean): void {
+    const overdrive = this.overdrives[index]
+    if (!overdrive) throw new RangeError(`Unknown overdrive index: ${index}`)
+    overdrive.settings = { ...overdrive.settings, bypassed }
+    this.routeOutput()
+  }
+
+  moveOverdrive(index: number, direction: -1 | 1): void {
+    const targetIndex = index + direction
+    if (!this.overdrives[index]) throw new RangeError(`Unknown overdrive index: ${index}`)
+    if (targetIndex < 0 || targetIndex >= this.overdrives.length) return
+    ;[this.overdrives[index], this.overdrives[targetIndex]] = [this.overdrives[targetIndex], this.overdrives[index]]
+    this.routeOutput()
+  }
+
   addReverb(settings: ReverbSettings = createReverbSettings()): void {
     const input = this.audioContext.createGain()
     const preDelay = this.audioContext.createDelay(0.25)
@@ -668,14 +758,15 @@ export class SynthEngine {
   }
 
   private lfoDepth(settings: LfoSettings): number {
-    const parameter = settings.target.split(':').at(-1)
+    const [module, , parameter] = settings.target.split(':')
     const ranges: Record<string, number> = {
       detune: 1200, level: MAX_GAIN, stereoSpread: 1, cutoff: 19980, resonance: 3,
       gain: 24, time: 1.99, feedback: 0.95, mix: 1, overdrive: 1,
-      decay: 9.4, preDelay: 0.2, damping: 9500, width: 1,
+      drive: 18, tone: 10200, decay: 9.4, preDelay: 0.2, damping: 9500, width: 1,
     }
     const normalizedDepth = Math.max(0, Math.min(1, settings.depth))
-    return normalizedDepth ** 2 * (ranges[parameter ?? ''] ?? 1)
+    const range = module === 'overdrive' && parameter === 'feedback' ? 0.6 : (ranges[parameter] ?? 1)
+    return normalizedDepth ** 2 * range
   }
 
   private lfoTargetParams(target: LfoTarget): AudioParam[] {
@@ -700,6 +791,10 @@ export class SynthEngine {
     if (module === 'delay') {
       const delay = this.delays[index]
       return !delay ? [] : parameter === 'time' ? [delay.node.delayTime] : parameter === 'feedback' ? [delay.feedback.gain] : parameter === 'mix' ? [delay.wet.gain] : parameter === 'overdrive' ? [delay.driveGain.gain] : []
+    }
+    if (module === 'overdrive') {
+      const overdrive = this.overdrives[index]
+      return !overdrive ? [] : parameter === 'drive' ? [overdrive.driveGain.gain] : parameter === 'tone' ? [overdrive.tone.frequency] : parameter === 'feedback' ? [overdrive.feedbackGain.gain] : parameter === 'mix' ? [overdrive.wet.gain] : []
     }
     if (module === 'reverb') {
       const reverb = this.reverbs[index]
@@ -800,6 +895,17 @@ export class SynthEngine {
             delay.dry.connect(delay.output)
             delay.wet.connect(delay.output)
             output = delay.output
+          }
+        })
+      }
+      if (group === 'overdrives') {
+        this.overdrives.forEach((overdrive) => {
+          overdrive.output.disconnect()
+          if (!overdrive.settings.bypassed) {
+            output.connect(overdrive.input)
+            overdrive.wet.connect(overdrive.output)
+            overdrive.dry.connect(overdrive.output)
+            output = overdrive.output
           }
         })
       }
@@ -945,6 +1051,38 @@ export class SynthEngine {
       curve[index] = amount === 0 ? input : Math.tanh(input * (1 + amount))
     }
     drive.curve = curve
+  }
+
+  private applyOverdriveSettings(overdrive: OverdriveModule): void {
+    const { dcBlocker, driveGain, shaper, tone, feedbackTone, feedbackDelay, feedbackGain, wet, dry, output, settings } = overdrive
+    const now = this.audioContext.currentTime
+    dcBlocker.type = 'highpass'
+    dcBlocker.frequency.setTargetAtTime(35, now, 0.02)
+    dcBlocker.Q.setTargetAtTime(0.7, now, 0.02)
+    driveGain.gain.setTargetAtTime(1 + settings.drive * 18, now, 0.02)
+    tone.type = 'lowpass'
+    tone.frequency.setTargetAtTime(1800 + settings.tone * 10200, now, 0.03)
+    tone.Q.setTargetAtTime(0.6, now, 0.03)
+    feedbackTone.type = 'lowpass'
+    feedbackTone.frequency.setTargetAtTime(900 + settings.tone * 4100, now, 0.03)
+    feedbackTone.Q.setTargetAtTime(0.7, now, 0.03)
+    feedbackDelay.delayTime.setTargetAtTime(0.012, now, 0.02)
+    feedbackGain.gain.setTargetAtTime(Math.min(0.6, settings.feedback), now, 0.03)
+    wet.gain.setTargetAtTime(settings.mix, now, 0.02)
+    dry.gain.setTargetAtTime(1 - settings.mix, now, 0.02)
+    output.gain.setTargetAtTime(1 / (1 + settings.drive * 0.8), now, 0.02)
+    shaper.oversample = '4x'
+    shaper.curve = this.createWarmOverdriveCurve(settings.drive)
+  }
+
+  private createWarmOverdriveCurve(drive: number): Float32Array<ArrayBuffer> {
+    const curve = new Float32Array(2048)
+    const gain = 1 + drive * 5
+    for (let index = 0; index < curve.length; index += 1) {
+      const input = (index * 2) / (curve.length - 1) - 1
+      curve[index] = Math.tanh(input * gain) / Math.tanh(gain)
+    }
+    return curve
   }
 
   private applyReverbSettings(reverb: ReverbModule, replaceImpulse: boolean): void {
