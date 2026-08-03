@@ -786,6 +786,7 @@ export class SynthEngine {
       detune: 1200, level: MAX_GAIN, stereoSpread: 1, cutoff: 19980, resonance: 3,
       gain: 24, time: 1.99, feedback: 0.95, mix: 1, overdrive: 1,
       drive: 18, tone: 10200, decay: 9.4, preDelay: 0.2, damping: 9500, width: 1,
+      volume: 1, pan: 1,
     }
     const normalizedDepth = Math.max(0, Math.min(1, settings.depth))
     const range = module === 'overdrive' && parameter === 'feedback' ? 0.6 : (ranges[parameter] ?? 1)
@@ -796,6 +797,9 @@ export class SynthEngine {
     const [module, rawIndex, parameter] = target.split(':')
     const index = Number(rawIndex)
     if (!Number.isInteger(index) || index < 0) return []
+    if (module === 'output') {
+      return parameter === 'volume' ? [this.outputGain.gain] : parameter === 'pan' ? [this.outputPanner.pan] : []
+    }
     if (module === 'oscillator') {
       return this.activeVoices
         .flatMap((active) => active.voices)

@@ -575,7 +575,7 @@ function updateEnvelopeSettings(index: number, settings: Partial<EnvelopeSetting
   activeSynth.setEnvelopeSettings(index, settings)
 }
 
-function lfoTargetOptions(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'overdrive' | 'reverb', index: number) {
+function lfoTargetOptions(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'overdrive' | 'reverb' | 'output', index: number) {
   const targets = {
     oscillator: [['detune', 'Detune'], ['level', 'Level'], ['stereoSpread', 'Stereo spread']],
     noise: [['level', 'Level'], ['stereoSpread', 'Stereo spread']],
@@ -583,16 +583,17 @@ function lfoTargetOptions(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 
     delay: [['time', 'Time'], ['feedback', 'Feedback'], ['mix', 'Mix'], ['overdrive', 'Overdrive']],
     overdrive: [['drive', 'Drive'], ['tone', 'Tone'], ['feedback', 'Feedback'], ['mix', 'Mix']],
     reverb: [['preDelay', 'Pre-delay'], ['damping', 'Damping'], ['mix', 'Mix'], ['width', 'Width']],
+    output: [['volume', 'Volume'], ['pan', 'Pan']],
   } as const
   return targets[module].map(([parameter, label]) => ({ value: `${module}:${index}:${parameter}`, label }))
 }
 
-function lfosForModule(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'overdrive' | 'reverb', index: number) {
+function lfosForModule(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'overdrive' | 'reverb' | 'output', index: number) {
   const prefix = `${module}:${index}:`
   return lfos.value.flatMap((lfo, lfoIndex) => lfo.target.startsWith(prefix) ? [{ ...lfo, index: lfoIndex }] : [])
 }
 
-function addLfo(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'overdrive' | 'reverb', index: number) {
+function addLfo(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'overdrive' | 'reverb' | 'output', index: number) {
   const target = lfoTargetOptions(module, index)[0].value
   const settings: LfoControlModule = { waveform: 'sine', rate: 5, depth: 0.25, target, bypassed: false }
   activeSynth.addLfo(settings)
@@ -690,8 +691,13 @@ onUnmounted(() => {
       <OutputControls
         :volume="output.volume"
         :pan="output.pan"
+        :lfos="lfosForModule('output', 0)"
         @update:volume="updateOutputSettings({ volume: $event })"
         @update:pan="updateOutputSettings({ pan: $event })"
+        @update-lfo="updateLfo($event.index, $event.settings)"
+        @toggle-lfo-bypass="toggleLfoBypass"
+        @remove-lfo="removeLfo"
+        @add-lfo="addLfo('output', 0)"
       />
 
       <section class="synth-section oscillators-section" aria-labelledby="oscillators-heading">
