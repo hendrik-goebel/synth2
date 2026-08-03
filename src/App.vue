@@ -190,6 +190,12 @@ const delayEnvelopeDestinations = [
   { value: 'delayFeedback', label: 'Feedback' },
   { value: 'delayMix', label: 'Mix' },
 ] satisfies { value: EnvelopeDestination; label: string }[]
+const overdriveEnvelopeDestinations = [
+  { value: 'overdriveDrive', label: 'Drive' },
+  { value: 'overdriveTone', label: 'Tone' },
+  { value: 'overdriveFeedback', label: 'Feedback' },
+  { value: 'overdriveMix', label: 'Mix' },
+] satisfies { value: EnvelopeDestination; label: string }[]
 const reverbEnvelopeDestinations = [
   { value: 'reverbDecay', label: 'Decay' },
   { value: 'reverbMix', label: 'Mix' },
@@ -880,6 +886,15 @@ onUnmounted(() => {
           />
           </template>
           <button type="button" class="add-filter-button" @click="addOverdrive">Add Overdrive</button>
+          <EnvelopeControls
+            :envelopes="envelopesFor(overdriveEnvelopeDestinations)"
+            :destination-options="overdriveEnvelopeDestinations"
+            id-prefix="overdrive"
+            @update="updateEnvelopeSettings($event.index, $event.settings)"
+            @toggle-bypass="toggleEnvelopeBypass"
+            @remove="removeEnvelope"
+            @add="addEnvelope('overdriveDrive')"
+          />
         </div>
       </section>
 

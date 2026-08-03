@@ -216,6 +216,10 @@ export type EnvelopeDestination =
   | 'delayTime'
   | 'delayFeedback'
   | 'delayMix'
+  | 'overdriveDrive'
+  | 'overdriveTone'
+  | 'overdriveFeedback'
+  | 'overdriveMix'
   | 'reverbDecay'
   | 'reverbMix'
   | 'reverbPreDelay'
@@ -867,6 +871,17 @@ export class SynthEngine {
       if (mixEnvelope) this.applyPositiveEnvelopeOnNoteOn(delay.wet.gain, now, mixEnvelope, 0, delay.settings.mix * this.envelopePeakGain(velocity, mixEnvelope.velocity))
     })
 
+    const driveEnvelope = this.activeEnvelopeSettings('overdriveDrive')
+    const toneEnvelope = this.activeEnvelopeSettings('overdriveTone')
+    const overdriveFeedbackEnvelope = this.activeEnvelopeSettings('overdriveFeedback')
+    const overdriveMixEnvelope = this.activeEnvelopeSettings('overdriveMix')
+    this.overdrives.forEach((overdrive) => {
+      if (driveEnvelope) this.applyPositiveEnvelopeOnNoteOn(overdrive.driveGain.gain, now, driveEnvelope, 1, 1 + overdrive.settings.drive * 18 * this.envelopePeakGain(velocity, driveEnvelope.velocity))
+      if (toneEnvelope) this.applyPositiveEnvelopeOnNoteOn(overdrive.tone.frequency, now, toneEnvelope, 1800, 1800 + overdrive.settings.tone * 10200 * this.envelopePeakGain(velocity, toneEnvelope.velocity))
+      if (overdriveFeedbackEnvelope) this.applyPositiveEnvelopeOnNoteOn(overdrive.feedbackGain.gain, now, overdriveFeedbackEnvelope, 0, Math.min(0.6, overdrive.settings.feedback) * this.envelopePeakGain(velocity, overdriveFeedbackEnvelope.velocity))
+      if (overdriveMixEnvelope) this.applyPositiveEnvelopeOnNoteOn(overdrive.wet.gain, now, overdriveMixEnvelope, 0, overdrive.settings.mix * this.envelopePeakGain(velocity, overdriveMixEnvelope.velocity))
+    })
+
     const reverbDecayEnvelope = this.activeEnvelopeSettings('reverbDecay')
     const reverbMixEnvelope = this.activeEnvelopeSettings('reverbMix')
     const reverbPreDelayEnvelope = this.activeEnvelopeSettings('reverbPreDelay')
@@ -1412,7 +1427,7 @@ export class SynthEngine {
   }
 
   private clampEnvelopeDestination(value: EnvelopeDestination | undefined, fallback: EnvelopeDestination): EnvelopeDestination {
-    return value === 'oscillatorLevel' || value === 'oscillatorPitch' || value === 'noiseLevel' || value === 'filterCutoff' || value === 'filterResonance' || value === 'delayTime' || value === 'delayFeedback' || value === 'delayMix' || value === 'reverbDecay' || value === 'reverbMix' || value === 'reverbPreDelay' || value === 'reverbDamping' || value === 'reverbWidth' ? value : fallback
+    return value === 'oscillatorLevel' || value === 'oscillatorPitch' || value === 'noiseLevel' || value === 'filterCutoff' || value === 'filterResonance' || value === 'delayTime' || value === 'delayFeedback' || value === 'delayMix' || value === 'overdriveDrive' || value === 'overdriveTone' || value === 'overdriveFeedback' || value === 'overdriveMix' || value === 'reverbDecay' || value === 'reverbMix' || value === 'reverbPreDelay' || value === 'reverbDamping' || value === 'reverbWidth' ? value : fallback
   }
 
   private envelopePeakGain(velocity: number, velocityAmount: number): number {
