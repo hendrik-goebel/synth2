@@ -328,7 +328,7 @@ onUnmounted(() => {
         </div>
       </header>
 
-      <section class="oscillators-section" aria-labelledby="oscillators-heading">
+      <section class="synth-section oscillators-section" aria-labelledby="oscillators-heading">
         <h2 id="oscillators-heading">
           <button
             type="button"
@@ -376,6 +376,7 @@ onUnmounted(() => {
 
       <template v-if="noise">
         <NoiseControls
+          class="synth-section"
           v-bind="noise"
           @update:color="updateNoiseSettings({ color: $event })"
           @update:level="updateNoiseSettings({ level: $event })"
@@ -396,7 +397,7 @@ onUnmounted(() => {
       </template>
 
       <div class="effect-chain">
-      <section class="oscillators-section effect-group" :style="{ order: effectOrder.indexOf('filters') }" aria-labelledby="filters-heading">
+      <section class="synth-section oscillators-section effect-group" :style="{ order: effectOrder.indexOf('filters') }" aria-labelledby="filters-heading">
         <h2 id="filters-heading">
           <button
             type="button"
@@ -438,7 +439,7 @@ onUnmounted(() => {
         </div>
       </section>
 
-      <section class="oscillators-section effect-group" :style="{ order: effectOrder.indexOf('delays') }" aria-labelledby="delays-heading">
+      <section class="synth-section oscillators-section effect-group" :style="{ order: effectOrder.indexOf('delays') }" aria-labelledby="delays-heading">
         <h2 id="delays-heading">
           <button type="button" class="oscillators-toggle" :aria-expanded="!areDelaysCollapsed" aria-controls="delays-content" @click="areDelaysCollapsed = !areDelaysCollapsed">
             Delays
@@ -477,7 +478,7 @@ onUnmounted(() => {
 
       <SectionFrame
         v-if="amplitudeModulation"
-        class="modulation-section"
+        class="synth-section modulation-section"
         title="Amplitude modulation"
         heading-id="am-heading"
         content-id="am-content"
