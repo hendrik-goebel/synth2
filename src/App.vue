@@ -52,6 +52,13 @@ const delayEnvelopeDestinations = [
   { value: 'delayFeedback', label: 'Feedback' },
   { value: 'delayMix', label: 'Mix' },
 ] satisfies { value: EnvelopeDestination; label: string }[]
+const reverbEnvelopeDestinations = [
+  { value: 'reverbDecay', label: 'Decay' },
+  { value: 'reverbMix', label: 'Mix' },
+  { value: 'reverbPreDelay', label: 'Pre-delay' },
+  { value: 'reverbDamping', label: 'Damping' },
+  { value: 'reverbWidth', label: 'Width' },
+] satisfies { value: EnvelopeDestination; label: string }[]
 
 const midiService = new MidiService({
   onNoteOn: ({ note, velocity }) => {
@@ -527,6 +534,15 @@ onUnmounted(() => {
             @remove="removeReverb(index)"
           />
           <button type="button" class="add-filter-button" @click="addReverb">Add Reverb</button>
+          <EnvelopeControls
+            :envelopes="envelopesFor(reverbEnvelopeDestinations)"
+            :destination-options="reverbEnvelopeDestinations"
+            id-prefix="reverb"
+            @update="updateEnvelopeSettings($event.index, $event.settings)"
+            @toggle-bypass="toggleEnvelopeBypass"
+            @remove="removeEnvelope"
+            @add="addEnvelope('reverbMix')"
+          />
         </div>
       </section>
 

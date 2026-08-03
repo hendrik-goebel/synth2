@@ -116,6 +116,11 @@ export type EnvelopeDestination =
   | 'delayTime'
   | 'delayFeedback'
   | 'delayMix'
+  | 'reverbDecay'
+  | 'reverbMix'
+  | 'reverbPreDelay'
+  | 'reverbDamping'
+  | 'reverbWidth'
 
 export type EnvelopeSettings = {
   attack: number
@@ -508,6 +513,28 @@ export class SynthEngine {
       if (feedbackEnvelope) this.applyPositiveEnvelopeOnNoteOn(delay.feedback.gain, now, feedbackEnvelope, 0, Math.min(0.98, delay.settings.feedback + delay.settings.resonance * 0.3) * this.envelopePeakGain(velocity, feedbackEnvelope.velocity))
       if (mixEnvelope) this.applyPositiveEnvelopeOnNoteOn(delay.wet.gain, now, mixEnvelope, 0, delay.settings.mix * this.envelopePeakGain(velocity, mixEnvelope.velocity))
     })
+
+    const reverbDecayEnvelope = this.activeEnvelopeSettings('reverbDecay')
+    const reverbMixEnvelope = this.activeEnvelopeSettings('reverbMix')
+    const reverbPreDelayEnvelope = this.activeEnvelopeSettings('reverbPreDelay')
+    const reverbDampingEnvelope = this.activeEnvelopeSettings('reverbDamping')
+    const reverbWidthEnvelope = this.activeEnvelopeSettings('reverbWidth')
+    this.reverbs.forEach((reverb) => {
+      if (reverbDecayEnvelope) {
+        const peakGain = this.envelopePeakGain(velocity, reverbDecayEnvelope.velocity)
+        reverb.convolver.buffer = this.createHallImpulse({ ...reverb.settings, decay: 0.6 + (reverb.settings.decay - 0.6) * peakGain })
+      }
+      if (reverbMixEnvelope) this.applyPositiveEnvelopeOnNoteOn(reverb.wet.gain, now, reverbMixEnvelope, 0, reverb.settings.mix * this.envelopePeakGain(velocity, reverbMixEnvelope.velocity))
+      if (reverbPreDelayEnvelope) this.applyPositiveEnvelopeOnNoteOn(reverb.preDelay.delayTime, now, reverbPreDelayEnvelope, 0, reverb.settings.preDelay * this.envelopePeakGain(velocity, reverbPreDelayEnvelope.velocity))
+      if (reverbDampingEnvelope) this.applyPositiveEnvelopeOnNoteOn(reverb.tone.frequency, now, reverbDampingEnvelope, 13000, 13000 - reverb.settings.damping * 9500 * this.envelopePeakGain(velocity, reverbDampingEnvelope.velocity))
+      if (reverbWidthEnvelope) {
+        const peakWidth = reverb.settings.width * this.envelopePeakGain(velocity, reverbWidthEnvelope.velocity)
+        this.applyPositiveEnvelopeOnNoteOn(reverb.left.gain, now, reverbWidthEnvelope, 0.5, (1 + peakWidth) / 2)
+        this.applyPositiveEnvelopeOnNoteOn(reverb.right.gain, now, reverbWidthEnvelope, 0.5, (1 + peakWidth) / 2)
+        this.applyPositiveEnvelopeOnNoteOn(reverb.leftCross.gain, now, reverbWidthEnvelope, 0.5, (1 - peakWidth) / 2)
+        this.applyPositiveEnvelopeOnNoteOn(reverb.rightCross.gain, now, reverbWidthEnvelope, 0.5, (1 - peakWidth) / 2)
+      }
+    })
   }
 
   private routeOutput(): void {
@@ -858,7 +885,7 @@ export class SynthEngine {
   }
 
   private clampEnvelopeDestination(value: EnvelopeDestination | undefined, fallback: EnvelopeDestination): EnvelopeDestination {
-    return value === 'oscillatorLevel' || value === 'oscillatorPitch' || value === 'noiseLevel' || value === 'filterCutoff' || value === 'filterResonance' || value === 'delayTime' || value === 'delayFeedback' || value === 'delayMix' ? value : fallback
+    return value === 'oscillatorLevel' || value === 'oscillatorPitch' || value === 'noiseLevel' || value === 'filterCutoff' || value === 'filterResonance' || value === 'delayTime' || value === 'delayFeedback' || value === 'delayMix' || value === 'reverbDecay' || value === 'reverbMix' || value === 'reverbPreDelay' || value === 'reverbDamping' || value === 'reverbWidth' ? value : fallback
   }
 
   private envelopePeakGain(velocity: number, velocityAmount: number): number {
