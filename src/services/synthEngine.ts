@@ -32,6 +32,19 @@ type ReverbModule = {
   output: GainNode
   settings: ReverbSettings
 }
+type DynamicsModule = {
+  input: GainNode
+  output: GainNode
+  compressor?: DynamicsCompressorNode
+  makeupGain?: GainNode
+  analyser?: AnalyserNode
+  gateGain?: GainNode
+  gateLevelData?: Float32Array<ArrayBuffer>
+  gateTimer?: ReturnType<typeof setInterval>
+  gateLastAboveThresholdTime: number
+  gateOpen: boolean
+  settings: DynamicsSettings
+}
 
 const MAX_GAIN = 0.2
 const UNISON_LAYER_COUNT = 3
@@ -45,6 +58,8 @@ const ENVELOPE_BYPASS_RELEASE_MS = 20
 const ENVELOPE_GAIN_EPSILON = 0.0001
 const PITCH_ENVELOPE_DEPTH_CENTS = 240
 const OVERDRIVE_OUTPUT_ATTENUATION = 40
+const GATE_CLOSED_GAIN = 0.0001
+const GATE_ANALYSIS_INTERVAL_MS = 20
 
 export type Waveform = OscillatorType | 'random'
 export type NoiseColor = 'white' | 'pink' | 'brown'
@@ -98,7 +113,48 @@ export type ReverbSettings = {
   mix: number
 }
 
-export type EffectGroup = 'filters' | 'delays' | 'reverbs'
+export type CompressorSettings = {
+  type: 'compressor'
+  bypassed: boolean
+  threshold: number
+  knee: number
+  ratio: number
+  attack: number
+  release: number
+  makeupGain: number
+}
+
+export type GateSettings = {
+  type: 'gate'
+  bypassed: boolean
+  threshold: number
+  attack: number
+  hold: number
+  release: number
+}
+
+export type LimiterSettings = {
+  type: 'limiter'
+  bypassed: boolean
+  ceiling: number
+  release: number
+  makeupGain: number
+}
+
+export type DynamicsSettings = CompressorSettings | GateSettings | LimiterSettings
+export type DynamicsSettingsChanges = Partial<{
+  threshold: number
+  knee: number
+  ratio: number
+  attack: number
+  hold: number
+  release: number
+  makeupGain: number
+  ceiling: number
+  bypassed: boolean
+}>
+
+export type EffectGroup = 'filters' | 'dynamics' | 'delays' | 'reverbs'
 
 export type AmplitudeModulationSettings = {
   rate: number
@@ -178,6 +234,18 @@ export function createReverbSettings(): ReverbSettings {
   return { bypassed: false, hallType: 'concert-hall', decay: 3.5, preDelay: 0.025, damping: 0.6, width: 0.9, mix: 0.25 }
 }
 
+export function createCompressorSettings(): CompressorSettings {
+  return { type: 'compressor', bypassed: false, threshold: -24, knee: 30, ratio: 12, attack: 0.003, release: 0.25, makeupGain: 0 }
+}
+
+export function createGateSettings(): GateSettings {
+  return { type: 'gate', bypassed: false, threshold: -60, attack: 0.005, hold: 0.075, release: 0.08 }
+}
+
+export function createLimiterSettings(): LimiterSettings {
+  return { type: 'limiter', bypassed: false, ceiling: -1, release: 0.1, makeupGain: 0 }
+}
+
 export function createEnvelopeSettings(): EnvelopeSettings {
   return { attack: 4, decay: 0, hold: 0, release: 80, velocity: 0, attackCurve: 'linear', releaseCurve: 'linear', destination: 'oscillatorLevel' }
 }
@@ -190,13 +258,14 @@ export class SynthEngine {
   private settings: OscillatorSettings[]
   private noiseSettings?: NoiseSettings
   private filters: { node: BiquadFilterNode; gainNode: GainNode; settings: FilterSettings }[] = []
+  private dynamics: DynamicsModule[] = []
   private delays: DelayModule[] = []
   private reverbs: ReverbModule[] = []
   private amplitudeModulation?: AmplitudeModulationSettings
   private amplitudeModulationBypassed = false
   private lfos: LfoModule[] = []
   private envelopeSettings: { settings: EnvelopeSettings; bypassed: boolean }[] = []
-  private effectOrder: EffectGroup[] = ['filters', 'delays', 'reverbs']
+  private effectOrder: EffectGroup[] = ['filters', 'delays', 'reverbs', 'dynamics']
 
   constructor(initialSettings: OscillatorSettings = createOscillatorSettings()) {
     this.settings = [{ ...initialSettings }]
@@ -333,6 +402,46 @@ export class SynthEngine {
     if (!filter) throw new RangeError(`Unknown filter index: ${index}`)
     filter.settings = { ...filter.settings, ...changes }
     this.applyFilterSettings(index)
+    this.routeOutput()
+  }
+
+  addCompressor(settings: CompressorSettings = createCompressorSettings()): void {
+    this.addDynamics({ ...settings, type: 'compressor' })
+  }
+
+  addGate(settings: GateSettings = createGateSettings()): void {
+    this.addDynamics({ ...settings, type: 'gate' })
+  }
+
+  addLimiter(settings: LimiterSettings = createLimiterSettings()): void {
+    this.addDynamics({ ...settings, type: 'limiter' })
+  }
+
+  setDynamicsSettings(index: number, changes: DynamicsSettingsChanges): void {
+    const dynamics = this.dynamics[index]
+    if (!dynamics) throw new RangeError(`Unknown dynamics index: ${index}`)
+    dynamics.settings = { ...dynamics.settings, ...changes } as DynamicsSettings
+    this.applyDynamicsSettings(dynamics)
+    if (changes.bypassed !== undefined) this.routeOutput()
+  }
+
+  removeDynamics(index: number): void {
+    const dynamics = this.dynamics[index]
+    if (!dynamics) throw new RangeError(`Unknown dynamics index: ${index}`)
+    this.destroyDynamicsModule(dynamics)
+    this.dynamics.splice(index, 1)
+    this.routeOutput()
+  }
+
+  setDynamicsBypassed(index: number, bypassed: boolean): void {
+    this.setDynamicsSettings(index, { bypassed })
+  }
+
+  moveDynamics(index: number, direction: -1 | 1): void {
+    const targetIndex = index + direction
+    if (!this.dynamics[index]) throw new RangeError(`Unknown dynamics index: ${index}`)
+    if (targetIndex < 0 || targetIndex >= this.dynamics.length) return
+    ;[this.dynamics[index], this.dynamics[targetIndex]] = [this.dynamics[targetIndex], this.dynamics[index]]
     this.routeOutput()
   }
 
@@ -544,6 +653,8 @@ export class SynthEngine {
       lfo.gain.disconnect()
     })
     this.lfos = []
+    this.dynamics.forEach((dynamics) => this.destroyDynamicsModule(dynamics))
+    this.dynamics = []
     void this.audioContext.close()
   }
 
@@ -660,6 +771,15 @@ export class SynthEngine {
           if (!settings.bypassed) output = output.connect(node).connect(gainNode)
         })
       }
+      if (group === 'dynamics') {
+        this.dynamics.forEach((dynamics) => {
+          this.connectDynamicsModule(dynamics)
+          if (!dynamics.settings.bypassed) {
+            output.connect(dynamics.input)
+            output = dynamics.output
+          }
+        })
+      }
       if (group === 'delays') {
         this.delays.forEach((delay) => {
           delay.node.disconnect()
@@ -692,6 +812,113 @@ export class SynthEngine {
       }
     })
     output.connect(this.destination)
+  }
+
+  private addDynamics(settings: DynamicsSettings): void {
+    const input = this.audioContext.createGain()
+    const output = this.audioContext.createGain()
+    const dynamics: DynamicsModule = {
+      input,
+      output,
+      gateLastAboveThresholdTime: this.audioContext.currentTime,
+      gateOpen: false,
+      settings: { ...settings },
+    }
+
+    if (settings.type === 'gate') {
+      const analyser = this.audioContext.createAnalyser()
+      analyser.fftSize = 2048
+      analyser.smoothingTimeConstant = 0.7
+      dynamics.analyser = analyser
+      dynamics.gateGain = this.audioContext.createGain()
+      dynamics.gateLevelData = new Float32Array(analyser.fftSize)
+      dynamics.gateGain.gain.setValueAtTime(GATE_CLOSED_GAIN, this.audioContext.currentTime)
+      dynamics.gateTimer = setInterval(() => this.updateGate(dynamics), GATE_ANALYSIS_INTERVAL_MS)
+    } else {
+      dynamics.compressor = this.audioContext.createDynamicsCompressor()
+      dynamics.makeupGain = this.audioContext.createGain()
+    }
+
+    this.dynamics.push(dynamics)
+    this.applyDynamicsSettings(dynamics)
+    this.routeOutput()
+  }
+
+  private connectDynamicsModule(dynamics: DynamicsModule): void {
+    dynamics.input.disconnect()
+    dynamics.output.disconnect()
+    if (dynamics.settings.type === 'gate') {
+      dynamics.analyser!.disconnect()
+      dynamics.gateGain!.disconnect()
+      dynamics.input.connect(dynamics.analyser!).connect(dynamics.gateGain!).connect(dynamics.output)
+      return
+    }
+
+    dynamics.compressor!.disconnect()
+    dynamics.makeupGain!.disconnect()
+    if (dynamics.settings.type === 'limiter') {
+      dynamics.input.connect(dynamics.makeupGain!).connect(dynamics.compressor!).connect(dynamics.output)
+      return
+    }
+    dynamics.input.connect(dynamics.compressor!).connect(dynamics.makeupGain!).connect(dynamics.output)
+  }
+
+  private applyDynamicsSettings(dynamics: DynamicsModule): void {
+    const now = this.audioContext.currentTime
+    const { settings } = dynamics
+    if (settings.type === 'gate') {
+      this.updateGate(dynamics)
+      return
+    }
+
+    const compressor = dynamics.compressor!
+    const makeupGain = dynamics.makeupGain!
+    if (settings.type === 'compressor') {
+      compressor.threshold.setTargetAtTime(settings.threshold, now, 0.01)
+      compressor.knee.setTargetAtTime(settings.knee, now, 0.01)
+      compressor.ratio.setTargetAtTime(settings.ratio, now, 0.01)
+      compressor.attack.setTargetAtTime(settings.attack, now, 0.01)
+      compressor.release.setTargetAtTime(settings.release, now, 0.02)
+    } else {
+      compressor.threshold.setTargetAtTime(settings.ceiling, now, 0.01)
+      compressor.knee.setTargetAtTime(0, now, 0.01)
+      compressor.ratio.setTargetAtTime(20, now, 0.01)
+      compressor.attack.setTargetAtTime(0.003, now, 0.01)
+      compressor.release.setTargetAtTime(settings.release, now, 0.02)
+    }
+    makeupGain.gain.setTargetAtTime(10 ** (settings.makeupGain / 20), now, 0.01)
+  }
+
+  private updateGate(dynamics: DynamicsModule): void {
+    if (dynamics.settings.type !== 'gate' || !dynamics.analyser || !dynamics.gateGain || !dynamics.gateLevelData) return
+    dynamics.analyser.getFloatTimeDomainData(dynamics.gateLevelData)
+    let sum = 0
+    for (const sample of dynamics.gateLevelData) sum += sample * sample
+    const level = 20 * Math.log10(Math.max(Math.sqrt(sum / dynamics.gateLevelData.length), Number.EPSILON))
+    const now = this.audioContext.currentTime
+    if (level >= dynamics.settings.threshold) {
+      dynamics.gateLastAboveThresholdTime = now
+      this.setGateOpen(dynamics, true, now)
+    } else if (now - dynamics.gateLastAboveThresholdTime >= dynamics.settings.hold) {
+      this.setGateOpen(dynamics, false, now)
+    }
+  }
+
+  private setGateOpen(dynamics: DynamicsModule, open: boolean, now: number): void {
+    if (dynamics.settings.type !== 'gate' || !dynamics.gateGain || dynamics.gateOpen === open) return
+    dynamics.gateOpen = open
+    const timeConstant = open ? dynamics.settings.attack : dynamics.settings.release
+    dynamics.gateGain.gain.setTargetAtTime(open ? 1 : GATE_CLOSED_GAIN, now, Math.max(0.001, timeConstant))
+  }
+
+  private destroyDynamicsModule(dynamics: DynamicsModule): void {
+    if (dynamics.gateTimer !== undefined) clearInterval(dynamics.gateTimer)
+    dynamics.input.disconnect()
+    dynamics.output.disconnect()
+    dynamics.compressor?.disconnect()
+    dynamics.makeupGain?.disconnect()
+    dynamics.analyser?.disconnect()
+    dynamics.gateGain?.disconnect()
   }
 
   private applyDelaySettings(delay: DelayModule): void {

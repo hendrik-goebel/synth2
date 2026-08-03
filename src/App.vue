@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { MidiService } from './services/midiService'
-import { createDelaySettings, createEnvelopeSettings, createFilterSettings, createNoiseSettings, createReverbSettings, type AmplitudeModulationSettings, type DelaySettings, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type LfoSettings, type NoiseSettings, type OscillatorSettings, type ReverbSettings, type Waveform, SynthEngine } from './services/synthEngine'
+import { createDelaySettings, createEnvelopeSettings, createFilterSettings, createNoiseSettings, createReverbSettings, createCompressorSettings, createGateSettings, createLimiterSettings, type AmplitudeModulationSettings, type DelaySettings, type DynamicsSettings, type DynamicsSettingsChanges, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type LfoSettings, type NoiseSettings, type OscillatorSettings, type ReverbSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
 import NoiseControls from './components/NoiseControls.vue'
 import FilterControls from './components/FilterControls.vue'
@@ -10,6 +10,9 @@ import DelayControls from './components/DelayControls.vue'
 import EnvelopeControls from './components/EnvelopeControls.vue'
 import ReverbControls from './components/ReverbControls.vue'
 import LfoControls from './components/LfoControls.vue'
+import CompressorControls from './components/CompressorControls.vue'
+import GateControls from './components/GateControls.vue'
+import LimiterControls from './components/LimiterControls.vue'
 
 type EnvelopeModule = EnvelopeSettings & { bypassed: boolean }
 type LfoControlModule = LfoSettings & { bypassed: boolean }
@@ -31,10 +34,12 @@ const reverbs = ref<ReverbSettings[]>([])
 const amplitudeModulation = ref<AmplitudeModulationSettings | null>(null)
 const envelopes = ref<EnvelopeModule[]>([])
 const lfos = ref<LfoControlModule[]>([])
-const effectOrder = ref<EffectGroup[]>(['filters', 'delays', 'reverbs'])
+const dynamics = ref<DynamicsSettings[]>([])
+const effectOrder = ref<EffectGroup[]>(['filters', 'delays', 'reverbs', 'dynamics'])
 const isAmplitudeModulationBypassed = ref(false)
 const areOscillatorsCollapsed = ref(false)
 const areFiltersCollapsed = ref(false)
+const areDynamicsCollapsed = ref(false)
 const areDelaysCollapsed = ref(false)
 const areReverbsCollapsed = ref(false)
 let firstInteractionHandled = false
@@ -254,6 +259,47 @@ function toggleReverbBypass(index: number) {
   synth.setReverbBypassed(index, bypassed)
 }
 
+function addCompressor() {
+  const settings = createCompressorSettings()
+  dynamics.value.push(settings)
+  synth.addCompressor(settings)
+}
+
+function addGate() {
+  const settings = createGateSettings()
+  dynamics.value.push(settings)
+  synth.addGate(settings)
+}
+
+function addLimiter() {
+  const settings = createLimiterSettings()
+  dynamics.value.push(settings)
+  synth.addLimiter(settings)
+}
+
+function updateDynamicsSettings(index: number, settings: DynamicsSettingsChanges) {
+  dynamics.value[index] = { ...dynamics.value[index], ...settings } as DynamicsSettings
+  synth.setDynamicsSettings(index, settings)
+}
+
+function removeDynamics(index: number) {
+  synth.removeDynamics(index)
+  dynamics.value.splice(index, 1)
+}
+
+function toggleDynamicsBypass(index: number) {
+  const bypassed = !dynamics.value[index].bypassed
+  dynamics.value[index] = { ...dynamics.value[index], bypassed } as DynamicsSettings
+  synth.setDynamicsBypassed(index, bypassed)
+}
+
+function moveDynamics(index: number, direction: -1 | 1) {
+  const targetIndex = index + direction
+  if (!dynamics.value[targetIndex]) return
+  ;[dynamics.value[index], dynamics.value[targetIndex]] = [dynamics.value[targetIndex], dynamics.value[index]]
+  synth.moveDynamics(index, direction)
+}
+
 function updateNoiseSettings(settings: Partial<NoiseSettings>) {
   if (!noise.value) {
     return
@@ -318,12 +364,17 @@ function toggleEnvelopeBypass(index: number) {
 
 function moveEffectGroup(group: EffectGroup, direction: -1 | 1) {
   const index = effectOrder.value.indexOf(group)
-  if (index < 0) return
+  const targetIndex = index + direction
+  if (index < 0 || targetIndex < 0 || targetIndex >= effectOrder.value.length) return
   const nextOrder = [...effectOrder.value]
-  const targetIndex = (index + direction + nextOrder.length) % nextOrder.length
   ;[nextOrder[index], nextOrder[targetIndex]] = [nextOrder[targetIndex], nextOrder[index]]
   effectOrder.value = nextOrder
   synth.setEffectOrder(nextOrder)
+}
+
+function canMoveEffectGroup(group: EffectGroup, direction: -1 | 1) {
+  const index = effectOrder.value.indexOf(group)
+  return index + direction >= 0 && index + direction < effectOrder.value.length
 }
 
 function updateEnvelopeSettings(index: number, settings: Partial<EnvelopeSettings>) {
@@ -517,8 +568,8 @@ onUnmounted(() => {
             Filters
           </button>
           <span class="effect-order-actions">
-            <button type="button" :disabled="effectOrder.indexOf('filters') === 0" aria-label="Move Filters up" @click="moveEffectGroup('filters', -1)">↑</button>
-            <button type="button" :disabled="effectOrder.indexOf('filters') === effectOrder.length - 1" aria-label="Move Filters down" @click="moveEffectGroup('filters', 1)">↓</button>
+            <button type="button" :disabled="!canMoveEffectGroup('filters', -1)" aria-label="Move Filters up" @click="moveEffectGroup('filters', -1)">↑</button>
+            <button type="button" :disabled="!canMoveEffectGroup('filters', 1)" aria-label="Move Filters down" @click="moveEffectGroup('filters', 1)">↓</button>
           </span>
         </h2>
         <div v-show="!areFiltersCollapsed" id="filters-content" class="oscillators-content">
@@ -562,8 +613,8 @@ onUnmounted(() => {
             Delays
           </button>
           <span class="effect-order-actions">
-            <button type="button" :disabled="effectOrder.indexOf('delays') === 0" aria-label="Move Delays up" @click="moveEffectGroup('delays', -1)">↑</button>
-            <button type="button" :disabled="effectOrder.indexOf('delays') === effectOrder.length - 1" aria-label="Move Delays down" @click="moveEffectGroup('delays', 1)">↓</button>
+            <button type="button" :disabled="!canMoveEffectGroup('delays', -1)" aria-label="Move Delays up" @click="moveEffectGroup('delays', -1)">↑</button>
+            <button type="button" :disabled="!canMoveEffectGroup('delays', 1)" aria-label="Move Delays down" @click="moveEffectGroup('delays', 1)">↓</button>
           </span>
         </h2>
         <div v-show="!areDelaysCollapsed" id="delays-content" class="oscillators-content">
@@ -608,8 +659,8 @@ onUnmounted(() => {
             Reverbs
           </button>
           <span class="effect-order-actions">
-            <button type="button" :disabled="effectOrder.indexOf('reverbs') === 0" aria-label="Move Reverbs up" @click="moveEffectGroup('reverbs', -1)">↑</button>
-            <button type="button" :disabled="effectOrder.indexOf('reverbs') === effectOrder.length - 1" aria-label="Move Reverbs down" @click="moveEffectGroup('reverbs', 1)">↓</button>
+            <button type="button" :disabled="!canMoveEffectGroup('reverbs', -1)" aria-label="Move Reverbs up" @click="moveEffectGroup('reverbs', -1)">↑</button>
+            <button type="button" :disabled="!canMoveEffectGroup('reverbs', 1)" aria-label="Move Reverbs down" @click="moveEffectGroup('reverbs', 1)">↓</button>
           </span>
         </h2>
         <div v-show="!areReverbsCollapsed" id="reverbs-content" class="oscillators-content">
@@ -682,6 +733,76 @@ onUnmounted(() => {
           </label>
         </div>
       </SectionFrame>
+
+      <section class="synth-section oscillators-section effect-group" :style="{ order: effectOrder.indexOf('dynamics') }" aria-labelledby="dynamics-heading">
+        <h2 id="dynamics-heading">
+          <button
+            type="button"
+            class="oscillators-toggle"
+            :aria-expanded="!areDynamicsCollapsed"
+            aria-controls="dynamics-content"
+            @click="areDynamicsCollapsed = !areDynamicsCollapsed"
+          >
+            Dynamics
+          </button>
+          <span class="effect-order-actions">
+            <button type="button" :disabled="!canMoveEffectGroup('dynamics', -1)" aria-label="Move Dynamics up" @click="moveEffectGroup('dynamics', -1)">↑</button>
+            <button type="button" :disabled="!canMoveEffectGroup('dynamics', 1)" aria-label="Move Dynamics down" @click="moveEffectGroup('dynamics', 1)">↓</button>
+          </span>
+        </h2>
+        <div v-show="!areDynamicsCollapsed" id="dynamics-content" class="oscillators-content">
+          <template v-for="(item, index) in dynamics" :key="index">
+            <CompressorControls
+              v-if="item.type === 'compressor'"
+              :dynamics-index="index"
+              :dynamics-count="dynamics.length"
+              v-bind="item"
+              @update:threshold="updateDynamicsSettings(index, { threshold: $event })"
+              @update:knee="updateDynamicsSettings(index, { knee: $event })"
+              @update:ratio="updateDynamicsSettings(index, { ratio: $event })"
+              @update:attack="updateDynamicsSettings(index, { attack: $event })"
+              @update:release="updateDynamicsSettings(index, { release: $event })"
+              @update:makeup-gain="updateDynamicsSettings(index, { makeupGain: $event })"
+              @toggle-bypass="toggleDynamicsBypass(index)"
+              @move-up="moveDynamics(index, -1)"
+              @move-down="moveDynamics(index, 1)"
+              @remove="removeDynamics(index)"
+            />
+            <GateControls
+              v-else-if="item.type === 'gate'"
+              :dynamics-index="index"
+              :dynamics-count="dynamics.length"
+              v-bind="item"
+              @update:threshold="updateDynamicsSettings(index, { threshold: $event })"
+              @update:attack="updateDynamicsSettings(index, { attack: $event })"
+              @update:hold="updateDynamicsSettings(index, { hold: $event })"
+              @update:release="updateDynamicsSettings(index, { release: $event })"
+              @toggle-bypass="toggleDynamicsBypass(index)"
+              @move-up="moveDynamics(index, -1)"
+              @move-down="moveDynamics(index, 1)"
+              @remove="removeDynamics(index)"
+            />
+            <LimiterControls
+              v-else-if="item.type === 'limiter'"
+              :dynamics-index="index"
+              :dynamics-count="dynamics.length"
+              v-bind="item"
+              @update:ceiling="updateDynamicsSettings(index, { ceiling: $event })"
+              @update:release="updateDynamicsSettings(index, { release: $event })"
+              @update:makeup-gain="updateDynamicsSettings(index, { makeupGain: $event })"
+              @toggle-bypass="toggleDynamicsBypass(index)"
+              @move-up="moveDynamics(index, -1)"
+              @move-down="moveDynamics(index, 1)"
+              @remove="removeDynamics(index)"
+            />
+          </template>
+          <div class="module-actions">
+            <button type="button" class="add-filter-button" @click="addCompressor">Add Compressor</button>
+            <button type="button" class="add-filter-button" @click="addGate">Add Gate</button>
+            <button type="button" class="add-filter-button" @click="addLimiter">Add Limiter</button>
+          </div>
+        </div>
+      </section>
 
       </div>
 

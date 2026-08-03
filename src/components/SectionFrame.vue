@@ -6,10 +6,14 @@ defineProps<{
   headingId: string
   contentId: string
   bypassed: boolean
+  canMoveUp?: boolean
+  canMoveDown?: boolean
 }>()
 
 const emit = defineEmits<{
   'toggle-bypass': []
+  'move-up': []
+  'move-down': []
   remove: []
 }>()
 
@@ -31,6 +35,10 @@ const isCollapsed = ref(false)
         </button>
       </h2>
       <div class="module-heading-actions">
+        <span v-if="canMoveUp || canMoveDown" class="effect-order-actions">
+          <button type="button" :disabled="!canMoveUp" :aria-label="`Move ${title} up`" @click="emit('move-up')">↑</button>
+          <button type="button" :disabled="!canMoveDown" :aria-label="`Move ${title} down`" @click="emit('move-down')">↓</button>
+        </span>
         <button
           type="button"
           class="module-bypass"
