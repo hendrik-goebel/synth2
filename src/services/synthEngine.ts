@@ -626,31 +626,46 @@ export class SynthEngine {
   }
 
   private createHallImpulse(settings: ReverbSettings): AudioBuffer {
-    const hallTypes: Record<HallType, { duration: number; density: number; reflections: number }> = {
-      'small-hall': { duration: 0.72, density: 0.8, reflections: 7 },
-      'wooden-hall': { duration: 0.88, density: 0.9, reflections: 10 },
-      'concert-hall': { duration: 1, density: 1, reflections: 12 },
-      'opera-house': { duration: 1.12, density: 1.05, reflections: 15 },
-      cathedral: { duration: 1.45, density: 1.2, reflections: 18 },
-      arena: { duration: 1.8, density: 1.35, reflections: 22 },
+    const hallTypes: Record<HallType, { duration: number; density: number; reflections: number; reflectionWindow: number }> = {
+      'small-hall': { duration: 0.72, density: 0.8, reflections: 56, reflectionWindow: 0.055 },
+      'wooden-hall': { duration: 0.88, density: 0.9, reflections: 72, reflectionWindow: 0.075 },
+      'concert-hall': { duration: 1, density: 1, reflections: 96, reflectionWindow: 0.095 },
+      'opera-house': { duration: 1.12, density: 1.05, reflections: 124, reflectionWindow: 0.115 },
+      cathedral: { duration: 1.45, density: 1.2, reflections: 160, reflectionWindow: 0.16 },
+      arena: { duration: 1.8, density: 1.35, reflections: 196, reflectionWindow: 0.2 },
     }
     const hall = hallTypes[settings.hallType]
     const duration = Math.min(12, Math.max(0.6, settings.decay * hall.duration))
     const frameCount = Math.ceil(this.audioContext.sampleRate * duration)
     const impulse = this.audioContext.createBuffer(2, frameCount, this.audioContext.sampleRate)
+    const channels = Array.from({ length: impulse.numberOfChannels }, (_, channel) => impulse.getChannelData(channel))
 
-    for (let channel = 0; channel < impulse.numberOfChannels; channel += 1) {
-      const data = impulse.getChannelData(channel)
+    for (const data of channels) {
+      let filteredNoise = 0
       for (let frame = 0; frame < frameCount; frame += 1) {
         const progress = frame / frameCount
-        const envelope = Math.pow(1 - progress, 1.2 + 2.6 / settings.decay)
-        data[frame] = (Math.random() * 2 - 1) * envelope * hall.density
+        const envelope = Math.pow(1 - progress, 1.35 + 2.4 / settings.decay)
+        const onset = Math.min(1, frame / (this.audioContext.sampleRate * 0.032))
+        filteredNoise = filteredNoise * 0.94 + (Math.random() * 2 - 1) * 0.06
+        data[frame] = filteredNoise * envelope * onset * hall.density * 0.42
       }
+    }
 
-      for (let reflection = 1; reflection <= hall.reflections; reflection += 1) {
-        const time = 0.009 * reflection * (channel === 0 ? 1 : 1.13) + (reflection % 3) * 0.0027
-        const frame = Math.floor(time * this.audioContext.sampleRate)
-        if (frame < frameCount) data[frame] += 0.4 / Math.sqrt(reflection)
+    for (let reflection = 0; reflection < hall.reflections; reflection += 1) {
+      const position = (reflection + Math.random() * 0.85) / hall.reflections
+      const time = 0.004 + position * position * hall.reflectionWindow
+      const frame = Math.floor(time * this.audioContext.sampleRate)
+      if (frame >= frameCount) continue
+      const gain = 0.22 * hall.density * Math.exp(-time / (hall.reflectionWindow * 0.8))
+      const pan = Math.random()
+      channels[0][frame] += gain * Math.sqrt(1 - pan)
+      channels[1][frame] += gain * Math.sqrt(pan)
+      for (let tap = 1; tap <= 3; tap += 1) {
+        const diffuseFrame = frame + Math.floor((0.0006 + Math.random() * 0.0028) * tap * this.audioContext.sampleRate)
+        if (diffuseFrame >= frameCount) continue
+        const diffuseGain = gain * Math.pow(0.42, tap)
+        channels[0][diffuseFrame] += diffuseGain * Math.sqrt(1 - pan)
+        channels[1][diffuseFrame] += diffuseGain * Math.sqrt(pan)
       }
     }
 
