@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue'
 import { MidiService } from './services/midiService'
-import { createDelaySettings, createEnvelopeSettings, createFilterSettings, createNoiseSettings, createOverdriveSettings, createReverbSettings, createCompressorSettings, createGateSettings, createLimiterSettings, createOscillatorSettings, type AmplitudeModulationSettings, type DelaySettings, type DynamicsSettings, type DynamicsSettingsChanges, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type LfoSettings, type NoiseSettings, type OscillatorSettings, type OverdriveSettings, type ReverbSettings, type Waveform, SynthEngine } from './services/synthEngine'
+import { createDelaySettings, createEnvelopeSettings, createFilterSettings, createNoiseSettings, createOutputSettings, createOverdriveSettings, createReverbSettings, createCompressorSettings, createGateSettings, createLimiterSettings, createOscillatorSettings, type AmplitudeModulationSettings, type DelaySettings, type DynamicsSettings, type DynamicsSettingsChanges, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type LfoSettings, type NoiseSettings, type OscillatorSettings, type OutputSettings, type OverdriveSettings, type ReverbSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
 import NoiseControls from './components/NoiseControls.vue'
 import FilterControls from './components/FilterControls.vue'
@@ -14,12 +14,14 @@ import LfoControls from './components/LfoControls.vue'
 import CompressorControls from './components/CompressorControls.vue'
 import GateControls from './components/GateControls.vue'
 import LimiterControls from './components/LimiterControls.vue'
+import OutputControls from './components/OutputControls.vue'
 
 type EnvelopeModule = EnvelopeSettings & { bypassed: boolean }
 type LfoControlModule = LfoSettings & { bypassed: boolean }
 type ChannelState = {
   synth: SynthEngine
   oscillators: OscillatorSettings[]
+  output: OutputSettings
   noise: NoiseSettings | null
   filters: FilterSettings[]
   delays: DelaySettings[]
@@ -36,7 +38,8 @@ type ChannelState = {
 
 const waveforms: OscillatorType[] = ['sine', 'triangle', 'sawtooth', 'square']
 const initialOscillatorSettings = createRandomOscillatorSettings()
-let activeSynth = new SynthEngine(initialOscillatorSettings)
+const initialOutputSettings = createOutputSettings()
+let activeSynth = new SynthEngine(initialOscillatorSettings, initialOutputSettings)
 const selectedChannel = ref(1)
 const selectedInputId = ref('')
 const midiInputs = ref<{ id: string; name: string }[]>([])
@@ -44,6 +47,7 @@ const midiStatus = ref('MIDI not connected.')
 const audioStatus = ref('Audio locked. Interact with the synth to enable audio.')
 const activeVoices = ref(0)
 const oscillators = ref<OscillatorSettings[]>([initialOscillatorSettings])
+const output = ref<OutputSettings>(initialOutputSettings)
 const noise = ref<NoiseSettings | null>(null)
 const filters = ref<FilterSettings[]>([createFilterSettings()])
 const delays = ref<DelaySettings[]>([])
@@ -72,6 +76,7 @@ function saveActiveChannel() {
   if (!channel) return
   channel.synth = activeSynth
   channel.oscillators = oscillators.value
+  channel.output = output.value
   channel.noise = noise.value
   channel.filters = filters.value
   channel.delays = delays.value
@@ -93,6 +98,7 @@ function loadChannel(channelNumber: number) {
   selectedChannel.value = channelNumber
   activeSynth = channel.synth
   oscillators.value = channel.oscillators
+  output.value = channel.output
   noise.value = channel.noise
   filters.value = channel.filters
   delays.value = channel.delays
@@ -112,9 +118,11 @@ function addChannel() {
   if (channels.value.length >= 16) return
   saveActiveChannel()
   const oscillatorSettings = createOscillatorSettings()
+  const outputSettings = createOutputSettings()
   const channel: ChannelState = {
-    synth: new SynthEngine(oscillatorSettings),
+    synth: new SynthEngine(oscillatorSettings, outputSettings),
     oscillators: [oscillatorSettings],
+    output: outputSettings,
     noise: null,
     filters: [createFilterSettings()],
     delays: [],
@@ -152,6 +160,7 @@ function handleKeydown(event: KeyboardEvent) {
 channels.value.push({
   synth: activeSynth,
   oscillators: oscillators.value,
+  output: output.value,
   noise: noise.value,
   filters: filters.value,
   delays: delays.value,
@@ -488,6 +497,11 @@ function updateNoiseSettings(settings: Partial<NoiseSettings>) {
   activeSynth.setNoiseSettings(settings)
 }
 
+function updateOutputSettings(settings: Partial<OutputSettings>) {
+  output.value = { ...output.value, ...settings }
+  activeSynth.setOutputSettings(settings)
+}
+
 function toggleNoiseBypass() {
   if (!noise.value) {
     return
@@ -672,6 +686,13 @@ onUnmounted(() => {
           <button v-if="channels.length < 16" type="button" class="add-channel-button" @click="addChannel">Add Channel</button>
         </div>
       </section>
+
+      <OutputControls
+        :volume="output.volume"
+        :pan="output.pan"
+        @update:volume="updateOutputSettings({ volume: $event })"
+        @update:pan="updateOutputSettings({ pan: $event })"
+      />
 
       <section class="synth-section oscillators-section" aria-labelledby="oscillators-heading">
         <h2 id="oscillators-heading">

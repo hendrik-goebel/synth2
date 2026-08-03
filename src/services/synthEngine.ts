@@ -97,6 +97,11 @@ export type NoiseSettings = {
   stereoSpread: number
 }
 
+export type OutputSettings = {
+  volume: number
+  pan: number
+}
+
 export type FilterType = 'lowpass' | 'highpass' | 'bandpass'
 
 export type FilterSettings = {
@@ -246,6 +251,10 @@ export function createNoiseSettings(): NoiseSettings {
   return { bypassed: false, color: 'white', level: 0, stereoSpread: 0 }
 }
 
+export function createOutputSettings(): OutputSettings {
+  return { volume: 1, pan: 0 }
+}
+
 export function createFilterSettings(): FilterSettings {
   return { bypassed: false, type: 'bandpass', cutoff: 12000, resonance: 0, gain: 0 }
 }
@@ -282,8 +291,11 @@ export class SynthEngine {
   private readonly audioContext = new AudioContext()
   private readonly destination = this.audioContext.destination
   private readonly mixBus = this.audioContext.createGain()
+  private readonly outputGain = this.audioContext.createGain()
+  private readonly outputPanner = this.audioContext.createStereoPanner()
   private activeVoices: { note: number; velocity: number; voices: Voice[] }[] = []
   private settings: OscillatorSettings[]
+  private outputSettings: OutputSettings
   private noiseSettings?: NoiseSettings
   private filters: { node: BiquadFilterNode; gainNode: GainNode; settings: FilterSettings }[] = []
   private dynamics: DynamicsModule[] = []
@@ -296,8 +308,11 @@ export class SynthEngine {
   private envelopeSettings: { settings: EnvelopeSettings; bypassed: boolean }[] = []
   private effectOrder: EffectGroup[] = ['filters', 'overdrives', 'delays', 'reverbs', 'dynamics']
 
-  constructor(initialSettings: OscillatorSettings = createOscillatorSettings()) {
+  constructor(initialSettings: OscillatorSettings = createOscillatorSettings(), outputSettings: OutputSettings = createOutputSettings()) {
     this.settings = [{ ...initialSettings }]
+    this.outputSettings = { ...outputSettings }
+    this.outputGain.connect(this.outputPanner).connect(this.destination)
+    this.applyOutputSettings()
     this.addFilter()
   }
 
@@ -326,6 +341,14 @@ export class SynthEngine {
 
   getActiveVoiceCount(): number {
     return this.activeVoices.length
+  }
+
+  setOutputSettings(changes: Partial<OutputSettings>): void {
+    this.outputSettings = {
+      volume: Math.max(0, Math.min(changes.volume ?? this.outputSettings.volume, 1)),
+      pan: Math.max(-1, Math.min(changes.pan ?? this.outputSettings.pan, 1)),
+    }
+    this.applyOutputSettings()
   }
 
   addOscillator(settings: OscillatorSettings = createOscillatorSettings()): void {
@@ -817,6 +840,12 @@ export class SynthEngine {
     filter.gainNode.gain.setTargetAtTime(10 ** (filter.settings.gain / 20), this.audioContext.currentTime, 0.01)
   }
 
+  private applyOutputSettings(): void {
+    const now = this.audioContext.currentTime
+    this.outputGain.gain.setTargetAtTime(this.outputSettings.volume, now, 0.01)
+    this.outputPanner.pan.setTargetAtTime(this.outputSettings.pan, now, 0.01)
+  }
+
   private applyEffectEnvelopes(now: number, velocity: number): void {
     const cutoffEnvelope = this.activeEnvelopeSettings('filterCutoff')
     const resonanceEnvelope = this.activeEnvelopeSettings('filterResonance')
@@ -919,7 +948,7 @@ export class SynthEngine {
         })
       }
     })
-    output.connect(this.destination)
+    output.connect(this.outputGain)
   }
 
   private addDynamics(settings: DynamicsSettings): void {
