@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { MidiService } from './services/midiService'
-import { createDelaySettings, createEnvelopeSettings, createFilterSettings, createNoiseSettings, createReverbSettings, type AmplitudeModulationSettings, type DelaySettings, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type NoiseSettings, type OscillatorSettings, type ReverbSettings, type Waveform, SynthEngine } from './services/synthEngine'
+import { createDelaySettings, createEnvelopeSettings, createFilterSettings, createNoiseSettings, createReverbSettings, type AmplitudeModulationSettings, type DelaySettings, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type LfoSettings, type NoiseSettings, type OscillatorSettings, type ReverbSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
 import NoiseControls from './components/NoiseControls.vue'
 import FilterControls from './components/FilterControls.vue'
@@ -9,8 +9,10 @@ import SectionFrame from './components/SectionFrame.vue'
 import DelayControls from './components/DelayControls.vue'
 import EnvelopeControls from './components/EnvelopeControls.vue'
 import ReverbControls from './components/ReverbControls.vue'
+import LfoControls from './components/LfoControls.vue'
 
 type EnvelopeModule = EnvelopeSettings & { bypassed: boolean }
+type LfoControlModule = LfoSettings & { bypassed: boolean }
 
 const waveforms: OscillatorType[] = ['sine', 'triangle', 'sawtooth', 'square']
 const initialOscillatorSettings = createRandomOscillatorSettings()
@@ -28,6 +30,7 @@ const delays = ref<DelaySettings[]>([])
 const reverbs = ref<ReverbSettings[]>([])
 const amplitudeModulation = ref<AmplitudeModulationSettings | null>(null)
 const envelopes = ref<EnvelopeModule[]>([])
+const lfos = ref<LfoControlModule[]>([])
 const effectOrder = ref<EffectGroup[]>(['filters', 'delays', 'reverbs'])
 const isAmplitudeModulationBypassed = ref(false)
 const areOscillatorsCollapsed = ref(false)
@@ -167,6 +170,7 @@ function addOscillator() {
 }
 
 function removeOscillator(index: number) {
+  removeLfosForModule('oscillator', index)
   synth.removeOscillator(index)
   oscillators.value.splice(index, 1)
 }
@@ -178,6 +182,7 @@ function addNoise() {
 }
 
 function removeNoise() {
+  removeLfosForModule('noise', 0)
   synth.removeNoise()
   noise.value = null
 }
@@ -189,6 +194,7 @@ function addFilter() {
 }
 
 function removeFilter(index: number) {
+  removeLfosForModule('filter', index)
   synth.removeFilter(index)
   filters.value.splice(index, 1)
 }
@@ -209,6 +215,7 @@ function addDelay() {
 }
 
 function removeDelay(index: number) {
+  removeLfosForModule('delay', index)
   synth.removeDelay(index)
   delays.value.splice(index, 1)
 }
@@ -231,6 +238,7 @@ function addReverb() {
 }
 
 function removeReverb(index: number) {
+  removeLfosForModule('reverb', index)
   synth.removeReverb(index)
   reverbs.value.splice(index, 1)
 }
@@ -323,6 +331,56 @@ function updateEnvelopeSettings(index: number, settings: Partial<EnvelopeSetting
   synth.setEnvelopeSettings(index, settings)
 }
 
+function lfoTargetOptions(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'reverb', index: number) {
+  const targets = {
+    oscillator: [['detune', 'Detune'], ['level', 'Level'], ['stereoSpread', 'Stereo spread']],
+    noise: [['level', 'Level'], ['stereoSpread', 'Stereo spread']],
+    filter: [['cutoff', 'Cutoff'], ['resonance', 'Resonance'], ['gain', 'Gain']],
+    delay: [['time', 'Time'], ['feedback', 'Feedback'], ['mix', 'Mix'], ['overdrive', 'Overdrive']],
+    reverb: [['preDelay', 'Pre-delay'], ['damping', 'Damping'], ['mix', 'Mix'], ['width', 'Width']],
+  } as const
+  return targets[module].map(([parameter, label]) => ({ value: `${module}:${index}:${parameter}`, label }))
+}
+
+function lfosForModule(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'reverb', index: number) {
+  const prefix = `${module}:${index}:`
+  return lfos.value.flatMap((lfo, lfoIndex) => lfo.target.startsWith(prefix) ? [{ ...lfo, index: lfoIndex }] : [])
+}
+
+function addLfo(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'reverb', index: number) {
+  const target = lfoTargetOptions(module, index)[0].value
+  const settings: LfoControlModule = { waveform: 'sine', rate: 5, depth: 0.25, target, bypassed: false }
+  synth.addLfo(settings)
+  lfos.value.push(settings)
+}
+
+function updateLfo(index: number, settings: Partial<LfoSettings>) {
+  lfos.value[index] = { ...lfos.value[index], ...settings }
+  synth.setLfoSettings(index, settings)
+}
+
+function toggleLfoBypass(index: number) {
+  const bypassed = !lfos.value[index].bypassed
+  lfos.value[index] = { ...lfos.value[index], bypassed }
+  synth.setLfoBypassed(index, bypassed)
+}
+
+function removeLfo(index: number) {
+  synth.removeLfo(index)
+  lfos.value.splice(index, 1)
+}
+
+function removeLfosForModule(module: string, index: number) {
+  const exactPrefix = `${module}:${index}:`
+  for (let lfoIndex = lfos.value.length - 1; lfoIndex >= 0; lfoIndex -= 1) {
+    if (lfos.value[lfoIndex].target.startsWith(exactPrefix)) removeLfo(lfoIndex)
+  }
+  lfos.value.forEach((lfo, lfoIndex) => {
+    const [targetModule, rawIndex, parameter] = lfo.target.split(':')
+    if (targetModule === module && Number(rawIndex) > index) updateLfo(lfoIndex, { target: `${module}:${Number(rawIndex) - 1}:${parameter}` })
+  })
+}
+
 function envelopesFor(destinations: readonly { value: EnvelopeDestination }[]) {
   return envelopes.value.flatMap((envelope, index) => destinations.some((destination) => destination.value === envelope.destination) ? [{ ...envelope, index }] : [])
 }
@@ -373,9 +431,8 @@ onUnmounted(() => {
           </button>
         </h2>
         <div v-show="!areOscillatorsCollapsed" id="oscillators-content" class="oscillators-content">
+          <template v-for="(oscillator, index) in oscillators" :key="index">
           <OscillatorControls
-            v-for="(oscillator, index) in oscillators"
-            :key="index"
             :oscillator-index="index"
             v-bind="oscillator"
             @update:detune="updateOscillatorSettings(index, { detune: $event })"
@@ -389,6 +446,16 @@ onUnmounted(() => {
             @toggle-bypass="toggleOscillatorBypass(index)"
             @remove="removeOscillator(index)"
           />
+          <LfoControls
+            :lfos="lfosForModule('oscillator', index)"
+            :target-options="lfoTargetOptions('oscillator', index)"
+            :id-prefix="`oscillator-${index}`"
+            @update="updateLfo($event.index, $event.settings)"
+            @toggle-bypass="toggleLfoBypass"
+            @remove="removeLfo"
+            @add="addLfo('oscillator', index)"
+          />
+          </template>
           <div class="module-actions">
             <button type="button" class="add-oscillator-button" @click="addOscillator">Add OSC</button>
             <button v-if="!noise" type="button" class="add-oscillator-button" @click="addNoise">Add Noise</button>
@@ -416,6 +483,15 @@ onUnmounted(() => {
           @toggle-bypass="toggleNoiseBypass"
           @remove="removeNoise"
         >
+          <LfoControls
+            :lfos="lfosForModule('noise', 0)"
+            :target-options="lfoTargetOptions('noise', 0)"
+            id-prefix="noise"
+            @update="updateLfo($event.index, $event.settings)"
+            @toggle-bypass="toggleLfoBypass"
+            @remove="removeLfo"
+            @add="addLfo('noise', 0)"
+          />
           <EnvelopeControls
             :envelopes="envelopesFor(noiseEnvelopeDestinations)"
             :destination-options="noiseEnvelopeDestinations"
@@ -446,9 +522,8 @@ onUnmounted(() => {
           </span>
         </h2>
         <div v-show="!areFiltersCollapsed" id="filters-content" class="oscillators-content">
+          <template v-for="(filter, index) in filters" :key="index">
           <FilterControls
-            v-for="(filter, index) in filters"
-            :key="index"
             :filter-index="index"
             v-bind="filter"
             @update:type="updateFilterSettings(index, { type: $event })"
@@ -458,6 +533,16 @@ onUnmounted(() => {
             @toggle-bypass="toggleFilterBypass(index)"
             @remove="removeFilter(index)"
           />
+          <LfoControls
+            :lfos="lfosForModule('filter', index)"
+            :target-options="lfoTargetOptions('filter', index)"
+            :id-prefix="`filter-${index}`"
+            @update="updateLfo($event.index, $event.settings)"
+            @toggle-bypass="toggleLfoBypass"
+            @remove="removeLfo"
+            @add="addLfo('filter', index)"
+          />
+          </template>
           <button type="button" class="add-filter-button" @click="addFilter">Add Filter</button>
           <EnvelopeControls
             :envelopes="envelopesFor(filterEnvelopeDestinations)"
@@ -482,9 +567,8 @@ onUnmounted(() => {
           </span>
         </h2>
         <div v-show="!areDelaysCollapsed" id="delays-content" class="oscillators-content">
+          <template v-for="(delaySettings, index) in delays" :key="index">
           <DelayControls
-            v-for="(delaySettings, index) in delays"
-            :key="index"
             :delay-index="index"
             v-bind="delaySettings"
             @update:time="updateDelaySettings(index, { time: $event })"
@@ -495,6 +579,16 @@ onUnmounted(() => {
             @toggle-bypass="toggleDelayBypass(index)"
             @remove="removeDelay(index)"
           />
+          <LfoControls
+            :lfos="lfosForModule('delay', index)"
+            :target-options="lfoTargetOptions('delay', index)"
+            :id-prefix="`delay-${index}`"
+            @update="updateLfo($event.index, $event.settings)"
+            @toggle-bypass="toggleLfoBypass"
+            @remove="removeLfo"
+            @add="addLfo('delay', index)"
+          />
+          </template>
           <button type="button" class="add-filter-button" @click="addDelay">Add Delay</button>
           <EnvelopeControls
             :envelopes="envelopesFor(delayEnvelopeDestinations)"
@@ -519,9 +613,8 @@ onUnmounted(() => {
           </span>
         </h2>
         <div v-show="!areReverbsCollapsed" id="reverbs-content" class="oscillators-content">
+          <template v-for="(reverbSettings, index) in reverbs" :key="index">
           <ReverbControls
-            v-for="(reverbSettings, index) in reverbs"
-            :key="index"
             :reverb-index="index"
             v-bind="reverbSettings"
             @update:hall-type="updateReverbSettings(index, { hallType: $event })"
@@ -533,6 +626,16 @@ onUnmounted(() => {
             @toggle-bypass="toggleReverbBypass(index)"
             @remove="removeReverb(index)"
           />
+          <LfoControls
+            :lfos="lfosForModule('reverb', index)"
+            :target-options="lfoTargetOptions('reverb', index)"
+            :id-prefix="`reverb-${index}`"
+            @update="updateLfo($event.index, $event.settings)"
+            @toggle-bypass="toggleLfoBypass"
+            @remove="removeLfo"
+            @add="addLfo('reverb', index)"
+          />
+          </template>
           <button type="button" class="add-filter-button" @click="addReverb">Add Reverb</button>
           <EnvelopeControls
             :envelopes="envelopesFor(reverbEnvelopeDestinations)"

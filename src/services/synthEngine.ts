@@ -106,6 +106,21 @@ export type AmplitudeModulationSettings = {
   waveform: Waveform
 }
 
+export type LfoTarget = string
+export type LfoSettings = {
+  waveform: Waveform
+  rate: number
+  depth: number
+  target: LfoTarget
+}
+
+type LfoModule = {
+  oscillator: OscillatorNode
+  gain: GainNode
+  settings: LfoSettings
+  bypassed: boolean
+}
+
 export type EnvelopeCurve = 'linear' | 'exponential'
 export type EnvelopeDestination =
   | 'oscillatorLevel'
@@ -179,6 +194,7 @@ export class SynthEngine {
   private reverbs: ReverbModule[] = []
   private amplitudeModulation?: AmplitudeModulationSettings
   private amplitudeModulationBypassed = false
+  private lfos: LfoModule[] = []
   private envelopeSettings: { settings: EnvelopeSettings; bypassed: boolean }[] = []
   private effectOrder: EffectGroup[] = ['filters', 'delays', 'reverbs']
 
@@ -197,6 +213,7 @@ export class SynthEngine {
     }
     if (this.activeVoices.some((active) => active.note === note)) this.stopNote(note)
     this.activeVoices.push({ note, velocity, voices: this.createVoices(note, velocity) })
+    this.refreshLfoConnections()
     this.applyEffectEnvelopes(this.audioContext.currentTime, velocity / 127)
   }
 
@@ -218,6 +235,7 @@ export class SynthEngine {
     this.activeVoices.forEach((active) => {
       active.voices.push(...this.createVoicesForOscillator(active.note, active.velocity, oscillatorIndex))
     })
+    this.refreshLfoConnections()
   }
 
   removeOscillator(oscillatorIndex: number): void {
@@ -259,6 +277,7 @@ export class SynthEngine {
     if (this.noiseSettings) throw new Error('Noise is already enabled')
     this.noiseSettings = { ...settings }
     this.activeVoices.forEach((active) => active.voices.push(this.createNoiseVoice(active.velocity)))
+    this.refreshLfoConnections()
   }
 
   removeNoise(): void {
@@ -456,6 +475,45 @@ export class SynthEngine {
     this.activeVoices.forEach(({ voices }) => voices.forEach((voice) => this.setAmplitudeModulationDepth(voice, now)))
   }
 
+  addLfo(settings: LfoSettings): number {
+    const oscillator = this.audioContext.createOscillator()
+    const gain = this.audioContext.createGain()
+    const lfo = { oscillator, gain, settings: { ...settings }, bypassed: false }
+    this.setWaveform(oscillator, settings.waveform)
+    oscillator.frequency.setValueAtTime(settings.rate, this.audioContext.currentTime)
+    oscillator.connect(gain)
+    oscillator.start()
+    this.lfos.push(lfo)
+    this.refreshLfoConnections()
+    return this.lfos.length - 1
+  }
+
+  setLfoSettings(index: number, changes: Partial<LfoSettings>): void {
+    const lfo = this.lfos[index]
+    if (!lfo) throw new RangeError(`Unknown LFO index: ${index}`)
+    lfo.settings = { ...lfo.settings, ...changes }
+    const now = this.audioContext.currentTime
+    if (changes.waveform !== undefined) this.setWaveform(lfo.oscillator, lfo.settings.waveform)
+    if (changes.rate !== undefined) lfo.oscillator.frequency.setTargetAtTime(lfo.settings.rate, now, 0.01)
+    this.refreshLfoConnections()
+  }
+
+  setLfoBypassed(index: number, bypassed: boolean): void {
+    const lfo = this.lfos[index]
+    if (!lfo) throw new RangeError(`Unknown LFO index: ${index}`)
+    lfo.bypassed = bypassed
+    lfo.gain.gain.setTargetAtTime(bypassed ? 0 : this.lfoDepth(lfo.settings), this.audioContext.currentTime, 0.01)
+  }
+
+  removeLfo(index: number): void {
+    const lfo = this.lfos[index]
+    if (!lfo) throw new RangeError(`Unknown LFO index: ${index}`)
+    lfo.oscillator.stop()
+    lfo.oscillator.disconnect()
+    lfo.gain.disconnect()
+    this.lfos.splice(index, 1)
+  }
+
   setEnvelopeSettings(index: number, changes: Partial<EnvelopeSettings>): void {
     const envelope = this.envelopeSettings[index]
     if (!envelope) throw new RangeError(`Unknown envelope index: ${index}`)
@@ -480,7 +538,61 @@ export class SynthEngine {
 
   destroy(): void {
     this.stopAllNotes()
+    this.lfos.forEach((lfo) => {
+      lfo.oscillator.stop()
+      lfo.oscillator.disconnect()
+      lfo.gain.disconnect()
+    })
+    this.lfos = []
     void this.audioContext.close()
+  }
+
+  private refreshLfoConnections(): void {
+    this.lfos.forEach((lfo) => {
+      lfo.gain.disconnect()
+      lfo.gain.gain.setTargetAtTime(lfo.bypassed ? 0 : this.lfoDepth(lfo.settings), this.audioContext.currentTime, 0.01)
+      this.lfoTargetParams(lfo.settings.target).forEach((param) => lfo.gain.connect(param))
+    })
+  }
+
+  private lfoDepth(settings: LfoSettings): number {
+    const parameter = settings.target.split(':').at(-1)
+    const ranges: Record<string, number> = {
+      detune: 1200, level: MAX_GAIN, stereoSpread: 1, cutoff: 19980, resonance: 3,
+      gain: 24, time: 1.99, feedback: 0.95, mix: 1, overdrive: 1,
+      decay: 9.4, preDelay: 0.2, damping: 9500, width: 1,
+    }
+    return settings.depth * (ranges[parameter ?? ''] ?? 1)
+  }
+
+  private lfoTargetParams(target: LfoTarget): AudioParam[] {
+    const [module, rawIndex, parameter] = target.split(':')
+    const index = Number(rawIndex)
+    if (!Number.isInteger(index) || index < 0) return []
+    if (module === 'oscillator') {
+      return this.activeVoices
+        .flatMap((active) => active.voices)
+        .filter((voice) => voice.oscillatorIndex === index)
+        .flatMap((voice) => parameter === 'detune' ? [voice.oscillator!.detune] : parameter === 'level' ? [voice.gainNode.gain] : parameter === 'stereoSpread' ? [voice.panner.pan] : [])
+    }
+    if (module === 'noise') {
+      return this.activeVoices.flatMap((active) => active.voices)
+        .filter((voice) => voice.kind === 'noise')
+        .flatMap((voice) => parameter === 'level' ? [voice.gainNode.gain] : parameter === 'stereoSpread' ? [voice.panner.pan] : [])
+    }
+    if (module === 'filter') {
+      const filter = this.filters[index]
+      return !filter ? [] : parameter === 'cutoff' ? [filter.node.frequency] : parameter === 'resonance' ? [filter.node.Q] : parameter === 'gain' ? [filter.gainNode.gain] : []
+    }
+    if (module === 'delay') {
+      const delay = this.delays[index]
+      return !delay ? [] : parameter === 'time' ? [delay.node.delayTime] : parameter === 'feedback' ? [delay.feedback.gain] : parameter === 'mix' ? [delay.wet.gain] : parameter === 'overdrive' ? [delay.driveGain.gain] : []
+    }
+    if (module === 'reverb') {
+      const reverb = this.reverbs[index]
+      return !reverb ? [] : parameter === 'preDelay' ? [reverb.preDelay.delayTime] : parameter === 'damping' ? [reverb.tone.frequency] : parameter === 'mix' ? [reverb.wet.gain] : parameter === 'width' ? [reverb.left.gain, reverb.right.gain, reverb.leftCross.gain, reverb.rightCross.gain] : []
+    }
+    return []
   }
 
   private createVoices(note: number, velocity: number): Voice[] {
