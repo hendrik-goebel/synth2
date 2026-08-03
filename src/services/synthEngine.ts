@@ -96,6 +96,7 @@ export type FilterSettings = {
 export type DelaySettings = {
   bypassed: boolean
   time: number
+  noteTime: number
   feedback: number
   resonance: number
   mix: number
@@ -227,7 +228,7 @@ export function createFilterSettings(): FilterSettings {
 }
 
 export function createDelaySettings(): DelaySettings {
-  return { bypassed: false, time: 0.25, feedback: 0.35, resonance: 0, mix: 0.3, overdrive: 0 }
+  return { bypassed: false, time: 0.25, noteTime: 16, feedback: 0.35, resonance: 0, mix: 0.3, overdrive: 0 }
 }
 
 export function createReverbSettings(): ReverbSettings {
@@ -673,7 +674,8 @@ export class SynthEngine {
       gain: 24, time: 1.99, feedback: 0.95, mix: 1, overdrive: 1,
       decay: 9.4, preDelay: 0.2, damping: 9500, width: 1,
     }
-    return settings.depth * (ranges[parameter ?? ''] ?? 1)
+    const normalizedDepth = Math.max(0, Math.min(1, settings.depth))
+    return normalizedDepth ** 2 * (ranges[parameter ?? ''] ?? 1)
   }
 
   private lfoTargetParams(target: LfoTarget): AudioParam[] {

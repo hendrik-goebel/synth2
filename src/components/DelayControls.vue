@@ -5,6 +5,7 @@ defineProps<{
   delayIndex: number
   bypassed: boolean
   time: number
+  noteTime: number
   feedback: number
   resonance: number
   mix: number
@@ -12,7 +13,7 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'update:time': [value: number]
+  'update:noteTime': [value: number]
   'update:feedback': [value: number]
   'update:resonance': [value: number]
   'update:mix': [value: number]
@@ -34,8 +35,10 @@ const emit = defineEmits<{
     <div class="modulation-controls">
       <label class="control">
         <span>Time</span>
-        <output>{{ Math.round(time * 1000) }} ms</output>
-        <input type="range" min="0.01" max="2" step="0.01" :value="time" @input="emit('update:time', Number(($event.target as HTMLInputElement).value))">
+        <output>{{ noteTime === 1 ? '1 bar' : `1/${noteTime}` }} · {{ Math.round(time * 1000) }} ms</output>
+        <select :value="noteTime" @change="emit('update:noteTime', Number(($event.target as HTMLSelectElement).value))">
+          <option v-for="value in [1, 3, 4, 5, 6, 8, 9, 16, 32]" :key="value" :value="value">1/{{ value }}</option>
+        </select>
       </label>
       <label class="control">
         <span>Feedback</span>

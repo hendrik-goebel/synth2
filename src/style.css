@@ -73,6 +73,49 @@ h1 {
   gap: 10px;
 }
 
+.bpm-control {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 4px 7px 4px 11px;
+  color: #bac4d3;
+  background: rgba(6, 8, 12, 0.65);
+  border: 1px solid rgba(101, 230, 194, 0.32);
+  border-radius: 999px;
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.bpm-label {
+  color: #65e6c2;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.bpm-control input {
+  width: 48px;
+  padding: 2px 0;
+  color: #f1f4f8;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.bpm-control input:focus {
+  color: #65e6c2;
+}
+
+.bpm-control input::-webkit-inner-spin-button,
+.bpm-control input::-webkit-outer-spin-button {
+  margin: 0;
+  opacity: 0.5;
+}
+
 .eyebrow {
   margin: 0;
   color: #7f8b9e;

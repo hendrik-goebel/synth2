@@ -30,6 +30,7 @@ const oscillators = ref<OscillatorSettings[]>([initialOscillatorSettings])
 const noise = ref<NoiseSettings | null>(null)
 const filters = ref<FilterSettings[]>([createFilterSettings()])
 const delays = ref<DelaySettings[]>([])
+const bpm = ref(120)
 const reverbs = ref<ReverbSettings[]>([])
 const amplitudeModulation = ref<AmplitudeModulationSettings | null>(null)
 const envelopes = ref<EnvelopeModule[]>([])
@@ -226,8 +227,24 @@ function removeDelay(index: number) {
 }
 
 function updateDelaySettings(index: number, settings: Partial<DelaySettings>) {
+  if (settings.noteTime !== undefined) {
+    settings = { ...settings, time: delayTimeForBpm(settings.noteTime, bpm.value) }
+  }
   delays.value[index] = { ...delays.value[index], ...settings }
   synth.setDelaySettings(index, settings)
+}
+
+function delayTimeForBpm(noteTime: number, tempo: number) {
+  return (60 / tempo) * (4 / noteTime)
+}
+
+function updateBpm(value: number) {
+  bpm.value = Math.min(300, Math.max(30, Number.isFinite(value) ? value : 120))
+  delays.value.forEach((delay, index) => {
+    const time = delayTimeForBpm(delay.noteTime, bpm.value)
+    delays.value[index] = { ...delay, time }
+    synth.setDelaySettings(index, { time })
+  })
 }
 
 function toggleDelayBypass(index: number) {
@@ -465,6 +482,10 @@ onUnmounted(() => {
         </div>
         <div class="topbar-actions">
           <output class="voice-count" title="Active voices">{{ activeVoices }}</output>
+          <label class="bpm-control">
+            <span class="bpm-label">BPM</span>
+            <input aria-label="Global tempo in beats per minute" type="number" min="30" max="300" step="1" :value="bpm" @input="updateBpm(Number(($event.target as HTMLInputElement).value))">
+          </label>
           <button type="button" class="panic-button" @click="handlePanic">Panic</button>
         </div>
       </header>
@@ -622,7 +643,7 @@ onUnmounted(() => {
           <DelayControls
             :delay-index="index"
             v-bind="delaySettings"
-            @update:time="updateDelaySettings(index, { time: $event })"
+            @update:note-time="updateDelaySettings(index, { noteTime: $event })"
             @update:feedback="updateDelaySettings(index, { feedback: $event })"
             @update:resonance="updateDelaySettings(index, { resonance: $event })"
             @update:mix="updateDelaySettings(index, { mix: $event })"
