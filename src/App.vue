@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue'
 import { instrumentCategories, instrumentPresets, type InstrumentPreset } from './instruments'
 import { MidiService } from './services/midiService'
 import { decodeSeed, encodeSeed } from './services/seedService'
-import { createDelaySettings, createEnvelopeSettings, createFilterSettings, createNoiseSettings, createOutputSettings, createOverdriveSettings, createReverbSettings, createCompressorSettings, createGateSettings, createLimiterSettings, createOscillatorSettings, type AmplitudeModulationSettings, type DelaySettings, type DynamicsSettings, type DynamicsSettingsChanges, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type LfoSettings, type NoiseSettings, type OscillatorSettings, type OutputSettings, type OverdriveSettings, type ReverbSettings, type Waveform, SynthEngine } from './services/synthEngine'
+import { createChorusSettings, createDelaySettings, createEnvelopeSettings, createEqBandSettings, createFilterSettings, createFlangerSettings, createMultibandEqSettings, createNoiseSettings, createOutputSettings, createOverdriveSettings, createReverbSettings, createCompressorSettings, createGateSettings, createLimiterSettings, createOscillatorSettings, createSingleBandEqSettings, createTremoloSettings, type AmplitudeModulationSettings, type ChorusSettings, type DelaySettings, type DynamicsSettings, type DynamicsSettingsChanges, type EqBandSettings, type EqEnvelopeSettings, type EqLfoSettings, type EqModulationTarget, type EqParameter, type EqSettings, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type FlangerSettings, type LfoSettings, type NoiseSettings, type OscillatorSettings, type OutputSettings, type OverdriveSettings, type ReverbSettings, type TremoloSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
 import NoiseControls from './components/NoiseControls.vue'
 import FilterControls from './components/FilterControls.vue'
@@ -17,17 +17,23 @@ import CompressorControls from './components/CompressorControls.vue'
 import GateControls from './components/GateControls.vue'
 import LimiterControls from './components/LimiterControls.vue'
 import OutputControls from './components/OutputControls.vue'
+import EqControls from './components/EqControls.vue'
+import ChorusControls from './components/ChorusControls.vue'
+import FlangerControls from './components/FlangerControls.vue'
+import TremoloControls from './components/TremoloControls.vue'
 
 type EnvelopeModule = EnvelopeSettings & { bypassed: boolean }
 type LfoControlModule = LfoSettings & { bypassed: boolean }
 type SynthSetup = Omit<InstrumentPreset, 'id' | 'name' | 'category'>
-type SeedChannel = SynthSetup & { selectedInstrumentId: string }
+type SeedChannel = Omit<SynthSetup, 'eqs' | 'choruses' | 'flangers' | 'tremolos'> & { eqs?: EqSettings[]; choruses?: ChorusSettings[]; flangers?: FlangerSettings[]; tremolos?: TremoloSettings[]; selectedInstrumentId: string }
 type SeedState = {
   version: 1
   selectedChannel: number
   channels: SeedChannel[]
 }
-const effectGroups: EffectGroup[] = ['filters', 'overdrives', 'delays', 'reverbs', 'dynamics']
+const effectGroups: EffectGroup[] = ['filters', 'overdrives', 'choruses', 'flangers', 'tremolos', 'delays', 'reverbs', 'eqs', 'dynamics']
+const legacyEffectGroups: EffectGroup[] = ['filters', 'overdrives', 'delays', 'reverbs', 'dynamics']
+const legacyEffectGroups6: EffectGroup[] = ['filters', 'overdrives', 'delays', 'reverbs', 'eqs', 'dynamics']
 const MAX_SEED_MODULES = 16
 const MAX_SEED_MODULATORS = 32
 type ChannelState = {
@@ -38,12 +44,16 @@ type ChannelState = {
   filters: FilterSettings[]
   delays: DelaySettings[]
   overdrives: OverdriveSettings[]
+  choruses: ChorusSettings[]
+  flangers: FlangerSettings[]
+  tremolos: TremoloSettings[]
   bpm: number
   reverbs: ReverbSettings[]
   amplitudeModulation: AmplitudeModulationSettings | null
   envelopes: EnvelopeModule[]
   lfos: LfoControlModule[]
   dynamics: DynamicsSettings[]
+  eqs: EqSettings[]
   effectOrder: EffectGroup[]
   isAmplitudeModulationBypassed: boolean
   selectedInstrumentId: string
@@ -65,12 +75,16 @@ const noise = ref<NoiseSettings | null>(null)
 const filters = ref<FilterSettings[]>([createFilterSettings()])
 const delays = ref<DelaySettings[]>([])
 const overdrives = ref<OverdriveSettings[]>([])
+const choruses = ref<ChorusSettings[]>([])
+const flangers = ref<FlangerSettings[]>([])
+const tremolos = ref<TremoloSettings[]>([])
 const bpm = ref(120)
 const reverbs = ref<ReverbSettings[]>([])
 const amplitudeModulation = ref<AmplitudeModulationSettings | null>(null)
 const envelopes = ref<EnvelopeModule[]>([])
 const lfos = ref<LfoControlModule[]>([])
 const dynamics = ref<DynamicsSettings[]>([])
+const eqs = ref<EqSettings[]>([])
 const effectOrder = ref<EffectGroup[]>([...effectGroups])
 const isAmplitudeModulationBypassed = ref(false)
 const selectedInstrumentId = ref('')
@@ -80,7 +94,9 @@ const areFiltersCollapsed = ref(false)
 const areDynamicsCollapsed = ref(false)
 const areDelaysCollapsed = ref(false)
 const areOverdrivesCollapsed = ref(false)
+const areEffectsCollapsed = ref(false)
 const areReverbsCollapsed = ref(false)
+const areEqsCollapsed = ref(false)
 const seedInput = ref('')
 const seedStatus = ref('')
 let firstInteractionHandled = false
@@ -97,12 +113,16 @@ function saveActiveChannel() {
   channel.filters = filters.value
   channel.delays = delays.value
   channel.overdrives = overdrives.value
+  channel.choruses = choruses.value
+  channel.flangers = flangers.value
+  channel.tremolos = tremolos.value
   channel.bpm = bpm.value
   channel.reverbs = reverbs.value
   channel.amplitudeModulation = amplitudeModulation.value
   channel.envelopes = envelopes.value
   channel.lfos = lfos.value
   channel.dynamics = dynamics.value
+  channel.eqs = eqs.value
   channel.effectOrder = effectOrder.value
   channel.isAmplitudeModulationBypassed = isAmplitudeModulationBypassed.value
   channel.selectedInstrumentId = selectedInstrumentId.value
@@ -124,12 +144,16 @@ function loadChannelState(channel: ChannelState) {
   filters.value = channel.filters
   delays.value = channel.delays
   overdrives.value = channel.overdrives
+  choruses.value = channel.choruses
+  flangers.value = channel.flangers
+  tremolos.value = channel.tremolos
   bpm.value = channel.bpm
   reverbs.value = channel.reverbs
   amplitudeModulation.value = channel.amplitudeModulation
   envelopes.value = channel.envelopes
   lfos.value = channel.lfos
   dynamics.value = channel.dynamics
+  eqs.value = channel.eqs
   effectOrder.value = channel.effectOrder
   isAmplitudeModulationBypassed.value = channel.isAmplitudeModulationBypassed
   selectedInstrumentId.value = channel.selectedInstrumentId
@@ -149,13 +173,17 @@ function addChannel() {
     filters: [createFilterSettings()],
     delays: [],
     overdrives: [],
+    choruses: [],
+    flangers: [],
+    tremolos: [],
     bpm: 120,
     reverbs: [],
     amplitudeModulation: null,
     envelopes: [],
     lfos: [],
     dynamics: [],
-    effectOrder: ['filters', 'overdrives', 'delays', 'reverbs', 'dynamics'],
+    eqs: [],
+    effectOrder: [...effectGroups],
     isAmplitudeModulationBypassed: false,
     selectedInstrumentId: '',
   }
@@ -189,12 +217,16 @@ channels.value.push({
   filters: filters.value,
   delays: delays.value,
   overdrives: overdrives.value,
+  choruses: choruses.value,
+  flangers: flangers.value,
+  tremolos: tremolos.value,
   bpm: bpm.value,
   reverbs: reverbs.value,
   amplitudeModulation: amplitudeModulation.value,
   envelopes: envelopes.value,
   lfos: lfos.value,
   dynamics: dynamics.value,
+  eqs: eqs.value,
   effectOrder: effectOrder.value,
   isAmplitudeModulationBypassed: isAmplitudeModulationBypassed.value,
   selectedInstrumentId: selectedInstrumentId.value,
@@ -220,6 +252,24 @@ const overdriveEnvelopeDestinations = [
   { value: 'overdriveTone', label: 'Tone' },
   { value: 'overdriveFeedback', label: 'Feedback' },
   { value: 'overdriveMix', label: 'Mix' },
+] satisfies { value: EnvelopeDestination; label: string }[]
+const chorusEnvelopeDestinations = [
+  { value: 'chorusRate', label: 'LFO rate' },
+  { value: 'chorusDepth', label: 'LFO depth' },
+  { value: 'chorusDelay', label: 'Delay' },
+  { value: 'chorusMix', label: 'Mix' },
+] satisfies { value: EnvelopeDestination; label: string }[]
+const flangerEnvelopeDestinations = [
+  { value: 'flangerRate', label: 'LFO rate' },
+  { value: 'flangerDepth', label: 'LFO depth' },
+  { value: 'flangerDelay', label: 'Delay' },
+  { value: 'flangerFeedback', label: 'Feedback' },
+  { value: 'flangerMix', label: 'Mix' },
+] satisfies { value: EnvelopeDestination; label: string }[]
+const tremoloEnvelopeDestinations = [
+  { value: 'tremoloRate', label: 'LFO rate' },
+  { value: 'tremoloDepth', label: 'Depth' },
+  { value: 'tremoloMix', label: 'Mix' },
 ] satisfies { value: EnvelopeDestination; label: string }[]
 const reverbEnvelopeDestinations = [
   { value: 'reverbDecay', label: 'Decay' },
@@ -330,6 +380,9 @@ function createSynthFromSetup(setup: SynthSetup): SynthEngine {
     setup.filters.slice(1).forEach((settings) => synth.addFilter(settings))
     if (setup.noise) synth.addNoise(setup.noise)
     setup.overdrives.forEach((settings) => synth.addOverdrive(settings))
+    setup.choruses.forEach((settings) => synth.addChorus(settings))
+    setup.flangers.forEach((settings) => synth.addFlanger(settings))
+    setup.tremolos.forEach((settings) => synth.addTremolo(settings))
     setup.delays.forEach((settings) => synth.addDelay(settings))
     setup.reverbs.forEach((settings) => synth.addReverb(settings))
     setup.dynamics.forEach((settings) => {
@@ -337,6 +390,7 @@ function createSynthFromSetup(setup: SynthSetup): SynthEngine {
       else if (settings.type === 'gate') synth.addGate(settings)
       else synth.addLimiter(settings)
     })
+    setup.eqs.forEach((settings) => synth.addEq(settings))
     if (setup.amplitudeModulation) {
       synth.addAmplitudeModulation(setup.amplitudeModulation)
       synth.setAmplitudeModulationBypassed(setup.isAmplitudeModulationBypassed)
@@ -349,7 +403,7 @@ function createSynthFromSetup(setup: SynthSetup): SynthEngine {
       const index = synth.addLfo(settings)
       synth.setLfoBypassed(index, bypassed)
     })
-    synth.setEffectOrder(setup.effectOrder)
+    synth.setEffectOrder(normalizeEffectOrder(setup.effectOrder))
     return synth
   } catch (error) {
     synth.destroy()
@@ -373,13 +427,17 @@ function applyInstrumentPreset(instrumentId: string) {
   filters.value = preset.filters.map((settings) => ({ ...settings }))
   delays.value = preset.delays.map((settings) => ({ ...settings }))
   overdrives.value = preset.overdrives.map((settings) => ({ ...settings }))
+  choruses.value = preset.choruses.map((settings) => ({ ...settings }))
+  flangers.value = preset.flangers.map((settings) => ({ ...settings }))
+  tremolos.value = preset.tremolos.map((settings) => ({ ...settings }))
   bpm.value = preset.bpm
   reverbs.value = preset.reverbs.map((settings) => ({ ...settings }))
   amplitudeModulation.value = preset.amplitudeModulation ? { ...preset.amplitudeModulation } : null
   envelopes.value = preset.envelopes.map((settings) => ({ ...settings }))
   lfos.value = preset.lfos.map((settings) => ({ ...settings }))
   dynamics.value = preset.dynamics.map((settings) => ({ ...settings }))
-  effectOrder.value = [...preset.effectOrder]
+  eqs.value = normalizeEqs(preset.eqs)
+  effectOrder.value = normalizeEffectOrder(preset.effectOrder)
   isAmplitudeModulationBypassed.value = preset.isAmplitudeModulationBypassed
   selectedInstrumentId.value = preset.id
   saveActiveChannel()
@@ -401,12 +459,16 @@ function createSeedChannel(channel: ChannelState): SeedChannel {
     filters: channel.filters,
     delays: channel.delays,
     overdrives: channel.overdrives,
+    choruses: channel.choruses,
+    flangers: channel.flangers,
+    tremolos: channel.tremolos,
     bpm: channel.bpm,
     reverbs: channel.reverbs,
     amplitudeModulation: channel.amplitudeModulation,
     envelopes: channel.envelopes,
     lfos: channel.lfos,
     dynamics: channel.dynamics,
+    eqs: channel.eqs,
     effectOrder: channel.effectOrder,
     isAmplitudeModulationBypassed: channel.isAmplitudeModulationBypassed,
     selectedInstrumentId: channel.selectedInstrumentId,
@@ -421,10 +483,125 @@ function isObjectArray(value: unknown, maximumLength: number, minimumLength = 0)
   return Array.isArray(value) && value.length >= minimumLength && value.length <= maximumLength && value.every(isRecord)
 }
 
+function isEqBandSettings(value: unknown): value is EqBandSettings {
+  if (!isRecord(value)) return false
+  const validTypes = ['peaking', 'lowshelf', 'highshelf', 'lowpass', 'highpass', 'notch']
+  return typeof value.bypassed === 'boolean'
+    && typeof value.type === 'string'
+    && validTypes.some((type) => type === value.type)
+    && typeof value.frequency === 'number'
+    && Number.isFinite(value.frequency) && value.frequency >= 20 && value.frequency <= 20000
+    && typeof value.gain === 'number'
+    && Number.isFinite(value.gain) && value.gain >= -24 && value.gain <= 24
+    && typeof value.q === 'number'
+    && Number.isFinite(value.q) && value.q >= 0.1 && value.q <= 18
+}
+
+function isEqModulationTarget(value: unknown, eqIndex: number, bandCount: number): value is EqModulationTarget {
+  const match = typeof value === 'string' ? /^eq:(\d+):(\d+):(frequency|q|gain)$/.exec(value) : null
+  return !!match && Number(match[1]) === eqIndex && Number(match[2]) >= 0 && Number(match[2]) < bandCount
+}
+
+function isEqEnvelopeSettings(value: unknown, eqIndex: number, bandCount: number): value is EqEnvelopeSettings {
+  return isRecord(value)
+    && typeof value.bypassed === 'boolean'
+    && typeof value.attack === 'number' && Number.isFinite(value.attack) && value.attack >= 0 && value.attack <= 300
+    && typeof value.decay === 'number' && Number.isFinite(value.decay) && value.decay >= 0 && value.decay <= 150
+    && typeof value.hold === 'number' && Number.isFinite(value.hold) && value.hold >= 0 && value.hold <= 150
+    && typeof value.release === 'number' && Number.isFinite(value.release) && value.release >= 0 && value.release <= 450
+    && typeof value.velocity === 'number' && Number.isFinite(value.velocity) && value.velocity >= 0 && value.velocity <= 1
+    && (value.attackCurve === 'linear' || value.attackCurve === 'exponential')
+    && (value.releaseCurve === 'linear' || value.releaseCurve === 'exponential')
+    && isEqModulationTarget(value.destination, eqIndex, bandCount)
+}
+
+function isEqLfoSettings(value: unknown, eqIndex: number, bandCount: number): value is EqLfoSettings {
+  return isRecord(value)
+    && typeof value.bypassed === 'boolean'
+    && (value.waveform === 'sine' || value.waveform === 'triangle' || value.waveform === 'sawtooth' || value.waveform === 'square' || value.waveform === 'random')
+    && typeof value.rate === 'number' && Number.isFinite(value.rate) && value.rate >= 0.1 && value.rate <= 30
+    && typeof value.depth === 'number' && Number.isFinite(value.depth) && value.depth >= 0 && value.depth <= 1
+    && isEqModulationTarget(value.target, eqIndex, bandCount)
+}
+
+function isEqSettings(value: unknown, eqIndex: number): value is EqSettings {
+  if (!isRecord(value) || (value.kind !== 'single' && value.kind !== 'multiband') || typeof value.bypassed !== 'boolean') return false
+  const { bands, envelopes, lfos } = value
+  if (!isObjectArray(bands, MAX_SEED_MODULES * 4) || !bands.every(isEqBandSettings) || (value.kind === 'single' && bands.length !== 1)) return false
+  return isObjectArray(envelopes, MAX_SEED_MODULATORS)
+    && envelopes.every((envelope) => isEqEnvelopeSettings(envelope, eqIndex, bands.length))
+    && isObjectArray(lfos, MAX_SEED_MODULATORS)
+    && lfos.every((lfo) => isEqLfoSettings(lfo, eqIndex, bands.length))
+}
+
+function isWaveform(value: unknown): value is Waveform {
+  return value === 'sine' || value === 'triangle' || value === 'sawtooth' || value === 'square' || value === 'random'
+}
+
+function isChorusSettings(value: unknown): value is ChorusSettings {
+  return isRecord(value)
+    && typeof value.bypassed === 'boolean'
+    && isWaveform(value.waveform)
+    && typeof value.rate === 'number' && Number.isFinite(value.rate) && value.rate >= 0.01 && value.rate <= 20
+    && typeof value.depth === 'number' && Number.isFinite(value.depth) && value.depth >= 0 && value.depth <= 1
+    && typeof value.delay === 'number' && Number.isFinite(value.delay) && value.delay >= 0 && value.delay <= 0.045
+    && typeof value.mix === 'number' && Number.isFinite(value.mix) && value.mix >= 0 && value.mix <= 1
+}
+
+function isFlangerSettings(value: unknown): value is FlangerSettings {
+  return isRecord(value)
+    && typeof value.bypassed === 'boolean'
+    && isWaveform(value.waveform)
+    && typeof value.rate === 'number' && Number.isFinite(value.rate) && value.rate >= 0.01 && value.rate <= 10
+    && typeof value.depth === 'number' && Number.isFinite(value.depth) && value.depth >= 0 && value.depth <= 1
+    && typeof value.delay === 'number' && Number.isFinite(value.delay) && value.delay >= 0 && value.delay <= 0.01
+    && typeof value.feedback === 'number' && Number.isFinite(value.feedback) && value.feedback >= 0 && value.feedback <= 0.9
+    && typeof value.mix === 'number' && Number.isFinite(value.mix) && value.mix >= 0 && value.mix <= 1
+}
+
+function isTremoloSettings(value: unknown): value is TremoloSettings {
+  return isRecord(value)
+    && typeof value.bypassed === 'boolean'
+    && isWaveform(value.waveform)
+    && typeof value.rate === 'number' && Number.isFinite(value.rate) && value.rate >= 0.1 && value.rate <= 30
+    && typeof value.depth === 'number' && Number.isFinite(value.depth) && value.depth >= 0 && value.depth <= 1
+    && typeof value.mix === 'number' && Number.isFinite(value.mix) && value.mix >= 0 && value.mix <= 1
+}
+
 function isEffectOrder(value: unknown): value is EffectGroup[] {
-  return Array.isArray(value)
-    && value.length === effectGroups.length
-    && effectGroups.every((group) => value.filter((valueGroup) => valueGroup === group).length === 1)
+  if (!Array.isArray(value)) return false
+  const groups = value.length === effectGroups.length
+    ? effectGroups
+    : value.length === legacyEffectGroups6.length
+      ? legacyEffectGroups6
+      : value.length === legacyEffectGroups.length ? legacyEffectGroups : null
+  return groups !== null && groups.every((group) => value.filter((valueGroup) => valueGroup === group).length === 1)
+}
+
+function normalizeEffectOrder(order: readonly EffectGroup[]): EffectGroup[] {
+  let normalized: EffectGroup[] = order.includes('eqs')
+    ? [...order]
+    : [...order.slice(0, order.indexOf('dynamics')), 'eqs', ...order.slice(order.indexOf('dynamics'))]
+  const insertBefore: Record<'choruses' | 'flangers' | 'tremolos', EffectGroup> = {
+    choruses: 'delays',
+    flangers: 'delays',
+    tremolos: 'delays',
+  }
+  ;(['choruses', 'flangers', 'tremolos'] as const).forEach((group) => {
+    if (normalized.includes(group)) return
+    const index = normalized.indexOf(insertBefore[group])
+    normalized = [...normalized.slice(0, index), group, ...normalized.slice(index)]
+  })
+  return normalized
+}
+
+function normalizeEqs(eqs: EqSettings[] | undefined): EqSettings[] {
+  return (eqs ?? []).map((eq) => ({
+    ...eq,
+    bands: eq.bands.map((band) => ({ ...band })),
+    envelopes: eq.envelopes.map((envelope) => ({ ...envelope })),
+    lfos: eq.lfos.map((lfo) => ({ ...lfo })),
+  }))
 }
 
 function isSeedChannel(value: unknown): value is SeedChannel {
@@ -440,10 +617,14 @@ function isSeedChannel(value: unknown): value is SeedChannel {
     && isObjectArray(value.filters, MAX_SEED_MODULES, 1)
     && isObjectArray(value.delays, MAX_SEED_MODULES)
     && isObjectArray(value.overdrives, MAX_SEED_MODULES)
+    && (value.choruses === undefined || (isObjectArray(value.choruses, MAX_SEED_MODULES) && value.choruses.every(isChorusSettings)))
+    && (value.flangers === undefined || (isObjectArray(value.flangers, MAX_SEED_MODULES) && value.flangers.every(isFlangerSettings)))
+    && (value.tremolos === undefined || (isObjectArray(value.tremolos, MAX_SEED_MODULES) && value.tremolos.every(isTremoloSettings)))
     && isObjectArray(value.reverbs, MAX_SEED_MODULES)
     && isObjectArray(value.envelopes, MAX_SEED_MODULATORS)
     && isObjectArray(value.lfos, MAX_SEED_MODULATORS)
     && isObjectArray(value.dynamics, MAX_SEED_MODULES)
+    && (value.eqs === undefined || (isObjectArray(value.eqs, MAX_SEED_MODULES) && value.eqs.every((eq, index) => isEqSettings(eq, index))))
     && isEffectOrder(value.effectOrder)
 }
 
@@ -459,7 +640,12 @@ function isSeedState(value: unknown): value is SeedState {
 }
 
 function createChannelFromSeed(seedChannel: SeedChannel): ChannelState {
-  const synth = createSynthFromSetup(seedChannel)
+  const eqs = normalizeEqs(seedChannel.eqs)
+  const choruses = seedChannel.choruses ?? []
+  const flangers = seedChannel.flangers ?? []
+  const tremolos = seedChannel.tremolos ?? []
+  const effectOrder = normalizeEffectOrder(seedChannel.effectOrder)
+  const synth = createSynthFromSetup({ ...seedChannel, eqs, choruses, flangers, tremolos, effectOrder })
 
   return {
     synth,
@@ -469,13 +655,17 @@ function createChannelFromSeed(seedChannel: SeedChannel): ChannelState {
     filters: seedChannel.filters.map((settings) => ({ ...settings })),
     delays: seedChannel.delays.map((settings) => ({ ...settings })),
     overdrives: seedChannel.overdrives.map((settings) => ({ ...settings })),
+    choruses: choruses.map((settings) => ({ ...settings })),
+    flangers: flangers.map((settings) => ({ ...settings })),
+    tremolos: tremolos.map((settings) => ({ ...settings })),
     bpm: seedChannel.bpm,
     reverbs: seedChannel.reverbs.map((settings) => ({ ...settings })),
     amplitudeModulation: seedChannel.amplitudeModulation ? { ...seedChannel.amplitudeModulation } : null,
     envelopes: seedChannel.envelopes.map((settings) => ({ ...settings })),
     lfos: seedChannel.lfos.map((settings) => ({ ...settings })),
     dynamics: seedChannel.dynamics.map((settings) => ({ ...settings })),
-    effectOrder: [...seedChannel.effectOrder],
+    eqs,
+    effectOrder,
     isAmplitudeModulationBypassed: seedChannel.isAmplitudeModulationBypassed,
     selectedInstrumentId: seedChannel.selectedInstrumentId,
   }
@@ -672,9 +862,289 @@ function moveOverdrive(index: number, direction: -1 | 1) {
   const sourcePrefix = `overdrive:${index}:`
   const targetPrefix = `overdrive:${targetIndex}:`
   lfos.value.forEach((lfo, lfoIndex) => {
-    if (lfo.target.startsWith(sourcePrefix)) updateLfo(lfoIndex, { target: lfo.target.replace(sourcePrefix, targetPrefix) })
-    else if (lfo.target.startsWith(targetPrefix)) updateLfo(lfoIndex, { target: lfo.target.replace(targetPrefix, sourcePrefix) })
+    if (lfo.target.startsWith(sourcePrefix)) updateLfo(lfoIndex, { target: lfo.target.replace(sourcePrefix, targetPrefix) as LfoSettings['target'] })
+    else if (lfo.target.startsWith(targetPrefix)) updateLfo(lfoIndex, { target: lfo.target.replace(targetPrefix, sourcePrefix) as LfoSettings['target'] })
   })
+}
+
+function addChorus() {
+  const settings = createChorusSettings()
+  choruses.value.push(settings)
+  activeSynth.addChorus(settings)
+}
+
+function removeChorus(index: number) {
+  removeLfosForModule('chorus', index)
+  activeSynth.removeChorus(index)
+  choruses.value.splice(index, 1)
+}
+
+function updateChorusSettings(index: number, settings: Partial<ChorusSettings>) {
+  choruses.value[index] = { ...choruses.value[index], ...settings }
+  activeSynth.setChorusSettings(index, settings)
+}
+
+function toggleChorusBypass(index: number) {
+  const bypassed = !choruses.value[index].bypassed
+  choruses.value[index] = { ...choruses.value[index], bypassed }
+  activeSynth.setChorusBypassed(index, bypassed)
+}
+
+function moveChorus(index: number, direction: -1 | 1) {
+  const targetIndex = index + direction
+  if (!choruses.value[targetIndex]) return
+  ;[choruses.value[index], choruses.value[targetIndex]] = [choruses.value[targetIndex], choruses.value[index]]
+  activeSynth.moveChorus(index, direction)
+  reindexLfosForMove('chorus', index, targetIndex)
+}
+
+function addFlanger() {
+  const settings = createFlangerSettings()
+  flangers.value.push(settings)
+  activeSynth.addFlanger(settings)
+}
+
+function removeFlanger(index: number) {
+  removeLfosForModule('flanger', index)
+  activeSynth.removeFlanger(index)
+  flangers.value.splice(index, 1)
+}
+
+function updateFlangerSettings(index: number, settings: Partial<FlangerSettings>) {
+  flangers.value[index] = { ...flangers.value[index], ...settings }
+  activeSynth.setFlangerSettings(index, settings)
+}
+
+function toggleFlangerBypass(index: number) {
+  const bypassed = !flangers.value[index].bypassed
+  flangers.value[index] = { ...flangers.value[index], bypassed }
+  activeSynth.setFlangerBypassed(index, bypassed)
+}
+
+function moveFlanger(index: number, direction: -1 | 1) {
+  const targetIndex = index + direction
+  if (!flangers.value[targetIndex]) return
+  ;[flangers.value[index], flangers.value[targetIndex]] = [flangers.value[targetIndex], flangers.value[index]]
+  activeSynth.moveFlanger(index, direction)
+  reindexLfosForMove('flanger', index, targetIndex)
+}
+
+function addTremolo() {
+  const settings = createTremoloSettings()
+  tremolos.value.push(settings)
+  activeSynth.addTremolo(settings)
+}
+
+function removeTremolo(index: number) {
+  removeLfosForModule('tremolo', index)
+  activeSynth.removeTremolo(index)
+  tremolos.value.splice(index, 1)
+}
+
+function updateTremoloSettings(index: number, settings: Partial<TremoloSettings>) {
+  tremolos.value[index] = { ...tremolos.value[index], ...settings }
+  activeSynth.setTremoloSettings(index, settings)
+}
+
+function toggleTremoloBypass(index: number) {
+  const bypassed = !tremolos.value[index].bypassed
+  tremolos.value[index] = { ...tremolos.value[index], bypassed }
+  activeSynth.setTremoloBypassed(index, bypassed)
+}
+
+function moveTremolo(index: number, direction: -1 | 1) {
+  const targetIndex = index + direction
+  if (!tremolos.value[targetIndex]) return
+  ;[tremolos.value[index], tremolos.value[targetIndex]] = [tremolos.value[targetIndex], tremolos.value[index]]
+  activeSynth.moveTremolo(index, direction)
+  reindexLfosForMove('tremolo', index, targetIndex)
+}
+
+function addSingleBandEq() {
+  const settings = createSingleBandEqSettings()
+  eqs.value.push(settings)
+  activeSynth.addEq(settings)
+}
+
+function addMultibandEq() {
+  const settings = createMultibandEqSettings()
+  eqs.value.push(settings)
+  activeSynth.addEq(settings)
+}
+
+function removeEq(index: number) {
+  activeSynth.removeEq(index)
+  eqs.value = eqs.value.filter((_, eqIndex) => eqIndex !== index).map(reindexEqModulationTargets)
+}
+
+function toggleEqBypass(index: number) {
+  const bypassed = !eqs.value[index].bypassed
+  eqs.value[index] = { ...eqs.value[index], bypassed }
+  activeSynth.setEqBypassed(index, bypassed)
+}
+
+function moveEq(index: number, direction: -1 | 1) {
+  const targetIndex = index + direction
+  if (!eqs.value[targetIndex]) return
+  ;[eqs.value[index], eqs.value[targetIndex]] = [eqs.value[targetIndex], eqs.value[index]]
+  eqs.value = eqs.value.map(reindexEqModulationTargets)
+  activeSynth.moveEq(index, direction)
+}
+
+function addEqBand(eqIndex: number) {
+  const eq = eqs.value[eqIndex]
+  if (!eq || eq.kind !== 'multiband') return
+  const band = createEqBandSettings()
+  eqs.value[eqIndex] = { ...eq, bands: [...eq.bands, band] }
+  activeSynth.addEqBand(eqIndex, band)
+}
+
+function removeEqBand(eqIndex: number, bandIndex: number) {
+  const eq = eqs.value[eqIndex]
+  if (!eq || eq.kind !== 'multiband' || !eq.bands[bandIndex]) return
+  activeSynth.removeEqBand(eqIndex, bandIndex)
+  const bands = eq.bands.filter((_, index) => index !== bandIndex)
+  eqs.value[eqIndex] = {
+    ...eq,
+    bands,
+    envelopes: eq.envelopes.flatMap((envelope) => {
+      const target = parseEqModulationTarget(envelope.destination)
+      if (!target || target.bandIndex === bandIndex) return []
+      return [{ ...envelope, destination: createEqModulationTarget(eqIndex, target.bandIndex > bandIndex ? target.bandIndex - 1 : target.bandIndex, target.parameter) }]
+    }),
+    lfos: eq.lfos.flatMap((lfo) => {
+      const target = parseEqModulationTarget(lfo.target)
+      if (!target || target.bandIndex === bandIndex) return []
+      return [{ ...lfo, target: createEqModulationTarget(eqIndex, target.bandIndex > bandIndex ? target.bandIndex - 1 : target.bandIndex, target.parameter) }]
+    }),
+  }
+}
+
+function updateEqBandSettings(eqIndex: number, bandIndex: number, changes: Partial<EqBandSettings>) {
+  const eq = eqs.value[eqIndex]
+  const band = eq?.bands[bandIndex]
+  if (!eq || !band) return
+  const bands = eq.bands.map((currentBand, index) => index === bandIndex ? { ...currentBand, ...changes } : currentBand)
+  eqs.value[eqIndex] = { ...eq, bands }
+  activeSynth.setEqBandSettings(eqIndex, bandIndex, changes)
+}
+
+function toggleEqBandBypass(eqIndex: number, bandIndex: number) {
+  const band = eqs.value[eqIndex]?.bands[bandIndex]
+  if (!band) return
+  updateEqBandSettings(eqIndex, bandIndex, { bypassed: !band.bypassed })
+}
+
+function createEqModulationTarget(eqIndex: number, bandIndex: number, parameter: EqParameter): EqModulationTarget {
+  return `eq:${eqIndex}:${bandIndex}:${parameter}`
+}
+
+function parseEqModulationTarget(target: EqModulationTarget): { bandIndex: number; parameter: EqParameter } | undefined {
+  const match = /^eq:\d+:(\d+):(frequency|q|gain)$/.exec(target)
+  return match ? { bandIndex: Number(match[1]), parameter: match[2] as EqParameter } : undefined
+}
+
+function reindexEqModulationTargets(eq: EqSettings, eqIndex: number): EqSettings {
+  return {
+    ...eq,
+    envelopes: eq.envelopes.map((envelope) => {
+      const target = parseEqModulationTarget(envelope.destination)
+      return target ? { ...envelope, destination: createEqModulationTarget(eqIndex, target.bandIndex, target.parameter) } : envelope
+    }),
+    lfos: eq.lfos.map((lfo) => {
+      const target = parseEqModulationTarget(lfo.target)
+      return target ? { ...lfo, target: createEqModulationTarget(eqIndex, target.bandIndex, target.parameter) } : lfo
+    }),
+  }
+}
+
+function eqModulationTargetOptions(eqIndex: number) {
+  const eq = eqs.value[eqIndex]
+  return (eq?.bands ?? []).flatMap((_, bandIndex) => [
+    { value: createEqModulationTarget(eqIndex, bandIndex, 'frequency'), label: `Band ${bandIndex + 1} frequency` },
+    { value: createEqModulationTarget(eqIndex, bandIndex, 'q'), label: `Band ${bandIndex + 1} Q` },
+    { value: createEqModulationTarget(eqIndex, bandIndex, 'gain'), label: `Band ${bandIndex + 1} gain` },
+  ])
+}
+
+function eqEnvelopes(eqIndex: number) {
+  return eqs.value[eqIndex]?.envelopes.map((envelope, index) => ({ ...envelope, index })) ?? []
+}
+
+function eqLfos(eqIndex: number) {
+  return eqs.value[eqIndex]?.lfos.map((lfo, index) => ({ ...lfo, index })) ?? []
+}
+
+function addEqEnvelope(eqIndex: number) {
+  const target = eqModulationTargetOptions(eqIndex)[0]?.value
+  const eq = eqs.value[eqIndex]
+  if (!eq || !target) return
+  const settings: EqEnvelopeSettings = { ...createEnvelopeSettings(), destination: target, bypassed: false }
+  activeSynth.addEqEnvelope(eqIndex, settings)
+  eqs.value[eqIndex] = { ...eq, envelopes: [...eq.envelopes, settings] }
+}
+
+function updateEqEnvelope(eqIndex: number, envelopeIndex: number, settings: Partial<EqEnvelopeSettings>) {
+  const eq = eqs.value[eqIndex]
+  const envelope = eq?.envelopes[envelopeIndex]
+  if (!eq || !envelope) return
+  activeSynth.setEqEnvelopeSettings(eqIndex, envelopeIndex, settings)
+  eqs.value[eqIndex] = { ...eq, envelopes: eq.envelopes.map((current, index) => index === envelopeIndex ? { ...current, ...settings } : current) }
+}
+
+function updateEqEnvelopeFromControls(eqIndex: number, envelopeIndex: number, settings: Partial<EnvelopeSettings>) {
+  if (settings.destination !== undefined && !isEqModulationTarget(settings.destination, eqIndex, eqs.value[eqIndex]?.bands.length ?? 0)) return
+  updateEqEnvelope(eqIndex, envelopeIndex, settings as Partial<EqEnvelopeSettings>)
+}
+
+function toggleEqEnvelopeBypass(eqIndex: number, envelopeIndex: number) {
+  const envelope = eqs.value[eqIndex]?.envelopes[envelopeIndex]
+  if (!envelope) return
+  updateEqEnvelope(eqIndex, envelopeIndex, { bypassed: !envelope.bypassed })
+  activeSynth.setEqEnvelopeBypassed(eqIndex, envelopeIndex, !envelope.bypassed)
+}
+
+function removeEqEnvelope(eqIndex: number, envelopeIndex: number) {
+  const eq = eqs.value[eqIndex]
+  if (!eq?.envelopes[envelopeIndex]) return
+  activeSynth.removeEqEnvelope(eqIndex, envelopeIndex)
+  eqs.value[eqIndex] = { ...eq, envelopes: eq.envelopes.filter((_, index) => index !== envelopeIndex) }
+}
+
+function addEqLfo(eqIndex: number) {
+  const target = eqModulationTargetOptions(eqIndex)[0]?.value
+  const eq = eqs.value[eqIndex]
+  if (!eq || !target) return
+  const settings: EqLfoSettings = { waveform: 'sine', rate: 5, depth: 0.25, target, bypassed: false }
+  activeSynth.addEqLfo(eqIndex, settings)
+  eqs.value[eqIndex] = { ...eq, lfos: [...eq.lfos, settings] }
+}
+
+function updateEqLfo(eqIndex: number, lfoIndex: number, settings: Partial<EqLfoSettings>) {
+  const eq = eqs.value[eqIndex]
+  const lfo = eq?.lfos[lfoIndex]
+  if (!eq || !lfo) return
+  activeSynth.setEqLfoSettings(eqIndex, lfoIndex, settings)
+  eqs.value[eqIndex] = { ...eq, lfos: eq.lfos.map((current, index) => index === lfoIndex ? { ...current, ...settings } : current) }
+}
+
+function updateEqLfoFromControls(eqIndex: number, lfoIndex: number, settings: Partial<LfoSettings>) {
+  if (settings.target !== undefined && !isEqModulationTarget(settings.target, eqIndex, eqs.value[eqIndex]?.bands.length ?? 0)) return
+  updateEqLfo(eqIndex, lfoIndex, settings as Partial<EqLfoSettings>)
+}
+
+function toggleEqLfoBypass(eqIndex: number, lfoIndex: number) {
+  const lfo = eqs.value[eqIndex]?.lfos[lfoIndex]
+  if (!lfo) return
+  updateEqLfo(eqIndex, lfoIndex, { bypassed: !lfo.bypassed })
+  activeSynth.setEqLfoBypassed(eqIndex, lfoIndex, !lfo.bypassed)
+}
+
+function removeEqLfo(eqIndex: number, lfoIndex: number) {
+  const eq = eqs.value[eqIndex]
+  if (!eq?.lfos[lfoIndex]) return
+  activeSynth.removeEqLfo(eqIndex, lfoIndex)
+  eqs.value[eqIndex] = { ...eq, lfos: eq.lfos.filter((_, index) => index !== lfoIndex) }
 }
 
 function addReverb() {
@@ -828,25 +1298,28 @@ function updateEnvelopeSettings(index: number, settings: Partial<EnvelopeSetting
   activeSynth.setEnvelopeSettings(index, settings)
 }
 
-function lfoTargetOptions(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'overdrive' | 'reverb' | 'output', index: number) {
+function lfoTargetOptions(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'overdrive' | 'chorus' | 'flanger' | 'tremolo' | 'reverb' | 'output', index: number): { value: LfoSettings['target']; label: string }[] {
   const targets = {
     oscillator: [['detune', 'Detune'], ['level', 'Level'], ['stereoSpread', 'Stereo spread']],
     noise: [['level', 'Level'], ['stereoSpread', 'Stereo spread']],
     filter: [['cutoff', 'Cutoff'], ['resonance', 'Resonance'], ['gain', 'Gain']],
     delay: [['time', 'Time'], ['feedback', 'Feedback'], ['mix', 'Mix'], ['overdrive', 'Overdrive']],
     overdrive: [['drive', 'Drive'], ['tone', 'Tone'], ['feedback', 'Feedback'], ['mix', 'Mix']],
+    chorus: [['rate', 'LFO rate'], ['depth', 'LFO depth'], ['delay', 'Delay'], ['mix', 'Mix']],
+    flanger: [['rate', 'LFO rate'], ['depth', 'LFO depth'], ['delay', 'Delay'], ['feedback', 'Feedback'], ['mix', 'Mix']],
+    tremolo: [['rate', 'LFO rate'], ['depth', 'Depth'], ['mix', 'Mix']],
     reverb: [['preDelay', 'Pre-delay'], ['damping', 'Damping'], ['mix', 'Mix'], ['width', 'Width']],
     output: [['volume', 'Volume'], ['pan', 'Pan']],
   } as const
-  return targets[module].map(([parameter, label]) => ({ value: `${module}:${index}:${parameter}`, label }))
+  return targets[module].map(([parameter, label]) => ({ value: `${module}:${index}:${parameter}` as LfoSettings['target'], label }))
 }
 
-function lfosForModule(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'overdrive' | 'reverb' | 'output', index: number) {
+function lfosForModule(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'overdrive' | 'chorus' | 'flanger' | 'tremolo' | 'reverb' | 'output', index: number) {
   const prefix = `${module}:${index}:`
   return lfos.value.flatMap((lfo, lfoIndex) => lfo.target.startsWith(prefix) ? [{ ...lfo, index: lfoIndex }] : [])
 }
 
-function addLfo(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'overdrive' | 'reverb' | 'output', index: number) {
+function addLfo(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'overdrive' | 'chorus' | 'flanger' | 'tremolo' | 'reverb' | 'output', index: number) {
   const target = lfoTargetOptions(module, index)[0].value
   const settings: LfoControlModule = { waveform: 'sine', rate: 5, depth: 0.25, target, bypassed: false }
   activeSynth.addLfo(settings)
@@ -876,7 +1349,16 @@ function removeLfosForModule(module: string, index: number) {
   }
   lfos.value.forEach((lfo, lfoIndex) => {
     const [targetModule, rawIndex, parameter] = lfo.target.split(':')
-    if (targetModule === module && Number(rawIndex) > index) updateLfo(lfoIndex, { target: `${module}:${Number(rawIndex) - 1}:${parameter}` })
+    if (targetModule === module && Number(rawIndex) > index) updateLfo(lfoIndex, { target: `${module}:${Number(rawIndex) - 1}:${parameter}` as LfoSettings['target'] })
+  })
+}
+
+function reindexLfosForMove(module: string, index: number, targetIndex: number) {
+  const sourcePrefix = `${module}:${index}:`
+  const targetPrefix = `${module}:${targetIndex}:`
+  lfos.value.forEach((lfo, lfoIndex) => {
+    if (lfo.target.startsWith(sourcePrefix)) updateLfo(lfoIndex, { target: lfo.target.replace(sourcePrefix, targetPrefix) as LfoSettings['target'] })
+    else if (lfo.target.startsWith(targetPrefix)) updateLfo(lfoIndex, { target: lfo.target.replace(targetPrefix, sourcePrefix) as LfoSettings['target'] })
   })
 }
 
@@ -1105,6 +1587,63 @@ onUnmounted(() => {
         </div>
       </section>
 
+      <section class="synth-section oscillators-section effect-group" :style="{ order: effectOrder.indexOf('eqs') }" aria-labelledby="eqs-heading">
+        <h2 id="eqs-heading">
+          <button
+            type="button"
+            class="oscillators-toggle"
+            :aria-expanded="!areEqsCollapsed"
+            aria-controls="eqs-content"
+            @click="areEqsCollapsed = !areEqsCollapsed"
+          >
+            EQ
+          </button>
+          <span class="effect-order-actions">
+            <button type="button" :disabled="!canMoveEffectGroup('eqs', -1)" aria-label="Move EQ up" @click="moveEffectGroup('eqs', -1)">↑</button>
+            <button type="button" :disabled="!canMoveEffectGroup('eqs', 1)" aria-label="Move EQ down" @click="moveEffectGroup('eqs', 1)">↓</button>
+          </span>
+        </h2>
+        <div v-show="!areEqsCollapsed" id="eqs-content" class="oscillators-content">
+          <template v-for="(eq, index) in eqs" :key="index">
+            <EqControls
+              :eq-index="index"
+              :eq-count="eqs.length"
+              v-bind="eq"
+              @update:band="updateEqBandSettings(index, $event.index, $event.changes)"
+              @toggle-bypass="toggleEqBypass(index)"
+              @toggle-band-bypass="toggleEqBandBypass(index, $event)"
+              @add-band="addEqBand(index)"
+              @remove-band="removeEqBand(index, $event)"
+              @move-up="moveEq(index, -1)"
+              @move-down="moveEq(index, 1)"
+              @remove="removeEq(index)"
+            />
+            <EnvelopeControls
+              :envelopes="eqEnvelopes(index)"
+              :destination-options="eqModulationTargetOptions(index)"
+              :id-prefix="`eq-${index}`"
+              @update="updateEqEnvelopeFromControls(index, $event.index, $event.settings)"
+              @toggle-bypass="toggleEqEnvelopeBypass(index, $event)"
+              @remove="removeEqEnvelope(index, $event)"
+              @add="addEqEnvelope(index)"
+            />
+            <LfoControls
+              :lfos="eqLfos(index)"
+              :target-options="eqModulationTargetOptions(index)"
+              :id-prefix="`eq-${index}`"
+              @update="updateEqLfoFromControls(index, $event.index, $event.settings)"
+              @toggle-bypass="toggleEqLfoBypass(index, $event)"
+              @remove="removeEqLfo(index, $event)"
+              @add="addEqLfo(index)"
+            />
+          </template>
+          <div class="module-actions">
+            <button type="button" class="add-eq-button" @click="addSingleBandEq">Add EQ</button>
+            <button type="button" class="add-eq-button" @click="addMultibandEq">Add Parametric EQ</button>
+          </div>
+        </div>
+      </section>
+
       <section class="synth-section oscillators-section effect-group" :style="{ order: effectOrder.indexOf('overdrives') }" aria-labelledby="overdrives-heading">
         <h2 id="overdrives-heading">
           <button
@@ -1156,6 +1695,148 @@ onUnmounted(() => {
             @remove="removeEnvelope"
             @add="addEnvelope('overdriveDrive')"
           />
+        </div>
+      </section>
+
+      <section class="synth-section oscillators-section effect-group" :style="{ order: Math.min(effectOrder.indexOf('choruses'), effectOrder.indexOf('flangers'), effectOrder.indexOf('tremolos')) }" aria-labelledby="effects-heading">
+        <h2 id="effects-heading">
+          <button type="button" class="oscillators-toggle" :aria-expanded="!areEffectsCollapsed" aria-controls="effects-content" @click="areEffectsCollapsed = !areEffectsCollapsed">Effects</button>
+        </h2>
+        <div v-show="!areEffectsCollapsed" id="effects-content" class="oscillators-content">
+          <div class="effect-type">
+            <div class="effect-type-heading">
+              <h3>Chorus</h3>
+              <span class="effect-order-actions">
+                <button type="button" :disabled="!canMoveEffectGroup('choruses', -1)" aria-label="Move Chorus up" @click="moveEffectGroup('choruses', -1)">↑</button>
+                <button type="button" :disabled="!canMoveEffectGroup('choruses', 1)" aria-label="Move Chorus down" @click="moveEffectGroup('choruses', 1)">↓</button>
+              </span>
+            </div>
+          <template v-for="(chorusSettings, index) in choruses" :key="index">
+            <ChorusControls
+              :chorus-index="index"
+              :chorus-count="choruses.length"
+              v-bind="chorusSettings"
+              @update:waveform="updateChorusSettings(index, { waveform: $event })"
+              @update:rate="updateChorusSettings(index, { rate: $event })"
+              @update:depth="updateChorusSettings(index, { depth: $event })"
+              @update:delay="updateChorusSettings(index, { delay: $event })"
+              @update:mix="updateChorusSettings(index, { mix: $event })"
+              @toggle-bypass="toggleChorusBypass(index)"
+              @move-up="moveChorus(index, -1)"
+              @move-down="moveChorus(index, 1)"
+              @remove="removeChorus(index)"
+            />
+            <LfoControls
+              :lfos="lfosForModule('chorus', index)"
+              :target-options="lfoTargetOptions('chorus', index)"
+              :id-prefix="`chorus-${index}`"
+              @update="updateLfo($event.index, $event.settings)"
+              @toggle-bypass="toggleLfoBypass"
+              @remove="removeLfo"
+              @add="addLfo('chorus', index)"
+            />
+          </template>
+          <button type="button" class="add-filter-button" @click="addChorus">Add Chorus</button>
+          <EnvelopeControls
+            :envelopes="envelopesFor(chorusEnvelopeDestinations)"
+            :destination-options="chorusEnvelopeDestinations"
+            id-prefix="chorus"
+            @update="updateEnvelopeSettings($event.index, $event.settings)"
+            @toggle-bypass="toggleEnvelopeBypass"
+            @remove="removeEnvelope"
+            @add="addEnvelope('chorusRate')"
+          />
+          </div>
+
+          <div class="effect-type">
+            <div class="effect-type-heading">
+              <h3>Flanger</h3>
+              <span class="effect-order-actions">
+                <button type="button" :disabled="!canMoveEffectGroup('flangers', -1)" aria-label="Move Flanger up" @click="moveEffectGroup('flangers', -1)">↑</button>
+                <button type="button" :disabled="!canMoveEffectGroup('flangers', 1)" aria-label="Move Flanger down" @click="moveEffectGroup('flangers', 1)">↓</button>
+              </span>
+            </div>
+          <template v-for="(flangerSettings, index) in flangers" :key="index">
+            <FlangerControls
+              :flanger-index="index"
+              :flanger-count="flangers.length"
+              v-bind="flangerSettings"
+              @update:waveform="updateFlangerSettings(index, { waveform: $event })"
+              @update:rate="updateFlangerSettings(index, { rate: $event })"
+              @update:depth="updateFlangerSettings(index, { depth: $event })"
+              @update:delay="updateFlangerSettings(index, { delay: $event })"
+              @update:feedback="updateFlangerSettings(index, { feedback: $event })"
+              @update:mix="updateFlangerSettings(index, { mix: $event })"
+              @toggle-bypass="toggleFlangerBypass(index)"
+              @move-up="moveFlanger(index, -1)"
+              @move-down="moveFlanger(index, 1)"
+              @remove="removeFlanger(index)"
+            />
+            <LfoControls
+              :lfos="lfosForModule('flanger', index)"
+              :target-options="lfoTargetOptions('flanger', index)"
+              :id-prefix="`flanger-${index}`"
+              @update="updateLfo($event.index, $event.settings)"
+              @toggle-bypass="toggleLfoBypass"
+              @remove="removeLfo"
+              @add="addLfo('flanger', index)"
+            />
+          </template>
+          <button type="button" class="add-filter-button" @click="addFlanger">Add Flanger</button>
+          <EnvelopeControls
+            :envelopes="envelopesFor(flangerEnvelopeDestinations)"
+            :destination-options="flangerEnvelopeDestinations"
+            id-prefix="flanger"
+            @update="updateEnvelopeSettings($event.index, $event.settings)"
+            @toggle-bypass="toggleEnvelopeBypass"
+            @remove="removeEnvelope"
+            @add="addEnvelope('flangerRate')"
+          />
+          </div>
+
+          <div class="effect-type">
+            <div class="effect-type-heading">
+              <h3>Tremolo</h3>
+              <span class="effect-order-actions">
+                <button type="button" :disabled="!canMoveEffectGroup('tremolos', -1)" aria-label="Move Tremolo up" @click="moveEffectGroup('tremolos', -1)">↑</button>
+                <button type="button" :disabled="!canMoveEffectGroup('tremolos', 1)" aria-label="Move Tremolo down" @click="moveEffectGroup('tremolos', 1)">↓</button>
+              </span>
+            </div>
+          <template v-for="(tremoloSettings, index) in tremolos" :key="index">
+            <TremoloControls
+              :tremolo-index="index"
+              :tremolo-count="tremolos.length"
+              v-bind="tremoloSettings"
+              @update:waveform="updateTremoloSettings(index, { waveform: $event })"
+              @update:rate="updateTremoloSettings(index, { rate: $event })"
+              @update:depth="updateTremoloSettings(index, { depth: $event })"
+              @update:mix="updateTremoloSettings(index, { mix: $event })"
+              @toggle-bypass="toggleTremoloBypass(index)"
+              @move-up="moveTremolo(index, -1)"
+              @move-down="moveTremolo(index, 1)"
+              @remove="removeTremolo(index)"
+            />
+            <LfoControls
+              :lfos="lfosForModule('tremolo', index)"
+              :target-options="lfoTargetOptions('tremolo', index)"
+              :id-prefix="`tremolo-${index}`"
+              @update="updateLfo($event.index, $event.settings)"
+              @toggle-bypass="toggleLfoBypass"
+              @remove="removeLfo"
+              @add="addLfo('tremolo', index)"
+            />
+          </template>
+          <button type="button" class="add-filter-button" @click="addTremolo">Add Tremolo</button>
+          <EnvelopeControls
+            :envelopes="envelopesFor(tremoloEnvelopeDestinations)"
+            :destination-options="tremoloEnvelopeDestinations"
+            id-prefix="tremolo"
+            @update="updateEnvelopeSettings($event.index, $event.settings)"
+            @toggle-bypass="toggleEnvelopeBypass"
+            @remove="removeEnvelope"
+            @add="addEnvelope('tremoloDepth')"
+          />
+          </div>
         </div>
       </section>
 

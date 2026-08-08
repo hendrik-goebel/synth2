@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import SectionFrame from './SectionFrame.vue'
-import type { LfoSettings, Waveform } from '../services/synthEngine'
+import type { LfoSettings, LfoTarget, Waveform } from '../services/synthEngine'
 
 type LfoModule = LfoSettings & { bypassed: boolean; index: number }
 
@@ -9,7 +9,7 @@ const MAX_LFO_RATE = 30
 
 defineProps<{
   lfos: LfoModule[]
-  targetOptions: { value: string; label: string }[]
+  targetOptions: { value: LfoTarget; label: string }[]
   idPrefix: string
 }>()
 
@@ -52,7 +52,7 @@ function updateRate(lfoIndex: number, event: Event) {
         <label class="control"><span>Wave</span><select :value="lfo.waveform" @change="emit('update', { index: lfo.index, settings: { waveform: ($event.target as HTMLSelectElement).value as Waveform } })"><option value="sine">Sine</option><option value="triangle">Triangle</option><option value="sawtooth">Sawtooth</option><option value="square">Square</option><option value="random">Random</option></select></label>
         <label class="control"><span>Rate</span><output>{{ lfo.rate }} Hz</output><input type="range" min="0" max="1000" step="1" :value="rateSliderValue(lfo.rate)" @input="updateRate(lfo.index, $event)"></label>
         <label class="control"><span>Depth</span><output>{{ Math.round(lfo.depth * 100) }}%</output><input type="range" min="0" max="1" step="0.01" :value="lfo.depth" @input="emit('update', { index: lfo.index, settings: { depth: Number(($event.target as HTMLInputElement).value) } })"></label>
-        <label class="control"><span>Target</span><select :value="lfo.target" @change="emit('update', { index: lfo.index, settings: { target: ($event.target as HTMLSelectElement).value } })"><option v-for="option in targetOptions" :key="option.value" :value="option.value">{{ option.label }}</option></select></label>
+        <label class="control"><span>Target</span><select :value="lfo.target" @change="emit('update', { index: lfo.index, settings: { target: ($event.target as HTMLSelectElement).value as LfoTarget } })"><option v-for="option in targetOptions" :key="option.value" :value="option.value">{{ option.label }}</option></select></label>
       </div>
     </SectionFrame>
     <button type="button" class="add-env-button" @click="emit('add')">Add LFO</button>

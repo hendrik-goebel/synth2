@@ -321,6 +321,33 @@ select:disabled {
   min-width: 0;
 }
 
+.effect-type {
+  display: grid;
+  gap: 14px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(152, 169, 202, 0.13);
+}
+
+.effect-type:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.effect-type-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.effect-type-heading h3 {
+  margin: 0;
+  color: #9aa8bd;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
 .modulation-section {
   order: -1;
 }
@@ -511,6 +538,49 @@ select:disabled {
   gap: 18px 24px;
 }
 
+.eq-bands {
+  display: grid;
+  gap: 18px;
+}
+
+.eq-band {
+  padding: 14px;
+  background: rgba(6, 8, 12, 0.34);
+  border: 1px solid rgba(152, 169, 202, 0.12);
+  border-radius: 12px;
+}
+
+.eq-band-header,
+.eq-band-actions {
+  display: flex;
+  align-items: center;
+}
+
+.eq-band-header {
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  color: #9aa8bd;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.eq-band-actions {
+  gap: 8px;
+}
+
+.eq-band-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px 24px;
+}
+
+.add-eq-button {
+  align-self: start;
+  border-color: rgba(101, 230, 194, 0.34);
+}
+
 .envelope-controls {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -649,6 +719,10 @@ select:disabled {
 
   .filter-control-grid {
     grid-template-columns: 1fr;
+  }
+
+  .eq-band-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .midi-fields {

@@ -30,6 +30,37 @@ type OverdriveModule = {
   output: GainNode
   settings: OverdriveSettings
 }
+type ChorusModule = {
+  input: GainNode
+  lfo: OscillatorNode
+  lfoGain: GainNode
+  delay: DelayNode
+  wet: GainNode
+  dry: GainNode
+  output: GainNode
+  settings: ChorusSettings
+}
+type FlangerModule = {
+  input: GainNode
+  lfo: OscillatorNode
+  lfoGain: GainNode
+  delay: DelayNode
+  feedback: GainNode
+  wet: GainNode
+  dry: GainNode
+  output: GainNode
+  settings: FlangerSettings
+}
+type TremoloModule = {
+  input: GainNode
+  lfo: OscillatorNode
+  lfoDepthGain: GainNode
+  tremoloGain: GainNode
+  wet: GainNode
+  dry: GainNode
+  output: GainNode
+  settings: TremoloSettings
+}
 type ReverbModule = {
   input: GainNode
   preDelay: DelayNode
@@ -58,6 +89,13 @@ type DynamicsModule = {
   gateLastAboveThresholdTime: number
   gateOpen: boolean
   settings: DynamicsSettings
+}
+type EqModule = {
+  input: GainNode
+  bands: BiquadFilterNode[]
+  output: GainNode
+  settings: EqSettings
+  lfos: LfoModule[]
 }
 
 const MAX_GAIN = 0.2
@@ -130,6 +168,33 @@ export type OverdriveSettings = {
   mix: number
 }
 
+export type ChorusSettings = {
+  bypassed: boolean
+  waveform: Waveform
+  rate: number
+  depth: number
+  delay: number
+  mix: number
+}
+
+export type FlangerSettings = {
+  bypassed: boolean
+  waveform: Waveform
+  rate: number
+  depth: number
+  delay: number
+  feedback: number
+  mix: number
+}
+
+export type TremoloSettings = {
+  bypassed: boolean
+  waveform: Waveform
+  rate: number
+  depth: number
+  mix: number
+}
+
 export type HallType = 'small-hall' | 'wooden-hall' | 'concert-hall' | 'opera-house' | 'cathedral' | 'arena'
 
 export type ReverbSettings = {
@@ -183,7 +248,28 @@ export type DynamicsSettingsChanges = Partial<{
   bypassed: boolean
 }>
 
-export type EffectGroup = 'filters' | 'overdrives' | 'dynamics' | 'delays' | 'reverbs'
+export type EqBandType = 'peaking' | 'lowshelf' | 'highshelf' | 'lowpass' | 'highpass' | 'notch'
+
+export type EqBandSettings = {
+  bypassed: boolean
+  type: EqBandType
+  frequency: number
+  gain: number
+  q: number
+}
+
+export type EqParameter = 'frequency' | 'q' | 'gain'
+export type EqModulationTarget = `eq:${number}:${number}:${EqParameter}`
+
+export type EqSettings = {
+  kind: 'single' | 'multiband'
+  bypassed: boolean
+  bands: EqBandSettings[]
+  envelopes: EqEnvelopeSettings[]
+  lfos: EqLfoSettings[]
+}
+
+export type EffectGroup = 'filters' | 'overdrives' | 'choruses' | 'flangers' | 'tremolos' | 'dynamics' | 'delays' | 'reverbs' | 'eqs'
 
 export type AmplitudeModulationSettings = {
   rate: number
@@ -191,7 +277,42 @@ export type AmplitudeModulationSettings = {
   waveform: Waveform
 }
 
-export type LfoTarget = string
+export type LfoTarget =
+  | `oscillator:${number}:detune`
+  | `oscillator:${number}:level`
+  | `oscillator:${number}:stereoSpread`
+  | `noise:${number}:level`
+  | `noise:${number}:stereoSpread`
+  | `filter:${number}:cutoff`
+  | `filter:${number}:resonance`
+  | `filter:${number}:gain`
+  | `delay:${number}:time`
+  | `delay:${number}:feedback`
+  | `delay:${number}:mix`
+  | `delay:${number}:overdrive`
+  | `overdrive:${number}:drive`
+  | `overdrive:${number}:tone`
+  | `overdrive:${number}:feedback`
+  | `overdrive:${number}:mix`
+  | `chorus:${number}:rate`
+  | `chorus:${number}:depth`
+  | `chorus:${number}:delay`
+  | `chorus:${number}:mix`
+  | `flanger:${number}:rate`
+  | `flanger:${number}:depth`
+  | `flanger:${number}:delay`
+  | `flanger:${number}:feedback`
+  | `flanger:${number}:mix`
+  | `tremolo:${number}:rate`
+  | `tremolo:${number}:depth`
+  | `tremolo:${number}:mix`
+  | `reverb:${number}:preDelay`
+  | `reverb:${number}:damping`
+  | `reverb:${number}:mix`
+  | `reverb:${number}:width`
+  | `output:0:volume`
+  | `output:0:pan`
+  | EqModulationTarget
 export type LfoSettings = {
   waveform: Waveform
   rate: number
@@ -220,11 +341,24 @@ export type EnvelopeDestination =
   | 'overdriveTone'
   | 'overdriveFeedback'
   | 'overdriveMix'
+  | 'chorusRate'
+  | 'chorusDepth'
+  | 'chorusDelay'
+  | 'chorusMix'
+  | 'flangerRate'
+  | 'flangerDepth'
+  | 'flangerDelay'
+  | 'flangerFeedback'
+  | 'flangerMix'
+  | 'tremoloRate'
+  | 'tremoloDepth'
+  | 'tremoloMix'
   | 'reverbDecay'
   | 'reverbMix'
   | 'reverbPreDelay'
   | 'reverbDamping'
   | 'reverbWidth'
+  | EqModulationTarget
 
 export type EnvelopeSettings = {
   attack: number
@@ -236,6 +370,9 @@ export type EnvelopeSettings = {
   releaseCurve: EnvelopeCurve
   destination: EnvelopeDestination
 }
+
+export type EqEnvelopeSettings = EnvelopeSettings & { destination: EqModulationTarget; bypassed: boolean }
+export type EqLfoSettings = LfoSettings & { target: EqModulationTarget; bypassed: boolean }
 
 export function createOscillatorSettings(): OscillatorSettings {
   return {
@@ -271,6 +408,18 @@ export function createOverdriveSettings(): OverdriveSettings {
   return { bypassed: false, drive: 0.35, tone: 0.55, feedback: 0, mix: 1 }
 }
 
+export function createChorusSettings(): ChorusSettings {
+  return { bypassed: false, waveform: 'sine', rate: 0.8, depth: 0.5, delay: 0.018, mix: 0.45 }
+}
+
+export function createFlangerSettings(): FlangerSettings {
+  return { bypassed: false, waveform: 'sine', rate: 0.35, depth: 0.5, delay: 0.003, feedback: 0.35, mix: 0.5 }
+}
+
+export function createTremoloSettings(): TremoloSettings {
+  return { bypassed: false, waveform: 'sine', rate: 4, depth: 0.5, mix: 1 }
+}
+
 export function createReverbSettings(): ReverbSettings {
   return { bypassed: false, hallType: 'concert-hall', decay: 3.5, preDelay: 0.025, damping: 0.6, width: 0.9, mix: 0.25 }
 }
@@ -285,6 +434,28 @@ export function createGateSettings(): GateSettings {
 
 export function createLimiterSettings(): LimiterSettings {
   return { type: 'limiter', bypassed: false, ceiling: -1, release: 0.1, makeupGain: 0 }
+}
+
+export function createEqBandSettings(type: EqBandType = 'peaking', frequency = 1000): EqBandSettings {
+  return { bypassed: false, type, frequency, gain: 0, q: 1 }
+}
+
+export function createSingleBandEqSettings(): EqSettings {
+  return { kind: 'single', bypassed: false, bands: [createEqBandSettings()], envelopes: [], lfos: [] }
+}
+
+export function createMultibandEqSettings(): EqSettings {
+  return {
+    kind: 'multiband',
+    bypassed: false,
+    bands: [
+      createEqBandSettings('peaking', 250),
+      createEqBandSettings('peaking', 1000),
+      createEqBandSettings('peaking', 4000),
+    ],
+    envelopes: [],
+    lfos: [],
+  }
 }
 
 export function createEnvelopeSettings(): EnvelopeSettings {
@@ -305,12 +476,16 @@ export class SynthEngine {
   private dynamics: DynamicsModule[] = []
   private delays: DelayModule[] = []
   private overdrives: OverdriveModule[] = []
+  private choruses: ChorusModule[] = []
+  private flangers: FlangerModule[] = []
+  private tremolos: TremoloModule[] = []
   private reverbs: ReverbModule[] = []
+  private eqs: EqModule[] = []
   private amplitudeModulation?: AmplitudeModulationSettings
   private amplitudeModulationBypassed = false
   private lfos: LfoModule[] = []
   private envelopeSettings: { settings: EnvelopeSettings; bypassed: boolean }[] = []
-  private effectOrder: EffectGroup[] = ['filters', 'overdrives', 'delays', 'reverbs', 'dynamics']
+  private effectOrder: EffectGroup[] = ['filters', 'overdrives', 'choruses', 'flangers', 'tremolos', 'delays', 'reverbs', 'eqs', 'dynamics']
 
   constructor(initialSettings: OscillatorSettings = createOscillatorSettings(), outputSettings: OutputSettings = createOutputSettings()) {
     this.settings = [{ ...initialSettings }]
@@ -608,6 +783,329 @@ export class SynthEngine {
     this.routeOutput()
   }
 
+  addChorus(settings: ChorusSettings = createChorusSettings()): void {
+    const input = this.audioContext.createGain()
+    const lfo = this.audioContext.createOscillator()
+    const lfoGain = this.audioContext.createGain()
+    const delay = this.audioContext.createDelay(0.05)
+    const wet = this.audioContext.createGain()
+    const dry = this.audioContext.createGain()
+    const output = this.audioContext.createGain()
+    const chorus = { input, lfo, lfoGain, delay, wet, dry, output, settings: { ...settings } }
+
+    input.connect(delay).connect(wet).connect(output)
+    input.connect(dry).connect(output)
+    lfo.connect(lfoGain).connect(delay.delayTime)
+    this.choruses.push(chorus)
+    this.applyChorusSettings(chorus)
+    lfo.start()
+    this.routeOutput()
+  }
+
+  setChorusSettings(index: number, changes: Partial<ChorusSettings>): void {
+    const chorus = this.choruses[index]
+    if (!chorus) throw new RangeError(`Unknown chorus index: ${index}`)
+    chorus.settings = { ...chorus.settings, ...changes }
+    this.applyChorusSettings(chorus)
+    if (changes.bypassed !== undefined) this.routeOutput()
+  }
+
+  removeChorus(index: number): void {
+    const chorus = this.choruses[index]
+    if (!chorus) throw new RangeError(`Unknown chorus index: ${index}`)
+    chorus.lfo.stop()
+    chorus.input.disconnect()
+    chorus.lfo.disconnect()
+    chorus.lfoGain.disconnect()
+    chorus.delay.disconnect()
+    chorus.wet.disconnect()
+    chorus.dry.disconnect()
+    chorus.output.disconnect()
+    this.choruses.splice(index, 1)
+    this.routeOutput()
+  }
+
+  setChorusBypassed(index: number, bypassed: boolean): void {
+    this.setChorusSettings(index, { bypassed })
+  }
+
+  moveChorus(index: number, direction: -1 | 1): void {
+    const targetIndex = index + direction
+    if (!this.choruses[index]) throw new RangeError(`Unknown chorus index: ${index}`)
+    if (targetIndex < 0 || targetIndex >= this.choruses.length) return
+    ;[this.choruses[index], this.choruses[targetIndex]] = [this.choruses[targetIndex], this.choruses[index]]
+    this.routeOutput()
+  }
+
+  addFlanger(settings: FlangerSettings = createFlangerSettings()): void {
+    const input = this.audioContext.createGain()
+    const lfo = this.audioContext.createOscillator()
+    const lfoGain = this.audioContext.createGain()
+    const delay = this.audioContext.createDelay(0.02)
+    const feedback = this.audioContext.createGain()
+    const wet = this.audioContext.createGain()
+    const dry = this.audioContext.createGain()
+    const output = this.audioContext.createGain()
+    const flanger = { input, lfo, lfoGain, delay, feedback, wet, dry, output, settings: { ...settings } }
+
+    input.connect(delay).connect(wet).connect(output)
+    input.connect(dry).connect(output)
+    delay.connect(feedback).connect(delay)
+    lfo.connect(lfoGain).connect(delay.delayTime)
+    this.flangers.push(flanger)
+    this.applyFlangerSettings(flanger)
+    lfo.start()
+    this.routeOutput()
+  }
+
+  setFlangerSettings(index: number, changes: Partial<FlangerSettings>): void {
+    const flanger = this.flangers[index]
+    if (!flanger) throw new RangeError(`Unknown flanger index: ${index}`)
+    flanger.settings = { ...flanger.settings, ...changes }
+    this.applyFlangerSettings(flanger)
+    if (changes.bypassed !== undefined) this.routeOutput()
+  }
+
+  removeFlanger(index: number): void {
+    const flanger = this.flangers[index]
+    if (!flanger) throw new RangeError(`Unknown flanger index: ${index}`)
+    flanger.lfo.stop()
+    flanger.input.disconnect()
+    flanger.lfo.disconnect()
+    flanger.lfoGain.disconnect()
+    flanger.delay.disconnect()
+    flanger.feedback.disconnect()
+    flanger.wet.disconnect()
+    flanger.dry.disconnect()
+    flanger.output.disconnect()
+    this.flangers.splice(index, 1)
+    this.routeOutput()
+  }
+
+  setFlangerBypassed(index: number, bypassed: boolean): void {
+    this.setFlangerSettings(index, { bypassed })
+  }
+
+  moveFlanger(index: number, direction: -1 | 1): void {
+    const targetIndex = index + direction
+    if (!this.flangers[index]) throw new RangeError(`Unknown flanger index: ${index}`)
+    if (targetIndex < 0 || targetIndex >= this.flangers.length) return
+    ;[this.flangers[index], this.flangers[targetIndex]] = [this.flangers[targetIndex], this.flangers[index]]
+    this.routeOutput()
+  }
+
+  addTremolo(settings: TremoloSettings = createTremoloSettings()): void {
+    const input = this.audioContext.createGain()
+    const lfo = this.audioContext.createOscillator()
+    const lfoDepthGain = this.audioContext.createGain()
+    const tremoloGain = this.audioContext.createGain()
+    const wet = this.audioContext.createGain()
+    const dry = this.audioContext.createGain()
+    const output = this.audioContext.createGain()
+    const tremolo = { input, lfo, lfoDepthGain, tremoloGain, wet, dry, output, settings: { ...settings } }
+
+    input.connect(tremoloGain).connect(wet).connect(output)
+    input.connect(dry).connect(output)
+    lfo.connect(lfoDepthGain).connect(tremoloGain.gain)
+    this.tremolos.push(tremolo)
+    this.applyTremoloSettings(tremolo)
+    lfo.start()
+    this.routeOutput()
+  }
+
+  setTremoloSettings(index: number, changes: Partial<TremoloSettings>): void {
+    const tremolo = this.tremolos[index]
+    if (!tremolo) throw new RangeError(`Unknown tremolo index: ${index}`)
+    tremolo.settings = { ...tremolo.settings, ...changes }
+    this.applyTremoloSettings(tremolo)
+    if (changes.bypassed !== undefined) this.routeOutput()
+  }
+
+  removeTremolo(index: number): void {
+    const tremolo = this.tremolos[index]
+    if (!tremolo) throw new RangeError(`Unknown tremolo index: ${index}`)
+    tremolo.lfo.stop()
+    tremolo.input.disconnect()
+    tremolo.lfo.disconnect()
+    tremolo.lfoDepthGain.disconnect()
+    tremolo.tremoloGain.disconnect()
+    tremolo.wet.disconnect()
+    tremolo.dry.disconnect()
+    tremolo.output.disconnect()
+    this.tremolos.splice(index, 1)
+    this.routeOutput()
+  }
+
+  setTremoloBypassed(index: number, bypassed: boolean): void {
+    this.setTremoloSettings(index, { bypassed })
+  }
+
+  moveTremolo(index: number, direction: -1 | 1): void {
+    const targetIndex = index + direction
+    if (!this.tremolos[index]) throw new RangeError(`Unknown tremolo index: ${index}`)
+    if (targetIndex < 0 || targetIndex >= this.tremolos.length) return
+    ;[this.tremolos[index], this.tremolos[targetIndex]] = [this.tremolos[targetIndex], this.tremolos[index]]
+    this.routeOutput()
+  }
+
+  addEq(settings: EqSettings = createSingleBandEqSettings()): void {
+    const input = this.audioContext.createGain()
+    const output = this.audioContext.createGain()
+    const eq: EqModule = {
+      input,
+      bands: settings.bands.map(() => this.audioContext.createBiquadFilter()),
+      output,
+      settings: {
+        kind: settings.kind,
+        bypassed: settings.bypassed,
+        bands: settings.bands.map((band) => ({ ...band })),
+        envelopes: (settings.envelopes ?? []).map((envelope) => ({ ...envelope })),
+        lfos: (settings.lfos ?? []).map((lfo) => ({ ...lfo })),
+      },
+      lfos: [],
+    }
+    eq.bands.forEach((_, index) => this.applyEqBandSettings(eq, index))
+    eq.settings.lfos.forEach((lfo) => eq.lfos.push(this.createLfoModule(lfo, lfo.bypassed)))
+    this.eqs.push(eq)
+    this.refreshLfoConnections()
+    this.routeOutput()
+  }
+
+  removeEq(index: number): void {
+    const eq = this.eqs[index]
+    if (!eq) throw new RangeError(`Unknown EQ index: ${index}`)
+    this.destroyEqModule(eq)
+    this.eqs.splice(index, 1)
+    this.reindexEqModulationTargets()
+    this.refreshLfoConnections()
+    this.routeOutput()
+  }
+
+  setEqBypassed(index: number, bypassed: boolean): void {
+    const eq = this.eqs[index]
+    if (!eq) throw new RangeError(`Unknown EQ index: ${index}`)
+    eq.settings = { ...eq.settings, bypassed }
+    this.routeOutput()
+  }
+
+  moveEq(index: number, direction: -1 | 1): void {
+    const targetIndex = index + direction
+    if (!this.eqs[index]) throw new RangeError(`Unknown EQ index: ${index}`)
+    if (targetIndex < 0 || targetIndex >= this.eqs.length) return
+    ;[this.eqs[index], this.eqs[targetIndex]] = [this.eqs[targetIndex], this.eqs[index]]
+    this.reindexEqModulationTargets()
+    this.refreshLfoConnections()
+    this.routeOutput()
+  }
+
+  addEqBand(eqIndex: number, settings: EqBandSettings = createEqBandSettings()): void {
+    const eq = this.eqs[eqIndex]
+    if (!eq) throw new RangeError(`Unknown EQ index: ${eqIndex}`)
+    if (eq.settings.kind !== 'multiband') throw new Error('Single-band EQ modules cannot add bands')
+    eq.settings = { ...eq.settings, bands: [...eq.settings.bands, { ...settings }] }
+    eq.bands.push(this.audioContext.createBiquadFilter())
+    this.applyEqBandSettings(eq, eq.bands.length - 1)
+    this.refreshLfoConnections()
+    this.routeOutput()
+  }
+
+  removeEqBand(eqIndex: number, bandIndex: number): void {
+    const eq = this.eqs[eqIndex]
+    if (!eq) throw new RangeError(`Unknown EQ index: ${eqIndex}`)
+    if (eq.settings.kind !== 'multiband') throw new Error('Single-band EQ modules cannot remove bands')
+    const band = eq.bands[bandIndex]
+    if (!band) throw new RangeError(`Unknown EQ band index: ${bandIndex}`)
+    band.disconnect()
+    eq.bands.splice(bandIndex, 1)
+    eq.settings = { ...eq.settings, bands: eq.settings.bands.filter((_, index) => index !== bandIndex) }
+    this.removeEqBandModulation(eq, eqIndex, bandIndex)
+    this.refreshLfoConnections()
+    this.routeOutput()
+  }
+
+  setEqBandSettings(eqIndex: number, bandIndex: number, changes: Partial<EqBandSettings>): void {
+    const eq = this.eqs[eqIndex]
+    if (!eq || !eq.bands[bandIndex] || !eq.settings.bands[bandIndex]) {
+      throw new RangeError(`Unknown EQ band index: ${bandIndex}`)
+    }
+    eq.settings.bands[bandIndex] = { ...eq.settings.bands[bandIndex], ...changes }
+    this.applyEqBandSettings(eq, bandIndex)
+    if (changes.bypassed !== undefined) this.routeOutput()
+  }
+
+  addEqEnvelope(eqIndex: number, settings: EqEnvelopeSettings): number {
+    const eq = this.eqs[eqIndex]
+    if (!eq) throw new RangeError(`Unknown EQ index: ${eqIndex}`)
+    if (!this.isEqTargetForModule(settings.destination, eqIndex)) throw new Error('Invalid EQ envelope target')
+    const normalized = this.normalizeEqEnvelopeSettings(eqIndex, settings, settings)
+    eq.settings.envelopes.push(normalized)
+    return eq.settings.envelopes.length - 1
+  }
+
+  setEqEnvelopeSettings(eqIndex: number, envelopeIndex: number, changes: Partial<EqEnvelopeSettings>): void {
+    const eq = this.eqs[eqIndex]
+    const envelope = eq?.settings.envelopes[envelopeIndex]
+    if (!eq || !envelope) throw new RangeError(`Unknown EQ envelope index: ${envelopeIndex}`)
+    eq.settings.envelopes[envelopeIndex] = this.normalizeEqEnvelopeSettings(eqIndex, changes, envelope)
+  }
+
+  setEqEnvelopeBypassed(eqIndex: number, envelopeIndex: number, bypassed: boolean): void {
+    const eq = this.eqs[eqIndex]
+    const envelope = eq?.settings.envelopes[envelopeIndex]
+    if (!eq || !envelope) throw new RangeError(`Unknown EQ envelope index: ${envelopeIndex}`)
+    eq.settings.envelopes[envelopeIndex] = { ...envelope, bypassed }
+  }
+
+  removeEqEnvelope(eqIndex: number, envelopeIndex: number): void {
+    const eq = this.eqs[eqIndex]
+    if (!eq?.settings.envelopes[envelopeIndex]) throw new RangeError(`Unknown EQ envelope index: ${envelopeIndex}`)
+    eq.settings.envelopes.splice(envelopeIndex, 1)
+  }
+
+  addEqLfo(eqIndex: number, settings: EqLfoSettings): number {
+    const eq = this.eqs[eqIndex]
+    if (!eq) throw new RangeError(`Unknown EQ index: ${eqIndex}`)
+    if (!this.isEqTargetForModule(settings.target, eqIndex)) throw new Error('Invalid EQ LFO target')
+    const lfo = this.createLfoModule(settings, settings.bypassed)
+    eq.lfos.push(lfo)
+    eq.settings.lfos.push({ ...settings })
+    this.refreshLfoConnections()
+    return eq.lfos.length - 1
+  }
+
+  setEqLfoSettings(eqIndex: number, lfoIndex: number, changes: Partial<EqLfoSettings>): void {
+    const eq = this.eqs[eqIndex]
+    const lfo = eq?.lfos[lfoIndex]
+    const settings = eq?.settings.lfos[lfoIndex]
+    if (!eq || !lfo || !settings) throw new RangeError(`Unknown EQ LFO index: ${lfoIndex}`)
+    const target = changes.target ?? settings.target
+    if (!this.isEqTargetForModule(target, eqIndex)) throw new Error('Invalid EQ LFO target')
+    if (changes.bypassed !== undefined) lfo.bypassed = changes.bypassed
+    lfo.settings = { ...lfo.settings, ...changes }
+    eq.settings.lfos[lfoIndex] = { ...lfo.settings, target, bypassed: lfo.bypassed }
+    const now = this.audioContext.currentTime
+    if (changes.waveform !== undefined) this.setWaveform(lfo.oscillator, lfo.settings.waveform)
+    if (changes.rate !== undefined) lfo.oscillator.frequency.setTargetAtTime(lfo.settings.rate, now, 0.01)
+    this.refreshLfoConnections()
+  }
+
+  setEqLfoBypassed(eqIndex: number, lfoIndex: number, bypassed: boolean): void {
+    const lfo = this.eqs[eqIndex]?.lfos[lfoIndex]
+    if (!lfo) throw new RangeError(`Unknown EQ LFO index: ${lfoIndex}`)
+    lfo.bypassed = bypassed
+    this.eqs[eqIndex].settings.lfos[lfoIndex] = { ...this.eqs[eqIndex].settings.lfos[lfoIndex], bypassed }
+    lfo.gain.gain.setTargetAtTime(bypassed ? 0 : this.lfoDepth(lfo.settings), this.audioContext.currentTime, 0.01)
+  }
+
+  removeEqLfo(eqIndex: number, lfoIndex: number): void {
+    const eq = this.eqs[eqIndex]
+    const lfo = eq?.lfos[lfoIndex]
+    if (!eq || !lfo) throw new RangeError(`Unknown EQ LFO index: ${lfoIndex}`)
+    this.destroyLfoModule(lfo)
+    eq.lfos.splice(lfoIndex, 1)
+    eq.settings.lfos.splice(lfoIndex, 1)
+  }
+
   addReverb(settings: ReverbSettings = createReverbSettings()): void {
     const input = this.audioContext.createGain()
     const preDelay = this.audioContext.createDelay(0.25)
@@ -704,13 +1202,7 @@ export class SynthEngine {
   }
 
   addLfo(settings: LfoSettings): number {
-    const oscillator = this.audioContext.createOscillator()
-    const gain = this.audioContext.createGain()
-    const lfo = { oscillator, gain, settings: { ...settings }, bypassed: false }
-    this.setWaveform(oscillator, settings.waveform)
-    oscillator.frequency.setValueAtTime(settings.rate, this.audioContext.currentTime)
-    oscillator.connect(gain)
-    oscillator.start()
+    const lfo = this.createLfoModule(settings)
     this.lfos.push(lfo)
     this.refreshLfoConnections()
     return this.lfos.length - 1
@@ -736,9 +1228,7 @@ export class SynthEngine {
   removeLfo(index: number): void {
     const lfo = this.lfos[index]
     if (!lfo) throw new RangeError(`Unknown LFO index: ${index}`)
-    lfo.oscillator.stop()
-    lfo.oscillator.disconnect()
-    lfo.gain.disconnect()
+    this.destroyLfoModule(lfo)
     this.lfos.splice(index, 1)
   }
 
@@ -766,40 +1256,74 @@ export class SynthEngine {
 
   destroy(): void {
     this.stopAllNotes()
-    this.lfos.forEach((lfo) => {
-      lfo.oscillator.stop()
-      lfo.oscillator.disconnect()
-      lfo.gain.disconnect()
-    })
+    this.lfos.forEach((lfo) => this.destroyLfoModule(lfo))
     this.lfos = []
+    this.choruses.forEach((chorus) => chorus.lfo.stop())
+    this.flangers.forEach((flanger) => flanger.lfo.stop())
+    this.tremolos.forEach((tremolo) => tremolo.lfo.stop())
+    this.choruses = []
+    this.flangers = []
+    this.tremolos = []
     this.dynamics.forEach((dynamics) => this.destroyDynamicsModule(dynamics))
     this.dynamics = []
+    this.eqs.forEach((eq) => this.destroyEqModule(eq))
+    this.eqs = []
     void this.audioContext.close()
   }
 
   private refreshLfoConnections(): void {
-    this.lfos.forEach((lfo) => {
+    [...this.lfos, ...this.eqs.flatMap((eq) => eq.lfos)].forEach((lfo) => {
       lfo.gain.disconnect()
       lfo.gain.gain.setTargetAtTime(lfo.bypassed ? 0 : this.lfoDepth(lfo.settings), this.audioContext.currentTime, 0.01)
       this.lfoTargetParams(lfo.settings.target).forEach((param) => lfo.gain.connect(param))
     })
   }
 
+  private createLfoModule(settings: LfoSettings, bypassed = false): LfoModule {
+    const oscillator = this.audioContext.createOscillator()
+    const gain = this.audioContext.createGain()
+    const lfo = { oscillator, gain, settings: { ...settings }, bypassed }
+    this.setWaveform(oscillator, settings.waveform)
+    oscillator.frequency.setValueAtTime(settings.rate, this.audioContext.currentTime)
+    oscillator.connect(gain)
+    oscillator.start()
+    return lfo
+  }
+
+  private destroyLfoModule(lfo: LfoModule): void {
+    lfo.oscillator.stop()
+    lfo.oscillator.disconnect()
+    lfo.gain.disconnect()
+  }
+
   private lfoDepth(settings: LfoSettings): number {
-    const [module, , parameter] = settings.target.split(':')
+    const [module, , possibleBandIndex, possibleParameter] = settings.target.split(':')
+    const parameter = module === 'eq' ? possibleParameter : possibleBandIndex
     const ranges: Record<string, number> = {
       detune: 1200, level: MAX_GAIN, stereoSpread: 1, cutoff: 19980, resonance: 3,
       gain: 24, time: 1.99, feedback: 0.95, mix: 1, overdrive: 1,
       drive: 18, tone: 10200, decay: 9.4, preDelay: 0.2, damping: 9500, width: 1,
-      volume: 1, pan: 1,
+      rate: 30, depth: 1, delay: 0.03,
+      volume: 1, pan: 1, frequency: 19980, q: 17.9,
     }
     const normalizedDepth = Math.max(0, Math.min(1, settings.depth))
-    const range = module === 'overdrive' && parameter === 'feedback' ? 0.6 : (ranges[parameter] ?? 1)
+    const range = module === 'overdrive' && parameter === 'feedback'
+      ? 0.6
+      : module === 'flanger' && parameter === 'feedback'
+        ? 0.9
+        : module === 'chorus' && parameter === 'depth'
+          ? 0.005
+          : module === 'flanger' && parameter === 'depth'
+            ? 0.002
+            : module === 'tremolo' && parameter === 'depth'
+              ? 0.5
+              : (ranges[parameter] ?? 1)
     return normalizedDepth ** 2 * range
   }
 
   private lfoTargetParams(target: LfoTarget): AudioParam[] {
-    const [module, rawIndex, parameter] = target.split(':')
+    const [module, rawIndex, possibleBandIndex, possibleParameter] = target.split(':')
+    const parameter = module === 'eq' ? possibleParameter : possibleBandIndex
     const index = Number(rawIndex)
     if (!Number.isInteger(index) || index < 0) return []
     if (module === 'output') {
@@ -828,9 +1352,27 @@ export class SynthEngine {
       const overdrive = this.overdrives[index]
       return !overdrive ? [] : parameter === 'drive' ? [overdrive.driveGain.gain] : parameter === 'tone' ? [overdrive.tone.frequency] : parameter === 'feedback' ? [overdrive.feedbackGain.gain] : parameter === 'mix' ? [overdrive.wet.gain] : []
     }
+    if (module === 'chorus') {
+      const chorus = this.choruses[index]
+      return !chorus ? [] : parameter === 'rate' ? [chorus.lfo.frequency] : parameter === 'depth' ? [chorus.lfoGain.gain] : parameter === 'delay' ? [chorus.delay.delayTime] : parameter === 'mix' ? [chorus.wet.gain] : []
+    }
+    if (module === 'flanger') {
+      const flanger = this.flangers[index]
+      return !flanger ? [] : parameter === 'rate' ? [flanger.lfo.frequency] : parameter === 'depth' ? [flanger.lfoGain.gain] : parameter === 'delay' ? [flanger.delay.delayTime] : parameter === 'feedback' ? [flanger.feedback.gain] : parameter === 'mix' ? [flanger.wet.gain] : []
+    }
+    if (module === 'tremolo') {
+      const tremolo = this.tremolos[index]
+      return !tremolo ? [] : parameter === 'rate' ? [tremolo.lfo.frequency] : parameter === 'depth' ? [tremolo.lfoDepthGain.gain] : parameter === 'mix' ? [tremolo.wet.gain] : []
+    }
     if (module === 'reverb') {
       const reverb = this.reverbs[index]
       return !reverb ? [] : parameter === 'preDelay' ? [reverb.preDelay.delayTime] : parameter === 'damping' ? [reverb.tone.frequency] : parameter === 'mix' ? [reverb.wet.gain] : parameter === 'width' ? [reverb.left.gain, reverb.right.gain, reverb.leftCross.gain, reverb.rightCross.gain] : []
+    }
+    if (module === 'eq') {
+      const bandIndex = Number(possibleBandIndex)
+      const eq = this.eqs[index]
+      const band = Number.isInteger(bandIndex) && bandIndex >= 0 ? eq?.bands[bandIndex] : undefined
+      return !band ? [] : parameter === 'frequency' ? [band.frequency] : parameter === 'q' ? [band.Q] : parameter === 'gain' ? [band.gain] : []
     }
     return []
   }
@@ -847,6 +1389,17 @@ export class SynthEngine {
     filter.node.frequency.setTargetAtTime(filter.settings.cutoff, this.audioContext.currentTime, 0.01)
     filter.node.Q.setTargetAtTime(filter.settings.resonance, this.audioContext.currentTime, 0.01)
     filter.gainNode.gain.setTargetAtTime(10 ** (filter.settings.gain / 20), this.audioContext.currentTime, 0.01)
+  }
+
+  private applyEqBandSettings(eq: EqModule, bandIndex: number): void {
+    const band = eq.bands[bandIndex]
+    const settings = eq.settings.bands[bandIndex]
+    if (!band || !settings) return
+    const now = this.audioContext.currentTime
+    band.type = settings.type
+    band.frequency.setTargetAtTime(settings.frequency, now, 0.01)
+    band.Q.setTargetAtTime(settings.q, now, 0.01)
+    band.gain.setTargetAtTime(settings.gain, now, 0.01)
   }
 
   private applyOutputSettings(): void {
@@ -904,6 +1457,58 @@ export class SynthEngine {
         this.applyPositiveEnvelopeOnNoteOn(reverb.rightCross.gain, now, reverbWidthEnvelope, 0.5, (1 - peakWidth) / 2)
       }
     })
+
+    const chorusRateEnvelope = this.activeEnvelopeSettings('chorusRate')
+    const chorusDepthEnvelope = this.activeEnvelopeSettings('chorusDepth')
+    const chorusDelayEnvelope = this.activeEnvelopeSettings('chorusDelay')
+    const chorusMixEnvelope = this.activeEnvelopeSettings('chorusMix')
+    this.choruses.forEach((chorus) => {
+      if (chorusRateEnvelope) this.applyPositiveEnvelopeOnNoteOn(chorus.lfo.frequency, now, chorusRateEnvelope, 0.01, chorus.settings.rate * this.envelopePeakGain(velocity, chorusRateEnvelope.velocity))
+      if (chorusDepthEnvelope) this.applyPositiveEnvelopeOnNoteOn(chorus.lfoGain.gain, now, chorusDepthEnvelope, 0, chorus.settings.depth * 0.005 * this.envelopePeakGain(velocity, chorusDepthEnvelope.velocity))
+      if (chorusDelayEnvelope) this.applyPositiveEnvelopeOnNoteOn(chorus.delay.delayTime, now, chorusDelayEnvelope, 0, chorus.settings.delay * this.envelopePeakGain(velocity, chorusDelayEnvelope.velocity))
+      if (chorusMixEnvelope) this.applyPositiveEnvelopeOnNoteOn(chorus.wet.gain, now, chorusMixEnvelope, 0, chorus.settings.mix * this.envelopePeakGain(velocity, chorusMixEnvelope.velocity))
+    })
+
+    const flangerRateEnvelope = this.activeEnvelopeSettings('flangerRate')
+    const flangerDepthEnvelope = this.activeEnvelopeSettings('flangerDepth')
+    const flangerDelayEnvelope = this.activeEnvelopeSettings('flangerDelay')
+    const flangerFeedbackEnvelope = this.activeEnvelopeSettings('flangerFeedback')
+    const flangerMixEnvelope = this.activeEnvelopeSettings('flangerMix')
+    this.flangers.forEach((flanger) => {
+      if (flangerRateEnvelope) this.applyPositiveEnvelopeOnNoteOn(flanger.lfo.frequency, now, flangerRateEnvelope, 0.01, flanger.settings.rate * this.envelopePeakGain(velocity, flangerRateEnvelope.velocity))
+      if (flangerDepthEnvelope) this.applyPositiveEnvelopeOnNoteOn(flanger.lfoGain.gain, now, flangerDepthEnvelope, 0, flanger.settings.depth * 0.002 * this.envelopePeakGain(velocity, flangerDepthEnvelope.velocity))
+      if (flangerDelayEnvelope) this.applyPositiveEnvelopeOnNoteOn(flanger.delay.delayTime, now, flangerDelayEnvelope, 0, flanger.settings.delay * this.envelopePeakGain(velocity, flangerDelayEnvelope.velocity))
+      if (flangerFeedbackEnvelope) this.applyPositiveEnvelopeOnNoteOn(flanger.feedback.gain, now, flangerFeedbackEnvelope, 0, flanger.settings.feedback * this.envelopePeakGain(velocity, flangerFeedbackEnvelope.velocity))
+      if (flangerMixEnvelope) this.applyPositiveEnvelopeOnNoteOn(flanger.wet.gain, now, flangerMixEnvelope, 0, flanger.settings.mix * this.envelopePeakGain(velocity, flangerMixEnvelope.velocity))
+    })
+
+    const tremoloRateEnvelope = this.activeEnvelopeSettings('tremoloRate')
+    const tremoloDepthEnvelope = this.activeEnvelopeSettings('tremoloDepth')
+    const tremoloMixEnvelope = this.activeEnvelopeSettings('tremoloMix')
+    this.tremolos.forEach((tremolo) => {
+      if (tremoloRateEnvelope) this.applyPositiveEnvelopeOnNoteOn(tremolo.lfo.frequency, now, tremoloRateEnvelope, 0.01, tremolo.settings.rate * this.envelopePeakGain(velocity, tremoloRateEnvelope.velocity))
+      if (tremoloDepthEnvelope) this.applyPositiveEnvelopeOnNoteOn(tremolo.lfoDepthGain.gain, now, tremoloDepthEnvelope, 0, tremolo.settings.depth / 2 * this.envelopePeakGain(velocity, tremoloDepthEnvelope.velocity))
+      if (tremoloMixEnvelope) this.applyPositiveEnvelopeOnNoteOn(tremolo.wet.gain, now, tremoloMixEnvelope, 0, tremolo.settings.mix * this.envelopePeakGain(velocity, tremoloMixEnvelope.velocity))
+    })
+
+    this.eqs.forEach((eq, eqIndex) => {
+      eq.settings.envelopes.forEach((envelope) => {
+        if (envelope.bypassed) return
+        const target = this.parseEqTarget(envelope.destination)
+        if (!target || target.eqIndex !== eqIndex) return
+        const band = eq.bands[target.bandIndex]
+        const bandSettings = eq.settings.bands[target.bandIndex]
+        if (!band || !bandSettings) return
+        const peakGain = this.envelopePeakGain(velocity, envelope.velocity)
+        if (target.parameter === 'frequency') {
+          this.applyPositiveEnvelopeOnNoteOn(band.frequency, now, envelope, 20, bandSettings.frequency * peakGain)
+        } else if (target.parameter === 'q') {
+          this.applyPositiveEnvelopeOnNoteOn(band.Q, now, envelope, 0, bandSettings.q * peakGain)
+        } else {
+          this.applyPositiveEnvelopeOnNoteOn(band.gain, now, envelope, bandSettings.gain, bandSettings.gain + 24 * peakGain)
+        }
+      })
+    })
   }
 
   private routeOutput(): void {
@@ -958,12 +1563,56 @@ export class SynthEngine {
           }
         })
       }
+      if (group === 'choruses') {
+        this.choruses.forEach((chorus) => {
+          chorus.output.disconnect()
+          if (!chorus.settings.bypassed) {
+            output.connect(chorus.input)
+            output = chorus.output
+          }
+        })
+      }
+      if (group === 'flangers') {
+        this.flangers.forEach((flanger) => {
+          flanger.output.disconnect()
+          if (!flanger.settings.bypassed) {
+            output.connect(flanger.input)
+            output = flanger.output
+          }
+        })
+      }
+      if (group === 'tremolos') {
+        this.tremolos.forEach((tremolo) => {
+          tremolo.output.disconnect()
+          if (!tremolo.settings.bypassed) {
+            output.connect(tremolo.input)
+            output = tremolo.output
+          }
+        })
+      }
       if (group === 'reverbs') {
         this.reverbs.forEach((reverb) => {
           reverb.output.disconnect()
           if (!reverb.settings.bypassed) {
             output.connect(reverb.input)
             output = reverb.output
+          }
+        })
+      }
+      if (group === 'eqs') {
+        this.eqs.forEach((eq) => {
+          eq.input.disconnect()
+          eq.output.disconnect()
+          eq.bands.forEach((band) => band.disconnect())
+          if (!eq.settings.bypassed) {
+            let eqOutput: AudioNode = eq.input
+            eq.settings.bands.forEach((bandSettings, index) => {
+              const band = eq.bands[index]
+              if (band && !bandSettings.bypassed) eqOutput = eqOutput.connect(band)
+            })
+            output.connect(eq.input)
+            eqOutput.connect(eq.output)
+            output = eq.output
           }
         })
       }
@@ -1078,6 +1727,67 @@ export class SynthEngine {
     dynamics.gateGain?.disconnect()
   }
 
+  private destroyEqModule(eq: EqModule): void {
+    eq.input.disconnect()
+    eq.bands.forEach((band) => band.disconnect())
+    eq.output.disconnect()
+    eq.lfos.forEach((lfo) => this.destroyLfoModule(lfo))
+  }
+
+  private parseEqTarget(target: string): { eqIndex: number; bandIndex: number; parameter: EqParameter } | undefined {
+    const match = /^eq:(\d+):(\d+):(frequency|q|gain)$/.exec(target)
+    if (!match) return undefined
+    return { eqIndex: Number(match[1]), bandIndex: Number(match[2]), parameter: match[3] as EqParameter }
+  }
+
+  private isEqTargetForModule(target: string, eqIndex: number): target is EqModulationTarget {
+    const parsed = this.parseEqTarget(target)
+    return !!parsed && parsed.eqIndex === eqIndex && parsed.bandIndex < this.eqs[eqIndex].bands.length
+  }
+
+  private eqTarget(eqIndex: number, bandIndex: number, parameter: EqParameter): EqModulationTarget {
+    return `eq:${eqIndex}:${bandIndex}:${parameter}`
+  }
+
+  private reindexEqModulationTargets(): void {
+    this.eqs.forEach((eq, eqIndex) => {
+      eq.settings.envelopes = eq.settings.envelopes.map((envelope) => {
+        const target = this.parseEqTarget(envelope.destination)
+        return target ? { ...envelope, destination: this.eqTarget(eqIndex, target.bandIndex, target.parameter) } : envelope
+      })
+      eq.lfos.forEach((lfo, lfoIndex) => {
+        const target = this.parseEqTarget(lfo.settings.target)
+        if (!target) return
+        const nextTarget = this.eqTarget(eqIndex, target.bandIndex, target.parameter)
+        lfo.settings = { ...lfo.settings, target: nextTarget }
+        eq.settings.lfos[lfoIndex] = { ...eq.settings.lfos[lfoIndex], target: nextTarget }
+      })
+    })
+  }
+
+  private removeEqBandModulation(eq: EqModule, eqIndex: number, bandIndex: number): void {
+    eq.settings.envelopes = eq.settings.envelopes.flatMap((envelope) => {
+      const target = this.parseEqTarget(envelope.destination)
+      if (!target || target.bandIndex === bandIndex) return []
+      return [{ ...envelope, destination: this.eqTarget(eqIndex, target.bandIndex > bandIndex ? target.bandIndex - 1 : target.bandIndex, target.parameter) }]
+    })
+    const retainedLfos: LfoModule[] = []
+    const retainedSettings: EqLfoSettings[] = []
+    eq.lfos.forEach((lfo, lfoIndex) => {
+      const target = this.parseEqTarget(lfo.settings.target)
+      if (!target || target.bandIndex === bandIndex) {
+        this.destroyLfoModule(lfo)
+        return
+      }
+      const nextTarget = this.eqTarget(eqIndex, target.bandIndex > bandIndex ? target.bandIndex - 1 : target.bandIndex, target.parameter)
+      lfo.settings = { ...lfo.settings, target: nextTarget }
+      retainedLfos.push(lfo)
+      retainedSettings.push({ ...eq.settings.lfos[lfoIndex], target: nextTarget })
+    })
+    eq.lfos = retainedLfos
+    eq.settings.lfos = retainedSettings
+  }
+
   private applyDelaySettings(delay: DelayModule): void {
     const { node, feedback, resonance, drive, driveGain, wet, dry, output, settings } = delay
     const now = this.audioContext.currentTime
@@ -1122,6 +1832,45 @@ export class SynthEngine {
     output.gain.setTargetAtTime(1 / (1 + settings.drive * 0.8), now, 0.02)
     shaper.oversample = '4x'
     shaper.curve = this.createWarmOverdriveCurve(settings.drive)
+  }
+
+  private applyChorusSettings(chorus: ChorusModule): void {
+    const { lfo, lfoGain, delay, wet, dry, output, settings } = chorus
+    const now = this.audioContext.currentTime
+    this.setWaveform(lfo, settings.waveform)
+    lfo.frequency.setTargetAtTime(Math.max(0.01, Math.min(settings.rate, 20)), now, 0.02)
+    delay.delayTime.setTargetAtTime(Math.max(0, Math.min(settings.delay, 0.045)), now, 0.02)
+    lfoGain.gain.setTargetAtTime(Math.max(0, Math.min(settings.depth, 1)) * 0.005, now, 0.02)
+    wet.gain.setTargetAtTime(Math.max(0, Math.min(settings.mix, 1)), now, 0.02)
+    dry.gain.setTargetAtTime(1 - Math.max(0, Math.min(settings.mix, 1)), now, 0.02)
+    output.gain.setTargetAtTime(1, now, 0.02)
+  }
+
+  private applyFlangerSettings(flanger: FlangerModule): void {
+    const { lfo, lfoGain, delay, feedback, wet, dry, output, settings } = flanger
+    const now = this.audioContext.currentTime
+    this.setWaveform(lfo, settings.waveform)
+    lfo.frequency.setTargetAtTime(Math.max(0.01, Math.min(settings.rate, 10)), now, 0.02)
+    delay.delayTime.setTargetAtTime(Math.max(0, Math.min(settings.delay, 0.01)), now, 0.02)
+    lfoGain.gain.setTargetAtTime(Math.max(0, Math.min(settings.depth, 1)) * 0.002, now, 0.02)
+    feedback.gain.setTargetAtTime(Math.max(0, Math.min(settings.feedback, 0.9)), now, 0.02)
+    wet.gain.setTargetAtTime(Math.max(0, Math.min(settings.mix, 1)), now, 0.02)
+    dry.gain.setTargetAtTime(1 - Math.max(0, Math.min(settings.mix, 1)), now, 0.02)
+    output.gain.setTargetAtTime(1 / (1 + Math.max(0, Math.min(settings.feedback, 0.9)) * 0.35), now, 0.02)
+  }
+
+  private applyTremoloSettings(tremolo: TremoloModule): void {
+    const { lfo, lfoDepthGain, tremoloGain, wet, dry, output, settings } = tremolo
+    const now = this.audioContext.currentTime
+    const depth = Math.max(0, Math.min(settings.depth, 1))
+    const mix = Math.max(0, Math.min(settings.mix, 1))
+    this.setWaveform(lfo, settings.waveform)
+    lfo.frequency.setTargetAtTime(Math.max(0.1, Math.min(settings.rate, 30)), now, 0.02)
+    tremoloGain.gain.setTargetAtTime(1 - depth / 2, now, 0.02)
+    lfoDepthGain.gain.setTargetAtTime(depth / 2, now, 0.02)
+    wet.gain.setTargetAtTime(mix, now, 0.02)
+    dry.gain.setTargetAtTime(1 - mix, now, 0.02)
+    output.gain.setTargetAtTime(1, now, 0.02)
   }
 
   private createWarmOverdriveCurve(drive: number): Float32Array<ArrayBuffer> {
@@ -1440,7 +2189,7 @@ export class SynthEngine {
   }
 
   private clampEnvelopeDestination(value: EnvelopeDestination | undefined, fallback: EnvelopeDestination): EnvelopeDestination {
-    return value === 'oscillatorLevel' || value === 'oscillatorPitch' || value === 'noiseLevel' || value === 'filterCutoff' || value === 'filterResonance' || value === 'delayTime' || value === 'delayFeedback' || value === 'delayMix' || value === 'overdriveDrive' || value === 'overdriveTone' || value === 'overdriveFeedback' || value === 'overdriveMix' || value === 'reverbDecay' || value === 'reverbMix' || value === 'reverbPreDelay' || value === 'reverbDamping' || value === 'reverbWidth' ? value : fallback
+    return value === 'oscillatorLevel' || value === 'oscillatorPitch' || value === 'noiseLevel' || value === 'filterCutoff' || value === 'filterResonance' || value === 'delayTime' || value === 'delayFeedback' || value === 'delayMix' || value === 'overdriveDrive' || value === 'overdriveTone' || value === 'overdriveFeedback' || value === 'overdriveMix' || value === 'chorusRate' || value === 'chorusDepth' || value === 'chorusDelay' || value === 'chorusMix' || value === 'flangerRate' || value === 'flangerDepth' || value === 'flangerDelay' || value === 'flangerFeedback' || value === 'flangerMix' || value === 'tremoloRate' || value === 'tremoloDepth' || value === 'tremoloMix' || value === 'reverbDecay' || value === 'reverbMix' || value === 'reverbPreDelay' || value === 'reverbDamping' || value === 'reverbWidth' ? value : fallback
   }
 
   private envelopePeakGain(velocity: number, velocityAmount: number): number {
@@ -1558,6 +2307,12 @@ export class SynthEngine {
       releaseCurve: this.clampEnvelopeCurve(changes.releaseCurve, fallback.releaseCurve),
       destination: this.clampEnvelopeDestination(changes.destination, fallback.destination),
     }
+  }
+
+  private normalizeEqEnvelopeSettings(eqIndex: number, changes: Partial<EqEnvelopeSettings>, fallback: EqEnvelopeSettings): EqEnvelopeSettings {
+    const destination = changes.destination ?? fallback.destination
+    if (!this.isEqTargetForModule(destination, eqIndex)) throw new Error('Invalid EQ envelope target')
+    return { ...this.normalizeEnvelopeSettings(changes, fallback), destination, bypassed: changes.bypassed ?? fallback.bypassed }
   }
 
   private activeEnvelopeSettings(destination?: EnvelopeDestination): EnvelopeSettings | undefined {

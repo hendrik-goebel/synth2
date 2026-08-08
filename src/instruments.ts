@@ -1,8 +1,10 @@
 import type {
   AmplitudeModulationSettings,
+  ChorusSettings,
   CompressorSettings,
   DelaySettings,
   DynamicsSettings,
+  EqSettings,
   EffectGroup,
   EnvelopeSettings,
   FilterSettings,
@@ -11,7 +13,9 @@ import type {
   OscillatorSettings,
   OutputSettings,
   OverdriveSettings,
+  FlangerSettings,
   ReverbSettings,
+  TremoloSettings,
   Waveform,
 } from './services/synthEngine'
 
@@ -27,19 +31,23 @@ export type InstrumentPreset = {
   filters: FilterSettings[]
   delays: DelaySettings[]
   overdrives: OverdriveSettings[]
+  choruses: ChorusSettings[]
+  flangers: FlangerSettings[]
+  tremolos: TremoloSettings[]
   bpm: number
   reverbs: ReverbSettings[]
   amplitudeModulation: AmplitudeModulationSettings | null
   envelopes: Array<EnvelopeSettings & { bypassed: boolean }>
   lfos: Array<LfoSettings & { bypassed: boolean }>
   dynamics: DynamicsSettings[]
+  eqs: EqSettings[]
   effectOrder: EffectGroup[]
   isAmplitudeModulationBypassed: boolean
 }
 
 type PresetDefinition = { id: string; name: string }
 
-const defaultEffectOrder: EffectGroup[] = ['filters', 'overdrives', 'delays', 'reverbs', 'dynamics']
+const defaultEffectOrder: EffectGroup[] = ['filters', 'overdrives', 'choruses', 'flangers', 'tremolos', 'delays', 'reverbs', 'eqs', 'dynamics']
 
 function oscillator(waveform: Waveform, level: number, changes: Partial<OscillatorSettings> = {}): OscillatorSettings {
   return {
@@ -83,6 +91,18 @@ function reverb(mix: number, changes: Partial<ReverbSettings> = {}): ReverbSetti
   return { bypassed: false, hallType: 'concert-hall', decay: 3.5, preDelay: 0.025, damping: 0.6, width: 0.9, mix, ...changes }
 }
 
+function chorus(changes: Partial<ChorusSettings> = {}): ChorusSettings {
+  return { bypassed: false, waveform: 'sine', rate: 0.8, depth: 0.5, delay: 0.018, mix: 0.45, ...changes }
+}
+
+function flanger(changes: Partial<FlangerSettings> = {}): FlangerSettings {
+  return { bypassed: false, waveform: 'sine', rate: 0.35, depth: 0.5, delay: 0.003, feedback: 0.35, mix: 0.5, ...changes }
+}
+
+function tremolo(changes: Partial<TremoloSettings> = {}): TremoloSettings {
+  return { bypassed: false, waveform: 'sine', rate: 4, depth: 0.5, mix: 1, ...changes }
+}
+
 function compressor(changes: Partial<CompressorSettings> = {}): CompressorSettings {
   return { type: 'compressor', bypassed: false, threshold: -24, knee: 24, ratio: 5, attack: 0.008, release: 0.18, makeupGain: 0, ...changes }
 }
@@ -103,6 +123,10 @@ function createBassPreset(definition: PresetDefinition, variation: number): Inst
     filters: [filter(cutoff, { resonance: 0.35 + variation * 0.05 })],
     delays: variation === 6 ? [delay(0.16, { noteTime: 16, feedback: 0.2 })] : [],
     overdrives: variation === 1 || variation === 4 ? [{ bypassed: false, drive: 0.24 + variation * 0.04, tone: 0.4, feedback: 0, mix: 0.55 }] : [],
+    choruses: [],
+    flangers: [],
+    tremolos: [],
+    eqs: [],
     bpm: 120,
     reverbs: [],
     amplitudeModulation: null,
@@ -132,6 +156,10 @@ function createLeadPreset(definition: PresetDefinition, variation: number): Inst
     filters: [filter(2800 + variation * 650, { resonance: 0.25 })],
     delays: [delay(0.18 + variation * 0.015, { noteTime: variation % 2 ? 8 : 16, feedback: 0.22 + variation * 0.03 })],
     overdrives: variation === 2 || variation === 5 ? [{ bypassed: false, drive: 0.22, tone: 0.65, feedback: 0, mix: 0.35 }] : [],
+    choruses: [],
+    flangers: [],
+    tremolos: [],
+    eqs: [],
     bpm: 124,
     reverbs: [reverb(0.12 + variation * 0.015, { decay: 2.1 + variation * 0.2, hallType: 'small-hall' })],
     amplitudeModulation: null,
@@ -157,6 +185,10 @@ function createPadPreset(definition: PresetDefinition, variation: number): Instr
     filters: [filter(1800 + variation * 320, { resonance: 0.12 })],
     delays: [delay(0.16, { noteTime: 4, feedback: 0.26 })],
     overdrives: [],
+    choruses: variation >= 3 ? [chorus({ rate: 0.3, depth: 0.4, mix: 0.4 })] : [],
+    flangers: [],
+    tremolos: [],
+    eqs: [],
     bpm: 110,
     reverbs: [reverb(0.3 + variation * 0.025, { decay: 4.5 + variation * 0.45, hallType: variation % 2 ? 'cathedral' : 'concert-hall' })],
     amplitudeModulation: variation === 4 ? { waveform: 'sine', rate: 2, depth: 0.18 } : null,
@@ -182,6 +214,10 @@ function createKeysPreset(definition: PresetDefinition, variation: number): Inst
     filters: [filter(2400 + variation * 620, { resonance: 0.1 })],
     delays: variation % 2 ? [delay(0.12, { noteTime: 16, feedback: 0.18 })] : [],
     overdrives: variation === 5 ? [{ bypassed: false, drive: 0.18, tone: 0.6, feedback: 0, mix: 0.22 }] : [],
+    choruses: [],
+    flangers: [],
+    tremolos: [],
+    eqs: [],
     bpm: 118,
     reverbs: [reverb(0.16 + variation * 0.02, { decay: 1.8 + variation * 0.25, hallType: 'wooden-hall' })],
     amplitudeModulation: null,
@@ -207,6 +243,10 @@ function createPluckPreset(definition: PresetDefinition, variation: number): Ins
     filters: [filter(1500 + variation * 460, { resonance: 0.4 })],
     delays: [delay(0.19 + variation * 0.02, { noteTime: variation % 2 ? 8 : 16, feedback: 0.25 })],
     overdrives: [],
+    choruses: [],
+    flangers: [],
+    tremolos: [],
+    eqs: [],
     bpm: 128,
     reverbs: [reverb(0.14 + variation * 0.02, { decay: 1.4 + variation * 0.2, hallType: 'small-hall' })],
     amplitudeModulation: null,
@@ -236,6 +276,10 @@ function createOrganPreset(definition: PresetDefinition, variation: number): Ins
     filters: [filter(4200 + variation * 400)],
     delays: variation === 2 ? [delay(0.13, { feedback: 0.18 })] : [],
     overdrives: variation === 3 ? [{ bypassed: false, drive: 0.12, tone: 0.45, feedback: 0, mix: 0.2 }] : [],
+    choruses: [chorus({ rate: 4.5 + variation * 0.5, depth: 0.6, delay: 0.012, mix: 0.55 })],
+    flangers: [],
+    tremolos: [],
+    eqs: [],
     bpm: 116,
     reverbs: [reverb(0.16 + variation * 0.02, { decay: 2.1, hallType: 'wooden-hall' })],
     amplitudeModulation: { waveform: 'sine', rate: 4.5 + variation * 0.5, depth: 0.12 + variation * 0.015 },
@@ -258,6 +302,10 @@ function createPercussionPreset(definition: PresetDefinition, variation: number)
     filters: [filter(900 + variation * 550, { resonance: 0.45 })],
     delays: variation === 4 ? [delay(0.15, { feedback: 0.18, mix: 0.12 })] : [],
     overdrives: variation === 2 ? [{ bypassed: false, drive: 0.32, tone: 0.45, feedback: 0, mix: 0.38 }] : [],
+    choruses: [],
+    flangers: [],
+    tremolos: [],
+    eqs: [],
     bpm: 126,
     reverbs: variation === 5 ? [reverb(0.22, { decay: 3.5, hallType: 'arena' })] : [],
     amplitudeModulation: null,
@@ -286,6 +334,10 @@ function createEffectsPreset(definition: PresetDefinition, variation: number): I
     filters: [filter(1000 + variation * 700, { resonance: 0.65 })],
     delays: [delay(0.28 + variation * 0.04, { noteTime: variation % 2 ? 4 : 8, feedback: 0.45 + variation * 0.04, resonance: 0.25, mix: 0.3 })],
     overdrives: variation === 1 || variation === 4 ? [{ bypassed: false, drive: 0.3, tone: 0.55, feedback: 0.12, mix: 0.45 }] : [],
+    choruses: variation % 2 === 0 ? [chorus({ rate: 0.2 + variation * 0.1, depth: 0.65, mix: 0.45 })] : [],
+    flangers: variation === 1 || variation === 4 ? [flanger({ rate: 0.35 + variation * 0.2, feedback: 0.5 })] : [],
+    tremolos: variation === 2 || variation === 5 ? [tremolo({ rate: 1.5 + variation, depth: 0.55 })] : [],
+    eqs: [],
     bpm: 100,
     reverbs: [reverb(0.36, { decay: 5 + variation, hallType: variation % 2 ? 'cathedral' : 'arena' })],
     amplitudeModulation: { waveform: variation % 2 ? 'random' : 'triangle', rate: 1.5 + variation, depth: 0.2 + variation * 0.04 },

@@ -22,7 +22,7 @@ const emit = defineEmits<{
 const lfoTargetOptions = [
   { value: 'output:0:volume', label: 'Volume' },
   { value: 'output:0:pan', label: 'Pan' },
-]
+] satisfies { value: LfoSettings['target']; label: string }[]
 </script>
 
 <template>
