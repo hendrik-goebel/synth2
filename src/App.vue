@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue'
+import { instrumentCategories, instrumentPresets, type InstrumentPreset } from './instruments'
 import { MidiService } from './services/midiService'
 import { createDelaySettings, createEnvelopeSettings, createFilterSettings, createNoiseSettings, createOutputSettings, createOverdriveSettings, createReverbSettings, createCompressorSettings, createGateSettings, createLimiterSettings, createOscillatorSettings, type AmplitudeModulationSettings, type DelaySettings, type DynamicsSettings, type DynamicsSettingsChanges, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type LfoSettings, type NoiseSettings, type OscillatorSettings, type OutputSettings, type OverdriveSettings, type ReverbSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
@@ -34,6 +35,7 @@ type ChannelState = {
   dynamics: DynamicsSettings[]
   effectOrder: EffectGroup[]
   isAmplitudeModulationBypassed: boolean
+  selectedInstrumentId: string
 }
 
 const waveforms: OscillatorType[] = ['sine', 'triangle', 'sawtooth', 'square']
@@ -60,6 +62,7 @@ const lfos = ref<LfoControlModule[]>([])
 const dynamics = ref<DynamicsSettings[]>([])
 const effectOrder = ref<EffectGroup[]>(['filters', 'overdrives', 'delays', 'reverbs', 'dynamics'])
 const isAmplitudeModulationBypassed = ref(false)
+const selectedInstrumentId = ref('')
 const channels = shallowRef<ChannelState[]>([])
 const areOscillatorsCollapsed = ref(false)
 const areFiltersCollapsed = ref(false)
@@ -89,6 +92,7 @@ function saveActiveChannel() {
   channel.dynamics = dynamics.value
   channel.effectOrder = effectOrder.value
   channel.isAmplitudeModulationBypassed = isAmplitudeModulationBypassed.value
+  channel.selectedInstrumentId = selectedInstrumentId.value
 }
 
 function loadChannel(channelNumber: number) {
@@ -111,6 +115,7 @@ function loadChannel(channelNumber: number) {
   dynamics.value = channel.dynamics
   effectOrder.value = channel.effectOrder
   isAmplitudeModulationBypassed.value = channel.isAmplitudeModulationBypassed
+  selectedInstrumentId.value = channel.selectedInstrumentId
   activeVoices.value = activeSynth.getActiveVoiceCount()
 }
 
@@ -135,6 +140,7 @@ function addChannel() {
     dynamics: [],
     effectOrder: ['filters', 'overdrives', 'delays', 'reverbs', 'dynamics'],
     isAmplitudeModulationBypassed: false,
+    selectedInstrumentId: '',
   }
   channels.value = [...channels.value, channel]
   if (audioEnabled) {
@@ -143,18 +149,25 @@ function addChannel() {
   loadChannel(channels.value.length)
 }
 
-function handleChannelKey(event: KeyboardEvent) {
-  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) return
-  const channelNumber = Number(event.key)
-  if (channelNumber >= 1 && channelNumber <= 9 && channelNumber <= channels.value.length) {
-    event.preventDefault()
-    loadChannel(channelNumber)
-  }
+function handleInstrumentKey(event: KeyboardEvent) {
+  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLTextAreaElement) return
+
+  const presetNumber = Number(event.key)
+  if (!Number.isInteger(presetNumber) || presetNumber < 1 || presetNumber > 9) return
+
+  const selectedPreset = instrumentPresets.find((preset) => preset.id === selectedInstrumentId.value)
+  if (!selectedPreset) return
+
+  const preset = instrumentPresets.filter((item) => item.category === selectedPreset.category)[presetNumber - 1]
+  if (!preset) return
+
+  event.preventDefault()
+  applyInstrumentPreset(preset.id)
 }
 
 function handleKeydown(event: KeyboardEvent) {
   handleFirstInteraction()
-  handleChannelKey(event)
+  handleInstrumentKey(event)
 }
 
 channels.value.push({
@@ -173,6 +186,7 @@ channels.value.push({
   dynamics: dynamics.value,
   effectOrder: effectOrder.value,
   isAmplitudeModulationBypassed: isAmplitudeModulationBypassed.value,
+  selectedInstrumentId: selectedInstrumentId.value,
 })
 
 const canSelectInput = computed(() => midiInputs.value.length > 0)
@@ -290,6 +304,77 @@ function handleChannelChange(event: Event) {
 function handlePanic() {
   channels.value.forEach(({ synth }) => synth.stopAllNotes())
   activeVoices.value = 0
+}
+
+function createSynthFromPreset(preset: InstrumentPreset): SynthEngine {
+  const [firstOscillator, ...additionalOscillators] = preset.oscillators
+  if (!firstOscillator) {
+    throw new Error(`Instrument "${preset.name}" has no oscillators.`)
+  }
+
+  const synth = new SynthEngine(firstOscillator, preset.output)
+  synth.setFilterSettings(0, preset.filters[0])
+  additionalOscillators.forEach((settings) => synth.addOscillator(settings))
+  preset.filters.slice(1).forEach((settings) => synth.addFilter(settings))
+  if (preset.noise) synth.addNoise(preset.noise)
+  preset.overdrives.forEach((settings) => synth.addOverdrive(settings))
+  preset.delays.forEach((settings) => synth.addDelay(settings))
+  preset.reverbs.forEach((settings) => synth.addReverb(settings))
+  preset.dynamics.forEach((settings) => {
+    if (settings.type === 'compressor') synth.addCompressor(settings)
+    else if (settings.type === 'gate') synth.addGate(settings)
+    else synth.addLimiter(settings)
+  })
+  if (preset.amplitudeModulation) {
+    synth.addAmplitudeModulation(preset.amplitudeModulation)
+    synth.setAmplitudeModulationBypassed(preset.isAmplitudeModulationBypassed)
+  }
+  preset.envelopes.forEach(({ bypassed, ...settings }) => {
+    const index = synth.addEnvelope(settings)
+    synth.setEnvelopeBypassed(index, bypassed)
+  })
+  preset.lfos.forEach(({ bypassed, ...settings }) => {
+    const index = synth.addLfo(settings)
+    synth.setLfoBypassed(index, bypassed)
+  })
+  synth.setEffectOrder(preset.effectOrder)
+  return synth
+}
+
+function applyInstrumentPreset(instrumentId: string) {
+  const preset = instrumentPresets.find((instrument) => instrument.id === instrumentId)
+  if (!preset) {
+    return
+  }
+
+  const previousSynth = activeSynth
+  const synth = createSynthFromPreset(preset)
+  previousSynth.stopAllNotes()
+  activeSynth = synth
+  oscillators.value = preset.oscillators.map((settings) => ({ ...settings }))
+  output.value = { ...preset.output }
+  noise.value = preset.noise ? { ...preset.noise } : null
+  filters.value = preset.filters.map((settings) => ({ ...settings }))
+  delays.value = preset.delays.map((settings) => ({ ...settings }))
+  overdrives.value = preset.overdrives.map((settings) => ({ ...settings }))
+  bpm.value = preset.bpm
+  reverbs.value = preset.reverbs.map((settings) => ({ ...settings }))
+  amplitudeModulation.value = preset.amplitudeModulation ? { ...preset.amplitudeModulation } : null
+  envelopes.value = preset.envelopes.map((settings) => ({ ...settings }))
+  lfos.value = preset.lfos.map((settings) => ({ ...settings }))
+  dynamics.value = preset.dynamics.map((settings) => ({ ...settings }))
+  effectOrder.value = [...preset.effectOrder]
+  isAmplitudeModulationBypassed.value = preset.isAmplitudeModulationBypassed
+  selectedInstrumentId.value = preset.id
+  saveActiveChannel()
+  previousSynth.destroy()
+
+  if (audioEnabled) {
+    void synth.activate().catch((error: unknown) => {
+      audioStatus.value = error instanceof Error ? error.message : 'Failed to activate instrument.'
+    })
+  }
+  activeVoices.value = channels.value.reduce((count, channel) => count + channel.synth.getActiveVoiceCount(), 0)
 }
 
 function randomInteger(min: number, max: number): number {
@@ -693,6 +778,18 @@ onUnmounted(() => {
           <button v-if="channels.length < 16" type="button" class="add-channel-button" @click="addChannel">Add Channel</button>
         </div>
       </section>
+
+      <label class="instrument-selector">
+        <span>Instrument</span>
+        <select :value="selectedInstrumentId" @change="applyInstrumentPreset(($event.target as HTMLSelectElement).value)">
+          <option value="" disabled>Select instrument</option>
+          <optgroup v-for="category in instrumentCategories" :key="category" :label="category">
+            <option v-for="instrument in instrumentPresets.filter((item) => item.category === category)" :key="instrument.id" :value="instrument.id">
+              {{ instrument.name }}
+            </option>
+          </optgroup>
+        </select>
+      </label>
 
       <OutputControls
         :volume="output.volume"

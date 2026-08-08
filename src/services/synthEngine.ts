@@ -10,7 +10,7 @@ type Voice = {
   panner: StereoPannerNode
   velocity: number
   oscillatorIndex?: number
-  layerIndex?: number
+  layerIndex?: xnumber
   baseDetune?: number
   stopping: boolean
 }

@@ -80,6 +80,26 @@ h1 {
   border-radius: 12px;
 }
 
+.instrument-selector {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  color: #8e9aac;
+  background: rgba(5, 7, 11, 0.35);
+  border: 1px solid rgba(152, 169, 202, 0.12);
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.instrument-selector select {
+  color: #f1f4f8;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
 .channel-number {
   display: block;
   margin-top: 3px;
