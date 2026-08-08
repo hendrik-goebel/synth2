@@ -62,7 +62,13 @@ type ChannelState = {
 const waveforms: OscillatorType[] = ['sine', 'triangle', 'sawtooth', 'square']
 const initialOscillatorSettings = createRandomOscillatorSettings()
 const initialOutputSettings = createOutputSettings()
-let activeSynth = new SynthEngine(initialOscillatorSettings, initialOutputSettings)
+const masterOutputSettings = createOutputSettings()
+const masterSynth = new SynthEngine(createOscillatorSettings(), masterOutputSettings, { effectsOnly: true })
+const createChannelSynth = (oscillatorSettings: OscillatorSettings, outputSettings: OutputSettings) => new SynthEngine(oscillatorSettings, outputSettings, {
+  audioContext: masterSynth.getAudioContext(),
+  destination: masterSynth.getInput(),
+})
+let activeSynth = createChannelSynth(initialOscillatorSettings, initialOutputSettings)
 const selectedChannel = ref(1)
 const selectedInputId = ref('')
 const midiInputs = ref<{ id: string; name: string }[]>([])
@@ -89,6 +95,29 @@ const effectOrder = ref<EffectGroup[]>([...effectGroups])
 const isAmplitudeModulationBypassed = ref(false)
 const selectedInstrumentId = ref('')
 const channels = shallowRef<ChannelState[]>([])
+const masterChannel: ChannelState = {
+  synth: masterSynth,
+  oscillators: [],
+  output: masterOutputSettings,
+  noise: null,
+  filters: [],
+  delays: [],
+  overdrives: [],
+  choruses: [],
+  flangers: [],
+  tremolos: [],
+  bpm: 120,
+  reverbs: [],
+  amplitudeModulation: null,
+  envelopes: [],
+  lfos: [],
+  dynamics: [],
+  eqs: [],
+  effectOrder: [...effectGroups],
+  isAmplitudeModulationBypassed: false,
+  selectedInstrumentId: '',
+}
+const isMasterChannel = computed(() => selectedChannel.value === 0)
 const areOscillatorsCollapsed = ref(false)
 const areFiltersCollapsed = ref(false)
 const areDynamicsCollapsed = ref(false)
@@ -104,7 +133,7 @@ let midiConnectionStarted = false
 let audioEnabled = false
 
 function saveActiveChannel() {
-  const channel = channels.value[selectedChannel.value - 1]
+  const channel = selectedChannel.value === 0 ? masterChannel : channels.value[selectedChannel.value - 1]
   if (!channel) return
   channel.synth = activeSynth
   channel.oscillators = oscillators.value
@@ -129,7 +158,7 @@ function saveActiveChannel() {
 }
 
 function loadChannel(channelNumber: number) {
-  const channel = channels.value[channelNumber - 1]
+  const channel = channelNumber === 0 ? masterChannel : channels.value[channelNumber - 1]
   if (!channel) return
   saveActiveChannel()
   selectedChannel.value = channelNumber
@@ -166,7 +195,7 @@ function addChannel() {
   const oscillatorSettings = createOscillatorSettings()
   const outputSettings = createOutputSettings()
   const channel: ChannelState = {
-    synth: new SynthEngine(oscillatorSettings, outputSettings),
+    synth: createChannelSynth(oscillatorSettings, outputSettings),
     oscillators: [oscillatorSettings],
     output: outputSettings,
     noise: null,
@@ -198,7 +227,7 @@ function handleChannelKey(event: KeyboardEvent) {
   if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLTextAreaElement) return
 
   const channelNumber = Number(event.key)
-  if (!Number.isInteger(channelNumber) || channelNumber < 1 || channelNumber > 9 || channelNumber > channels.value.length) return
+  if (!Number.isInteger(channelNumber) || channelNumber < 0 || channelNumber > 9 || (channelNumber > 0 && channelNumber > channels.value.length)) return
 
   event.preventDefault()
   loadChannel(channelNumber)
@@ -306,7 +335,7 @@ const midiService = new MidiService({
 })
 
 function handleEnableAudio() {
-  Promise.all(channels.value.map(({ synth }) => synth.activate()))
+  masterSynth.activate()
     .then(() => {
       audioEnabled = true
       audioStatus.value = 'Audio enabled.'
@@ -359,7 +388,7 @@ function handleInputChange() {
 function handleChannelChange(event: Event) {
   const channelNumber = Number((event.target as HTMLSelectElement).value)
   loadChannel(channelNumber)
-  midiService.setChannel(channelNumber)
+  if (channelNumber > 0) midiService.setChannel(channelNumber)
 }
 
 function handlePanic() {
@@ -373,7 +402,7 @@ function createSynthFromSetup(setup: SynthSetup): SynthEngine {
     throw new Error('The setup has no oscillators.')
   }
 
-  const synth = new SynthEngine(firstOscillator, setup.output)
+  const synth = createChannelSynth(firstOscillator, setup.output)
   try {
     synth.setFilterSettings(0, setup.filters[0])
     additionalOscillators.forEach((settings) => synth.addOscillator(settings))
@@ -1384,6 +1413,7 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown, true)
   midiService.destroy()
   channels.value.forEach(({ synth }) => synth.destroy())
+  masterSynth.destroy()
 })
 </script>
 
@@ -1392,8 +1422,7 @@ onUnmounted(() => {
     <section class="panel">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Web instrument</p>
-          <h1>OSC</h1>
+          <h1>Synth2</h1>
         </div>
         <div class="topbar-actions">
           <output class="voice-count" title="Active voices">{{ activeVoices }}</output>
@@ -1408,9 +1437,17 @@ onUnmounted(() => {
       <section class="channel-bar" aria-label="Synth channels">
         <div>
           <p class="eyebrow">Channel</p>
-          <strong class="channel-number">MIDI {{ selectedChannel }}</strong>
+          <strong class="channel-number">{{ isMasterChannel ? 'MASTER' : `MIDI ${selectedChannel}` }}</strong>
         </div>
         <div class="channel-actions">
+          <button
+            type="button"
+            class="channel-button"
+            :class="{ 'channel-button-active': isMasterChannel }"
+            @click="loadChannel(0)"
+          >
+            0
+          </button>
           <button
             v-for="(channel, index) in channels"
             :key="index"
@@ -1425,7 +1462,7 @@ onUnmounted(() => {
         </div>
       </section>
 
-      <label class="instrument-selector">
+      <label v-if="!isMasterChannel" class="instrument-selector">
         <span>Instrument</span>
         <select :value="selectedInstrumentId" @change="applyInstrumentPreset(($event.target as HTMLSelectElement).value)">
           <option value="" disabled>Select instrument</option>
@@ -1449,7 +1486,7 @@ onUnmounted(() => {
         @add-lfo="addLfo('output', 0)"
       />
 
-      <section class="synth-section oscillators-section" aria-labelledby="oscillators-heading">
+      <section v-if="!isMasterChannel" class="synth-section oscillators-section" aria-labelledby="oscillators-heading">
         <h2 id="oscillators-heading">
           <button
             type="button"
@@ -1504,7 +1541,7 @@ onUnmounted(() => {
         </div>
       </section>
 
-      <template v-if="noise">
+      <template v-if="!isMasterChannel && noise">
         <NoiseControls
           class="synth-section"
           v-bind="noise"
@@ -1934,7 +1971,7 @@ onUnmounted(() => {
       </section>
 
       <SectionFrame
-        v-if="amplitudeModulation"
+        v-if="!isMasterChannel && amplitudeModulation"
         class="synth-section modulation-section"
         title="Amplitude modulation"
         heading-id="am-heading"
@@ -2063,6 +2100,7 @@ onUnmounted(() => {
           <label class="field channel-field">
             <span>Ch</span>
             <select :value="selectedChannel" @change="handleChannelChange">
+              <option :value="0">Master</option>
               <option v-for="channel in channels.length" :key="channel" :value="channel">
                 {{ channel }}
               </option>

@@ -462,12 +462,19 @@ export function createEnvelopeSettings(): EnvelopeSettings {
   return { attack: 4, decay: 0, hold: 0, release: 80, velocity: 0, attackCurve: 'linear', releaseCurve: 'linear', destination: 'oscillatorLevel' }
 }
 
+export type SynthEngineOptions = {
+  audioContext?: AudioContext
+  destination?: AudioNode
+  effectsOnly?: boolean
+}
+
 export class SynthEngine {
-  private readonly audioContext = new AudioContext()
-  private readonly destination = this.audioContext.destination
-  private readonly mixBus = this.audioContext.createGain()
-  private readonly outputGain = this.audioContext.createGain()
-  private readonly outputPanner = this.audioContext.createStereoPanner()
+  private readonly audioContext: AudioContext
+  private readonly destination: AudioNode
+  private readonly mixBus: GainNode
+  private readonly outputGain: GainNode
+  private readonly outputPanner: StereoPannerNode
+  private readonly ownsAudioContext: boolean
   private activeVoices: { note: number; velocity: number; voices: Voice[] }[] = []
   private settings: OscillatorSettings[]
   private outputSettings: OutputSettings
@@ -487,12 +494,27 @@ export class SynthEngine {
   private envelopeSettings: { settings: EnvelopeSettings; bypassed: boolean }[] = []
   private effectOrder: EffectGroup[] = ['filters', 'overdrives', 'choruses', 'flangers', 'tremolos', 'delays', 'reverbs', 'eqs', 'dynamics']
 
-  constructor(initialSettings: OscillatorSettings = createOscillatorSettings(), outputSettings: OutputSettings = createOutputSettings()) {
+  constructor(initialSettings: OscillatorSettings = createOscillatorSettings(), outputSettings: OutputSettings = createOutputSettings(), options: SynthEngineOptions = {}) {
+    this.audioContext = options.audioContext ?? new AudioContext()
+    this.destination = options.destination ?? this.audioContext.destination
+    this.ownsAudioContext = options.audioContext === undefined
+    this.mixBus = this.audioContext.createGain()
+    this.outputGain = this.audioContext.createGain()
+    this.outputPanner = this.audioContext.createStereoPanner()
     this.settings = [{ ...initialSettings }]
     this.outputSettings = { ...outputSettings }
     this.outputGain.connect(this.outputPanner).connect(this.destination)
     this.applyOutputSettings()
-    this.addFilter()
+    if (options.effectsOnly) this.routeOutput()
+    else this.addFilter()
+  }
+
+  getAudioContext(): AudioContext {
+    return this.audioContext
+  }
+
+  getInput(): AudioNode {
+    return this.mixBus
   }
 
   async activate(): Promise<void> {
@@ -1268,7 +1290,10 @@ export class SynthEngine {
     this.dynamics = []
     this.eqs.forEach((eq) => this.destroyEqModule(eq))
     this.eqs = []
-    void this.audioContext.close()
+    this.mixBus.disconnect()
+    this.outputGain.disconnect()
+    this.outputPanner.disconnect()
+    if (this.ownsAudioContext) void this.audioContext.close()
   }
 
   private refreshLfoConnections(): void {
