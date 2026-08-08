@@ -1804,6 +1804,7 @@ onUnmounted(() => {
                 @remove="removeLfo"
                 @add="addLfo('filter', entry.index)"
               />
+              <EnvelopeControls :envelopes="envelopesFor(filterEnvelopeDestinations)" :destination-options="filterEnvelopeDestinations" :id-prefix="`filter-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('filterCutoff')" />
             </template>
 
             <template v-else-if="entry.type === 'eqs' && eqs[entry.index]">
@@ -1865,6 +1866,7 @@ onUnmounted(() => {
                 @remove="removeLfo"
                 @add="addLfo('overdrive', entry.index)"
               />
+              <EnvelopeControls :envelopes="envelopesFor(overdriveEnvelopeDestinations)" :destination-options="overdriveEnvelopeDestinations" :id-prefix="`overdrive-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('overdriveDrive')" />
             </template>
 
             <template v-else-if="entry.type === 'choruses' && choruses[entry.index]">
@@ -1892,6 +1894,7 @@ onUnmounted(() => {
                 @remove="removeLfo"
                 @add="addLfo('chorus', entry.index)"
               />
+              <EnvelopeControls :envelopes="envelopesFor(chorusEnvelopeDestinations)" :destination-options="chorusEnvelopeDestinations" :id-prefix="`chorus-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('chorusRate')" />
             </template>
 
             <template v-else-if="entry.type === 'flangers' && flangers[entry.index]">
@@ -1920,6 +1923,7 @@ onUnmounted(() => {
                 @remove="removeLfo"
                 @add="addLfo('flanger', entry.index)"
               />
+              <EnvelopeControls :envelopes="envelopesFor(flangerEnvelopeDestinations)" :destination-options="flangerEnvelopeDestinations" :id-prefix="`flanger-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('flangerRate')" />
             </template>
 
             <template v-else-if="entry.type === 'tremolos' && tremolos[entry.index]">
@@ -1946,6 +1950,7 @@ onUnmounted(() => {
                 @remove="removeLfo"
                 @add="addLfo('tremolo', entry.index)"
               />
+              <EnvelopeControls :envelopes="envelopesFor(tremoloEnvelopeDestinations)" :destination-options="tremoloEnvelopeDestinations" :id-prefix="`tremolo-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('tremoloRate')" />
             </template>
 
             <template v-else-if="entry.type === 'delays' && delays[entry.index]">
@@ -1972,6 +1977,15 @@ onUnmounted(() => {
                 @toggle-bypass="toggleLfoBypass"
                 @remove="removeLfo"
                 @add="addLfo('delay', entry.index)"
+              />
+              <EnvelopeControls
+                :envelopes="envelopesFor(delayEnvelopeDestinations)"
+                :destination-options="delayEnvelopeDestinations"
+                :id-prefix="`delay-${entry.index}`"
+                @update="updateEnvelopeSettings($event.index, $event.settings)"
+                @toggle-bypass="toggleEnvelopeBypass"
+                @remove="removeEnvelope"
+                @add="addEnvelope('delayTime')"
               />
             </template>
 
@@ -2001,6 +2015,7 @@ onUnmounted(() => {
                 @remove="removeLfo"
                 @add="addLfo('reverb', entry.index)"
               />
+              <EnvelopeControls :envelopes="envelopesFor(reverbEnvelopeDestinations)" :destination-options="reverbEnvelopeDestinations" :id-prefix="`reverb-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('reverbDecay')" />
             </template>
 
             <template v-else-if="entry.type === 'dynamics' && dynamics[entry.index]">
