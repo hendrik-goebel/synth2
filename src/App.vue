@@ -149,25 +149,17 @@ function addChannel() {
   loadChannel(channels.value.length)
 }
 
-function handleInstrumentKey(event: KeyboardEvent) {
-  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLTextAreaElement) return
-
-  const presetNumber = Number(event.key)
-  if (!Number.isInteger(presetNumber) || presetNumber < 1 || presetNumber > 9) return
-
-  const selectedPreset = instrumentPresets.find((preset) => preset.id === selectedInstrumentId.value)
-  if (!selectedPreset) return
-
-  const preset = instrumentPresets.filter((item) => item.category === selectedPreset.category)[presetNumber - 1]
-  if (!preset) return
+function handleChannelKey(event: KeyboardEvent) {
+  const channelNumber = Number(event.key)
+  if (!Number.isInteger(channelNumber) || channelNumber < 1 || channelNumber > 9 || channelNumber > channels.value.length) return
 
   event.preventDefault()
-  applyInstrumentPreset(preset.id)
+  loadChannel(channelNumber)
 }
 
 function handleKeydown(event: KeyboardEvent) {
   handleFirstInteraction()
-  handleInstrumentKey(event)
+  handleChannelKey(event)
 }
 
 channels.value.push({
@@ -733,16 +725,18 @@ function updateOscillatorSettings(index: number, settings: Partial<OscillatorSet
 
 onMounted(() => {
   midiService.setChannel(selectedChannel.value)
+  window.addEventListener('keydown', handleKeydown, true)
 })
 
 onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown, true)
   midiService.destroy()
   channels.value.forEach(({ synth }) => synth.destroy())
 })
 </script>
 
 <template>
-  <main class="app" @pointerdown.capture="handleFirstInteraction" @keydown.capture="handleKeydown">
+  <main class="app" @pointerdown.capture="handleFirstInteraction">
     <section class="panel">
       <header class="topbar">
         <div>
