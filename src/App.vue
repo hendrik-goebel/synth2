@@ -1775,7 +1775,6 @@ onUnmounted(() => {
       <section class="synth-section module-chain-section" aria-labelledby="module-chain-heading">
         <div class="module-chain-heading">
           <h2 id="module-chain-heading">Module Chain</h2>
-          <button type="button" class="add-module-button" @click="openAddModuleDialog">+ Add Module</button>
         </div>
         <p v-if="moduleOrder.length === 0" class="module-chain-empty">No modules yet. Use “Add Module” to build the signal chain.</p>
         <div v-else class="effect-chain">
@@ -2132,6 +2131,7 @@ onUnmounted(() => {
             </SectionFrame>
           </template>
         </div>
+        <button type="button" class="add-module-button" @click="openAddModuleDialog">+ Add Module</button>
       </section>
 
       <dialog ref="addModuleDialog" class="add-module-dialog" aria-labelledby="add-module-heading" @click="($event.target as HTMLElement).closest('.add-module-dialog-content') || closeAddModuleDialog()">

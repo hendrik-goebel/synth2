@@ -532,6 +532,93 @@ select:disabled {
   padding-top: 18px;
 }
 
+.add-module-dialog {
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(720px, calc(100vh - 32px));
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 0;
+  color: #f1f4f8;
+  background: #151b26;
+  border: 1px solid rgba(101, 230, 194, 0.28);
+  border-radius: 18px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+}
+
+.add-module-dialog::backdrop {
+  background: rgba(3, 5, 9, 0.74);
+  backdrop-filter: blur(5px);
+}
+
+.add-module-dialog-content {
+  overflow: auto;
+  max-height: min(720px, calc(100vh - 32px));
+  box-sizing: border-box;
+  padding: 22px;
+}
+
+.add-module-dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(152, 169, 202, 0.16);
+}
+
+.add-module-dialog-heading h2 {
+  margin: 0;
+  color: #65e6c2;
+  font-size: 0.85rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.add-module-dialog-close {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: #9aa8bd;
+  border-radius: 50%;
+}
+
+.add-module-categories {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding-top: 18px;
+}
+
+.add-module-category {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 14px;
+  background: rgba(5, 7, 11, 0.36);
+  border: 1px solid rgba(152, 169, 202, 0.14);
+  border-radius: 12px;
+}
+
+.add-module-category h3 {
+  margin: 0 0 3px;
+  color: #9aa8bd;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.add-module-category button {
+  width: 100%;
+  text-align: left;
+  border-color: rgba(101, 230, 194, 0.22);
+}
+
+.add-module-category button:hover {
+  color: #07110f;
+  background: #65e6c2;
+  border-color: #65e6c2;
+}
+
 .modulation-controls {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -757,5 +844,13 @@ select:disabled {
 
   .seed-actions button {
     flex: 1;
+  }
+
+  .add-module-dialog-content {
+    padding: 16px;
+  }
+
+  .add-module-categories {
+    grid-template-columns: 1fr;
   }
 }
