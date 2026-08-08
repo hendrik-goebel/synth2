@@ -1390,21 +1390,21 @@ onUnmounted(() => {
         </div>
         <span class="status midi-status" aria-live="polite">{{ midiStatus }}</span>
       </section>
-    </section>
 
-    <section class="seed-panel" aria-label="Setup seed">
-      <div class="seed-panel-content">
-        <label class="seed-field">
-          <span>Setup seed</span>
-          <input v-model="seedInput" spellcheck="false" autocomplete="off" aria-label="Setup seed">
-        </label>
-        <div class="seed-actions">
-          <button type="button" @click="generateSeed">Generate</button>
-          <button type="button" :disabled="!seedInput" @click="copySeed">Copy</button>
-          <button type="button" :disabled="!seedInput" @click="loadSeed">Load</button>
+      <section class="seed-panel" aria-label="Setup seed">
+        <div class="seed-panel-content">
+          <label class="seed-field">
+            <span>Setup seed</span>
+            <input v-model="seedInput" spellcheck="false" autocomplete="off" aria-label="Setup seed">
+          </label>
+          <div class="seed-actions">
+            <button type="button" @click="generateSeed">Generate</button>
+            <button type="button" :disabled="!seedInput" @click="copySeed">Copy</button>
+            <button type="button" :disabled="!seedInput" @click="loadSeed">Load</button>
+          </div>
+          <span class="seed-status" aria-live="polite">{{ seedStatus }}</span>
         </div>
-        <span class="seed-status" aria-live="polite">{{ seedStatus }}</span>
-      </div>
+      </section>
     </section>
   </main>
 </template>
