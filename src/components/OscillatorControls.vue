@@ -70,7 +70,7 @@ const emit = defineEmits<{
 
     <label class="control">
       <span>Glide</span>
-      <output>{{ glide }}</output>
+      <output>{{ glide }} ms</output>
       <input
         type="range"
         min="0"

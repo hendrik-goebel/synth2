@@ -10,7 +10,7 @@ type Voice = {
   panner: StereoPannerNode
   velocity: number
   oscillatorIndex?: number
-  layerIndex?: xnumber
+  layerIndex?: number
   baseDetune?: number
   stopping: boolean
 }
@@ -328,8 +328,9 @@ export class SynthEngine {
     if (!this.hasAudibleSources() || velocity <= 0) {
       return
     }
+    const glideFromNote = this.activeVoices.at(-1)?.note
     if (this.activeVoices.some((active) => active.note === note)) this.stopNote(note)
-    this.activeVoices.push({ note, velocity, voices: this.createVoices(note, velocity) })
+    this.activeVoices.push({ note, velocity, voices: this.createVoices(note, velocity, glideFromNote) })
     this.refreshLfoConnections()
     this.applyEffectEnvelopes(this.audioContext.currentTime, velocity / 127)
   }
@@ -834,8 +835,8 @@ export class SynthEngine {
     return []
   }
 
-  private createVoices(note: number, velocity: number): Voice[] {
-    const oscillators = this.settings.flatMap((_, index) => this.createVoicesForOscillator(note, velocity, index))
+  private createVoices(note: number, velocity: number, glideFromNote?: number): Voice[] {
+    const oscillators = this.settings.flatMap((_, index) => this.createVoicesForOscillator(note, velocity, index, glideFromNote))
     return this.noiseSettings ? [...oscillators, this.createNoiseVoice(velocity)] : oscillators
   }
 
@@ -1199,32 +1200,44 @@ export class SynthEngine {
     return impulse
   }
 
-  private createVoicesForOscillator(note: number, velocity: number, oscillatorIndex: number): Voice[] {
-    return Array.from({ length: UNISON_LAYER_COUNT }, (_, layerIndex) => this.createOscillatorVoice(note, velocity, oscillatorIndex, layerIndex))
+  private createVoicesForOscillator(note: number, velocity: number, oscillatorIndex: number, glideFromNote?: number): Voice[] {
+    return Array.from({ length: UNISON_LAYER_COUNT }, (_, layerIndex) => this.createOscillatorVoice(note, velocity, oscillatorIndex, layerIndex, glideFromNote))
   }
 
-  private createOscillatorVoice(note: number, velocity: number, oscillatorIndex: number, layerIndex: number): Voice {
+  private createOscillatorVoice(note: number, velocity: number, oscillatorIndex: number, layerIndex: number, glideFromNote?: number): Voice {
     const settings = this.settings[oscillatorIndex]
     const oscillator = this.audioContext.createOscillator()
     this.setWaveform(oscillator, settings.waveform)
-    oscillator.frequency.setValueAtTime(this.midiNoteToFrequency(note), this.audioContext.currentTime)
+    const now = this.audioContext.currentTime
+    const frequency = this.midiNoteToFrequency(note)
+    const glideFromFrequency = glideFromNote === undefined ? undefined : this.midiNoteToFrequency(glideFromNote)
+    this.scheduleGlide(oscillator.frequency, glideFromFrequency, frequency, settings.glide, now)
     const baseDetune = settings.detune + this.layerDetune(layerIndex, settings.unisonDetune)
-    oscillator.detune.setValueAtTime(baseDetune, this.audioContext.currentTime)
+    oscillator.detune.setValueAtTime(baseDetune, now)
     const voice = this.createVoice(oscillator, 'oscillator', velocity, oscillatorIndex, layerIndex)
     voice.baseDetune = baseDetune
-    this.applyPitchEnvelopeOnNoteOn(voice, this.audioContext.currentTime)
+    this.applyPitchEnvelopeOnNoteOn(voice, now)
     oscillator.start()
     if (settings.fmAmount > 0) {
       const modulator = this.audioContext.createOscillator()
       this.setWaveform(modulator, settings.fmSource)
-      modulator.frequency.setValueAtTime(this.midiNoteToFrequency(note), this.audioContext.currentTime)
+      this.scheduleGlide(modulator.frequency, glideFromFrequency, frequency, settings.glide, now)
       const modulationGain = this.audioContext.createGain()
-      modulationGain.gain.setValueAtTime(settings.fmAmount * this.midiNoteToFrequency(note), this.audioContext.currentTime)
+      this.scheduleGlide(modulationGain.gain, glideFromFrequency === undefined ? undefined : settings.fmAmount * glideFromFrequency, settings.fmAmount * frequency, settings.glide, now)
       modulator.connect(modulationGain).connect(oscillator.frequency)
       modulator.start()
       voice.modulator = modulator
     }
     return voice
+  }
+
+  private scheduleGlide(parameter: AudioParam, from: number | undefined, to: number, glideMs: number, now: number): void {
+    if (from === undefined || glideMs <= 0) {
+      parameter.setValueAtTime(to, now)
+      return
+    }
+    parameter.setValueAtTime(from, now)
+    parameter.linearRampToValueAtTime(to, now + glideMs / 1000)
   }
 
   private createNoiseVoice(velocity: number): Voice {
