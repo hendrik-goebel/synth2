@@ -4,10 +4,11 @@ import type { EqBandSettings, EqBandType } from '../services/synthEngine'
 
 const props = defineProps<{
   eqIndex: number
-  eqCount: number
   bypassed: boolean
   kind: 'single' | 'multiband'
   bands: EqBandSettings[]
+  canMoveUp: boolean
+  canMoveDown: boolean
 }>()
 
 const emit = defineEmits<{
@@ -70,8 +71,8 @@ function supportsGain(type: EqBandType): boolean {
     :heading-id="`eq-${eqIndex}-heading`"
     :content-id="`eq-${eqIndex}-content`"
     :bypassed="bypassed"
-    :can-move-up="eqIndex > 0"
-    :can-move-down="eqIndex < eqCount - 1"
+    :can-move-up="canMoveUp"
+    :can-move-down="canMoveDown"
     @toggle-bypass="emit('toggle-bypass')"
     @move-up="emit('move-up')"
     @move-down="emit('move-down')"

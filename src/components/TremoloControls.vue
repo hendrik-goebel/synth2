@@ -4,12 +4,13 @@ import type { Waveform } from '../services/synthEngine'
 
 defineProps<{
   tremoloIndex: number
-  tremoloCount: number
   bypassed: boolean
   waveform: Waveform
   rate: number
   depth: number
   mix: number
+  canMoveUp: boolean
+  canMoveDown: boolean
 }>()
 
 const emit = defineEmits<{
@@ -30,8 +31,8 @@ const emit = defineEmits<{
     :heading-id="`tremolo-${tremoloIndex}-heading`"
     :content-id="`tremolo-${tremoloIndex}-content`"
     :bypassed="bypassed"
-    :can-move-up="tremoloIndex > 0"
-    :can-move-down="tremoloIndex < tremoloCount - 1"
+    :can-move-up="canMoveUp"
+    :can-move-down="canMoveDown"
     @toggle-bypass="emit('toggle-bypass')"
     @move-up="emit('move-up')"
     @move-down="emit('move-down')"

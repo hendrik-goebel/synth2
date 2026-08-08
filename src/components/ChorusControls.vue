@@ -4,13 +4,14 @@ import type { Waveform } from '../services/synthEngine'
 
 defineProps<{
   chorusIndex: number
-  chorusCount: number
   bypassed: boolean
   waveform: Waveform
   rate: number
   depth: number
   delay: number
   mix: number
+  canMoveUp: boolean
+  canMoveDown: boolean
 }>()
 
 const emit = defineEmits<{
@@ -32,8 +33,8 @@ const emit = defineEmits<{
     :heading-id="`chorus-${chorusIndex}-heading`"
     :content-id="`chorus-${chorusIndex}-content`"
     :bypassed="bypassed"
-    :can-move-up="chorusIndex > 0"
-    :can-move-down="chorusIndex < chorusCount - 1"
+    :can-move-up="canMoveUp"
+    :can-move-down="canMoveDown"
     @toggle-bypass="emit('toggle-bypass')"
     @move-up="emit('move-up')"
     @move-down="emit('move-down')"

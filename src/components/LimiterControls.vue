@@ -3,11 +3,12 @@ import SectionFrame from './SectionFrame.vue'
 
 defineProps<{
   dynamicsIndex: number
-  dynamicsCount: number
   bypassed: boolean
   ceiling: number
   release: number
   makeupGain: number
+  canMoveUp: boolean
+  canMoveDown: boolean
 }>()
 
 const emit = defineEmits<{
@@ -27,8 +28,8 @@ const emit = defineEmits<{
     :heading-id="`dynamics-${dynamicsIndex}-heading`"
     :content-id="`dynamics-${dynamicsIndex}-content`"
     :bypassed="bypassed"
-    :can-move-up="dynamicsIndex > 0"
-    :can-move-down="dynamicsIndex < dynamicsCount - 1"
+    :can-move-up="canMoveUp"
+    :can-move-down="canMoveDown"
     @toggle-bypass="emit('toggle-bypass')"
     @move-up="emit('move-up')"
     @move-down="emit('move-down')"

@@ -9,6 +9,8 @@ const props = defineProps<{
   cutoff: number
   resonance: number
   gain: number
+  canMoveUp: boolean
+  canMoveDown: boolean
 }>()
 
 function logarithmicPosition(value: number, min: number, max: number): number {
@@ -43,6 +45,8 @@ const emit = defineEmits<{
   'update:resonance': [value: number]
   'update:gain': [value: number]
   'toggle-bypass': []
+  'move-up': []
+  'move-down': []
   remove: []
 }>()
 </script>
@@ -54,7 +58,11 @@ const emit = defineEmits<{
     :heading-id="`filter-${filterIndex}-heading`"
     :content-id="`filter-${filterIndex}-content`"
     :bypassed="bypassed"
+    :can-move-up="canMoveUp"
+    :can-move-down="canMoveDown"
     @toggle-bypass="emit('toggle-bypass')"
+    @move-up="emit('move-up')"
+    @move-down="emit('move-down')"
     @remove="emit('remove')"
   >
     <div class="modulation-controls filter-control-grid">

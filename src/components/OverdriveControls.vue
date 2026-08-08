@@ -3,12 +3,13 @@ import SectionFrame from './SectionFrame.vue'
 
 const props = defineProps<{
   overdriveIndex: number
-  overdriveCount: number
   bypassed: boolean
   drive: number
   tone: number
   feedback: number
   mix: number
+  canMoveUp: boolean
+  canMoveDown: boolean
 }>()
 
 const MIN_FEEDBACK = 0.001
@@ -46,8 +47,8 @@ const emit = defineEmits<{
     :heading-id="`overdrive-${overdriveIndex}-heading`"
     :content-id="`overdrive-${overdriveIndex}-content`"
     :bypassed="bypassed"
-    :can-move-up="overdriveIndex > 0"
-    :can-move-down="overdriveIndex < overdriveCount - 1"
+    :can-move-up="canMoveUp"
+    :can-move-down="canMoveDown"
     @toggle-bypass="emit('toggle-bypass')"
     @move-up="emit('move-up')"
     @move-down="emit('move-down')"

@@ -1,0 +1,493 @@
+      <section v-if="!isMasterChannel" class="synth-section oscillators-section" aria-labelledby="modulation-envelopes-heading">
+        <h2 id="modulation-envelopes-heading">
+          <button
+            type="button"
+            class="oscillators-toggle"
+            :aria-expanded="!areModulationEnvelopesCollapsed"
+            aria-controls="modulation-envelopes-content"
+            @click="areModulationEnvelopesCollapsed = !areModulationEnvelopesCollapsed"
+          >
+            Modulation Envelopes
+          </button>
+        </h2>
+        <div v-show="!areModulationEnvelopesCollapsed" id="modulation-envelopes-content" class="oscillators-content">
+          <div class="effect-type">
+            <div class="effect-type-heading">
+              <h3>Filter</h3>
+            </div>
+            <EnvelopeControls
+              :envelopes="envelopesFor(filterEnvelopeDestinations)"
+              :destination-options="filterEnvelopeDestinations"
+              id-prefix="filter"
+              @update="updateEnvelopeSettings($event.index, $event.settings)"
+              @toggle-bypass="toggleEnvelopeBypass"
+              @remove="removeEnvelope"
+              @add="addEnvelope('filterCutoff')"
+            />
+          </div>
+
+          <div class="effect-type">
+            <div class="effect-type-heading">
+              <h3>Overdrive</h3>
+            </div>
+            <EnvelopeControls
+              :envelopes="envelopesFor(overdriveEnvelopeDestinations)"
+              :destination-options="overdriveEnvelopeDestinations"
+              id-prefix="overdrive"
+              @update="updateEnvelopeSettings($event.index, $event.settings)"
+              @toggle-bypass="toggleEnvelopeBypass"
+              @remove="removeEnvelope"
+              @add="addEnvelope('overdriveDrive')"
+            />
+          </div>
+
+          <div class="effect-type">
+            <div class="effect-type-heading">
+              <h3>Chorus</h3>
+            </div>
+            <EnvelopeControls
+              :envelopes="envelopesFor(chorusEnvelopeDestinations)"
+              :destination-options="chorusEnvelopeDestinations"
+              id-prefix="chorus"
+              @update="updateEnvelopeSettings($event.index, $event.settings)"
+              @toggle-bypass="toggleEnvelopeBypass"
+              @remove="removeEnvelope"
+              @add="addEnvelope('chorusRate')"
+            />
+          </div>
+
+          <div class="effect-type">
+            <div class="effect-type-heading">
+              <h3>Flanger</h3>
+            </div>
+            <EnvelopeControls
+              :envelopes="envelopesFor(flangerEnvelopeDestinations)"
+              :destination-options="flangerEnvelopeDestinations"
+              id-prefix="flanger"
+              @update="updateEnvelopeSettings($event.index, $event.settings)"
+              @toggle-bypass="toggleEnvelopeBypass"
+              @remove="removeEnvelope"
+              @add="addEnvelope('flangerRate')"
+            />
+          </div>
+
+          <div class="effect-type">
+            <div class="effect-type-heading">
+              <h3>Tremolo</h3>
+            </div>
+            <EnvelopeControls
+              :envelopes="envelopesFor(tremoloEnvelopeDestinations)"
+              :destination-options="tremoloEnvelopeDestinations"
+              id-prefix="tremolo"
+              @update="updateEnvelopeSettings($event.index, $event.settings)"
+              @toggle-bypass="toggleEnvelopeBypass"
+              @remove="removeEnvelope"
+              @add="addEnvelope('tremoloDepth')"
+            />
+          </div>
+
+          <div class="effect-type">
+            <div class="effect-type-heading">
+              <h3>Delay</h3>
+            </div>
+            <EnvelopeControls
+              :envelopes="envelopesFor(delayEnvelopeDestinations)"
+              :destination-options="delayEnvelopeDestinations"
+              id-prefix="delay"
+              @update="updateEnvelopeSettings($event.index, $event.settings)"
+              @toggle-bypass="toggleEnvelopeBypass"
+              @remove="removeEnvelope"
+              @add="addEnvelope('delayTime')"
+            />
+          </div>
+
+          <div class="effect-type">
+            <div class="effect-type-heading">
+              <h3>Reverb</h3>
+            </div>
+            <EnvelopeControls
+              :envelopes="envelopesFor(reverbEnvelopeDestinations)"
+              :destination-options="reverbEnvelopeDestinations"
+              id-prefix="reverb"
+              @update="updateEnvelopeSettings($event.index, $event.settings)"
+              @toggle-bypass="toggleEnvelopeBypass"
+              @remove="removeEnvelope"
+              @add="addEnvelope('reverbMix')"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section class="synth-section module-chain-section" aria-labelledby="module-chain-heading">
+        <div class="module-chain-heading">
+          <h2 id="module-chain-heading">Module Chain</h2>
+          <button type="button" class="add-module-button" @click="openAddModuleDialog">+ Add Module</button>
+        </div>
+        <p v-if="moduleOrder.length === 0" class="module-chain-empty">No modules yet. Use “Add Module” to build the signal chain.</p>
+        <div v-else class="effect-chain">
+          <template v-for="entry in moduleOrder" :key="`${entry.type}:${entry.index}`">
+            <template v-if="entry.type === 'filters' && filters[entry.index]">
+              <FilterControls
+                :filter-index="entry.index"
+                v-bind="filters[entry.index]"
+                :can-move-up="canMoveModule('filters', entry.index, -1)"
+                :can-move-down="canMoveModule('filters', entry.index, 1)"
+                @update:type="updateFilterSettings(entry.index, { type: $event })"
+                @update:cutoff="updateFilterSettings(entry.index, { cutoff: $event })"
+                @update:resonance="updateFilterSettings(entry.index, { resonance: $event })"
+                @update:gain="updateFilterSettings(entry.index, { gain: $event })"
+                @toggle-bypass="toggleFilterBypass(entry.index)"
+                @move-up="moveModule('filters', entry.index, -1)"
+                @move-down="moveModule('filters', entry.index, 1)"
+                @remove="removeFilter(entry.index)"
+              />
+              <LfoControls
+                :lfos="lfosForModule('filter', entry.index)"
+                :target-options="lfoTargetOptions('filter', entry.index)"
+                :id-prefix="`filter-${entry.index}`"
+                @update="updateLfo($event.index, $event.settings)"
+                @toggle-bypass="toggleLfoBypass"
+                @remove="removeLfo"
+                @add="addLfo('filter', entry.index)"
+              />
+            </template>
+
+            <template v-else-if="entry.type === 'eqs' && eqs[entry.index]">
+              <EqControls
+                :eq-index="entry.index"
+                v-bind="eqs[entry.index]"
+                :can-move-up="canMoveModule('eqs', entry.index, -1)"
+                :can-move-down="canMoveModule('eqs', entry.index, 1)"
+                @update:band="updateEqBandSettings(entry.index, $event.index, $event.changes)"
+                @toggle-bypass="toggleEqBypass(entry.index)"
+                @toggle-band-bypass="toggleEqBandBypass(entry.index, $event)"
+                @add-band="addEqBand(entry.index)"
+                @remove-band="removeEqBand(entry.index, $event)"
+                @move-up="moveModule('eqs', entry.index, -1)"
+                @move-down="moveModule('eqs', entry.index, 1)"
+                @remove="removeEq(entry.index)"
+              />
+              <EnvelopeControls
+                :envelopes="eqEnvelopes(entry.index)"
+                :destination-options="eqModulationTargetOptions(entry.index)"
+                :id-prefix="`eq-${entry.index}`"
+                @update="updateEqEnvelopeFromControls(entry.index, $event.index, $event.settings)"
+                @toggle-bypass="toggleEqEnvelopeBypass(entry.index, $event)"
+                @remove="removeEqEnvelope(entry.index, $event)"
+                @add="addEqEnvelope(entry.index)"
+              />
+              <LfoControls
+                :lfos="eqLfos(entry.index)"
+                :target-options="eqModulationTargetOptions(entry.index)"
+                :id-prefix="`eq-${entry.index}`"
+                @update="updateEqLfoFromControls(entry.index, $event.index, $event.settings)"
+                @toggle-bypass="toggleEqLfoBypass(entry.index, $event)"
+                @remove="removeEqLfo(entry.index, $event)"
+                @add="addEqLfo(entry.index)"
+              />
+            </template>
+
+            <template v-else-if="entry.type === 'overdrives' && overdrives[entry.index]">
+              <OverdriveControls
+                :overdrive-index="entry.index"
+                v-bind="overdrives[entry.index]"
+                :can-move-up="canMoveModule('overdrives', entry.index, -1)"
+                :can-move-down="canMoveModule('overdrives', entry.index, 1)"
+                @update:drive="updateOverdriveSettings(entry.index, { drive: $event })"
+                @update:tone="updateOverdriveSettings(entry.index, { tone: $event })"
+                @update:feedback="updateOverdriveSettings(entry.index, { feedback: $event })"
+                @update:mix="updateOverdriveSettings(entry.index, { mix: $event })"
+                @toggle-bypass="toggleOverdriveBypass(entry.index)"
+                @move-up="moveModule('overdrives', entry.index, -1)"
+                @move-down="moveModule('overdrives', entry.index, 1)"
+                @remove="removeOverdrive(entry.index)"
+              />
+              <LfoControls
+                :lfos="lfosForModule('overdrive', entry.index)"
+                :target-options="lfoTargetOptions('overdrive', entry.index)"
+                :id-prefix="`overdrive-${entry.index}`"
+                @update="updateLfo($event.index, $event.settings)"
+                @toggle-bypass="toggleLfoBypass"
+                @remove="removeLfo"
+                @add="addLfo('overdrive', entry.index)"
+              />
+            </template>
+
+            <template v-else-if="entry.type === 'choruses' && choruses[entry.index]">
+              <ChorusControls
+                :chorus-index="entry.index"
+                v-bind="choruses[entry.index]"
+                :can-move-up="canMoveModule('choruses', entry.index, -1)"
+                :can-move-down="canMoveModule('choruses', entry.index, 1)"
+                @update:waveform="updateChorusSettings(entry.index, { waveform: $event })"
+                @update:rate="updateChorusSettings(entry.index, { rate: $event })"
+                @update:depth="updateChorusSettings(entry.index, { depth: $event })"
+                @update:delay="updateChorusSettings(entry.index, { delay: $event })"
+                @update:mix="updateChorusSettings(entry.index, { mix: $event })"
+                @toggle-bypass="toggleChorusBypass(entry.index)"
+                @move-up="moveModule('choruses', entry.index, -1)"
+                @move-down="moveModule('choruses', entry.index, 1)"
+                @remove="removeChorus(entry.index)"
+              />
+              <LfoControls
+                :lfos="lfosForModule('chorus', entry.index)"
+                :target-options="lfoTargetOptions('chorus', entry.index)"
+                :id-prefix="`chorus-${entry.index}`"
+                @update="updateLfo($event.index, $event.settings)"
+                @toggle-bypass="toggleLfoBypass"
+                @remove="removeLfo"
+                @add="addLfo('chorus', entry.index)"
+              />
+            </template>
+
+            <template v-else-if="entry.type === 'flangers' && flangers[entry.index]">
+              <FlangerControls
+                :flanger-index="entry.index"
+                v-bind="flangers[entry.index]"
+                :can-move-up="canMoveModule('flangers', entry.index, -1)"
+                :can-move-down="canMoveModule('flangers', entry.index, 1)"
+                @update:waveform="updateFlangerSettings(entry.index, { waveform: $event })"
+                @update:rate="updateFlangerSettings(entry.index, { rate: $event })"
+                @update:depth="updateFlangerSettings(entry.index, { depth: $event })"
+                @update:delay="updateFlangerSettings(entry.index, { delay: $event })"
+                @update:feedback="updateFlangerSettings(entry.index, { feedback: $event })"
+                @update:mix="updateFlangerSettings(entry.index, { mix: $event })"
+                @toggle-bypass="toggleFlangerBypass(entry.index)"
+                @move-up="moveModule('flangers', entry.index, -1)"
+                @move-down="moveModule('flangers', entry.index, 1)"
+                @remove="removeFlanger(entry.index)"
+              />
+              <LfoControls
+                :lfos="lfosForModule('flanger', entry.index)"
+                :target-options="lfoTargetOptions('flanger', entry.index)"
+                :id-prefix="`flanger-${entry.index}`"
+                @update="updateLfo($event.index, $event.settings)"
+                @toggle-bypass="toggleLfoBypass"
+                @remove="removeLfo"
+                @add="addLfo('flanger', entry.index)"
+              />
+            </template>
+
+            <template v-else-if="entry.type === 'tremolos' && tremolos[entry.index]">
+              <TremoloControls
+                :tremolo-index="entry.index"
+                v-bind="tremolos[entry.index]"
+                :can-move-up="canMoveModule('tremolos', entry.index, -1)"
+                :can-move-down="canMoveModule('tremolos', entry.index, 1)"
+                @update:waveform="updateTremoloSettings(entry.index, { waveform: $event })"
+                @update:rate="updateTremoloSettings(entry.index, { rate: $event })"
+                @update:depth="updateTremoloSettings(entry.index, { depth: $event })"
+                @update:mix="updateTremoloSettings(entry.index, { mix: $event })"
+                @toggle-bypass="toggleTremoloBypass(entry.index)"
+                @move-up="moveModule('tremolos', entry.index, -1)"
+                @move-down="moveModule('tremolos', entry.index, 1)"
+                @remove="removeTremolo(entry.index)"
+              />
+              <LfoControls
+                :lfos="lfosForModule('tremolo', entry.index)"
+                :target-options="lfoTargetOptions('tremolo', entry.index)"
+                :id-prefix="`tremolo-${entry.index}`"
+                @update="updateLfo($event.index, $event.settings)"
+                @toggle-bypass="toggleLfoBypass"
+                @remove="removeLfo"
+                @add="addLfo('tremolo', entry.index)"
+              />
+            </template>
+
+            <template v-else-if="entry.type === 'delays' && delays[entry.index]">
+              <DelayControls
+                :delay-index="entry.index"
+                v-bind="delays[entry.index]"
+                :can-move-up="canMoveModule('delays', entry.index, -1)"
+                :can-move-down="canMoveModule('delays', entry.index, 1)"
+                @update:note-time="updateDelaySettings(entry.index, { noteTime: $event })"
+                @update:feedback="updateDelaySettings(entry.index, { feedback: $event })"
+                @update:resonance="updateDelaySettings(entry.index, { resonance: $event })"
+                @update:mix="updateDelaySettings(entry.index, { mix: $event })"
+                @update:overdrive="updateDelaySettings(entry.index, { overdrive: $event })"
+                @toggle-bypass="toggleDelayBypass(entry.index)"
+                @move-up="moveModule('delays', entry.index, -1)"
+                @move-down="moveModule('delays', entry.index, 1)"
+                @remove="removeDelay(entry.index)"
+              />
+              <LfoControls
+                :lfos="lfosForModule('delay', entry.index)"
+                :target-options="lfoTargetOptions('delay', entry.index)"
+                :id-prefix="`delay-${entry.index}`"
+                @update="updateLfo($event.index, $event.settings)"
+                @toggle-bypass="toggleLfoBypass"
+                @remove="removeLfo"
+                @add="addLfo('delay', entry.index)"
+              />
+            </template>
+
+            <template v-else-if="entry.type === 'reverbs' && reverbs[entry.index]">
+              <ReverbControls
+                :reverb-index="entry.index"
+                v-bind="reverbs[entry.index]"
+                :can-move-up="canMoveModule('reverbs', entry.index, -1)"
+                :can-move-down="canMoveModule('reverbs', entry.index, 1)"
+                @update:hall-type="updateReverbSettings(entry.index, { hallType: $event })"
+                @update:decay="updateReverbSettings(entry.index, { decay: $event })"
+                @update:pre-delay="updateReverbSettings(entry.index, { preDelay: $event })"
+                @update:damping="updateReverbSettings(entry.index, { damping: $event })"
+                @update:width="updateReverbSettings(entry.index, { width: $event })"
+                @update:mix="updateReverbSettings(entry.index, { mix: $event })"
+                @toggle-bypass="toggleReverbBypass(entry.index)"
+                @move-up="moveModule('reverbs', entry.index, -1)"
+                @move-down="moveModule('reverbs', entry.index, 1)"
+                @remove="removeReverb(entry.index)"
+              />
+              <LfoControls
+                :lfos="lfosForModule('reverb', entry.index)"
+                :target-options="lfoTargetOptions('reverb', entry.index)"
+                :id-prefix="`reverb-${entry.index}`"
+                @update="updateLfo($event.index, $event.settings)"
+                @toggle-bypass="toggleLfoBypass"
+                @remove="removeLfo"
+                @add="addLfo('reverb', entry.index)"
+              />
+            </template>
+
+            <template v-else-if="entry.type === 'dynamics' && dynamics[entry.index]">
+              <template v-for="dynamicsItem in [dynamics[entry.index]]" :key="entry.index">
+                <CompressorControls
+                  v-if="dynamicsItem.type === 'compressor'"
+                  :dynamics-index="entry.index"
+                  v-bind="dynamicsItem"
+                  :can-move-up="canMoveModule('dynamics', entry.index, -1)"
+                  :can-move-down="canMoveModule('dynamics', entry.index, 1)"
+                  @update:threshold="updateDynamicsSettings(entry.index, { threshold: $event })"
+                  @update:knee="updateDynamicsSettings(entry.index, { knee: $event })"
+                  @update:ratio="updateDynamicsSettings(entry.index, { ratio: $event })"
+                  @update:attack="updateDynamicsSettings(entry.index, { attack: $event })"
+                  @update:release="updateDynamicsSettings(entry.index, { release: $event })"
+                  @update:makeup-gain="updateDynamicsSettings(entry.index, { makeupGain: $event })"
+                  @toggle-bypass="toggleDynamicsBypass(entry.index)"
+                  @move-up="moveModule('dynamics', entry.index, -1)"
+                  @move-down="moveModule('dynamics', entry.index, 1)"
+                  @remove="removeDynamics(entry.index)"
+                />
+                <GateControls
+                  v-else-if="dynamicsItem.type === 'gate'"
+                  :dynamics-index="entry.index"
+                  v-bind="dynamicsItem"
+                  :can-move-up="canMoveModule('dynamics', entry.index, -1)"
+                  :can-move-down="canMoveModule('dynamics', entry.index, 1)"
+                  @update:threshold="updateDynamicsSettings(entry.index, { threshold: $event })"
+                  @update:attack="updateDynamicsSettings(entry.index, { attack: $event })"
+                  @update:hold="updateDynamicsSettings(entry.index, { hold: $event })"
+                  @update:release="updateDynamicsSettings(entry.index, { release: $event })"
+                  @toggle-bypass="toggleDynamicsBypass(entry.index)"
+                  @move-up="moveModule('dynamics', entry.index, -1)"
+                  @move-down="moveModule('dynamics', entry.index, 1)"
+                  @remove="removeDynamics(entry.index)"
+                />
+                <LimiterControls
+                  v-else-if="dynamicsItem.type === 'limiter'"
+                  :dynamics-index="entry.index"
+                  v-bind="dynamicsItem"
+                  :can-move-up="canMoveModule('dynamics', entry.index, -1)"
+                  :can-move-down="canMoveModule('dynamics', entry.index, 1)"
+                  @update:ceiling="updateDynamicsSettings(entry.index, { ceiling: $event })"
+                  @update:release="updateDynamicsSettings(entry.index, { release: $event })"
+                  @update:makeup-gain="updateDynamicsSettings(entry.index, { makeupGain: $event })"
+                  @toggle-bypass="toggleDynamicsBypass(entry.index)"
+                  @move-up="moveModule('dynamics', entry.index, -1)"
+                  @move-down="moveModule('dynamics', entry.index, 1)"
+                  @remove="removeDynamics(entry.index)"
+                />
+              </template>
+            </template>
+
+            <SectionFrame
+              v-else-if="entry.type === 'amplitudeModulation' && amplitudeModulation"
+              class="synth-section modulation-section"
+              title="Amplitude modulation"
+              heading-id="am-heading"
+              content-id="am-content"
+              :bypassed="isAmplitudeModulationBypassed"
+              :can-move-up="canMoveModule('amplitudeModulation', 0, -1)"
+              :can-move-down="canMoveModule('amplitudeModulation', 0, 1)"
+              @toggle-bypass="toggleAmplitudeModulationBypass"
+              @move-up="moveModule('amplitudeModulation', 0, -1)"
+              @move-down="moveModule('amplitudeModulation', 0, 1)"
+              @remove="removeAmplitudeModulation"
+            >
+              <div class="modulation-controls">
+                <label class="control">
+                  <span>Wave</span>
+                  <select :value="amplitudeModulation.waveform" @change="updateAmplitudeModulation({ waveform: ($event.target as HTMLSelectElement).value as Waveform })">
+                    <option value="sine">Sine</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="sawtooth">Sawtooth</option>
+                    <option value="square">Square</option>
+                    <option value="random">Random</option>
+                  </select>
+                </label>
+                <label class="control">
+                  <span>Rate</span>
+                  <output>{{ amplitudeModulation.rate }} Hz</output>
+                  <input type="range" min="1" max="30" step="1" :value="amplitudeModulation.rate" @input="updateAmplitudeModulation({ rate: Number(($event.target as HTMLInputElement).value) })">
+                </label>
+                <label class="control">
+                  <span>Depth</span>
+                  <output>{{ Math.round(amplitudeModulation.depth * 100) }}%</output>
+                  <input type="range" min="0" max="1" step="0.01" :value="amplitudeModulation.depth" @input="updateAmplitudeModulation({ depth: Number(($event.target as HTMLInputElement).value) })">
+                </label>
+              </div>
+            </SectionFrame>
+          </template>
+        </div>
+      </section>
+
+      <dialog ref="addModuleDialog" class="add-module-dialog" aria-labelledby="add-module-heading" @click="($event.target as HTMLElement).closest('.add-module-dialog-content') || closeAddModuleDialog()">
+        <div class="add-module-dialog-content">
+          <div class="add-module-dialog-heading">
+            <h2 id="add-module-heading">Add module</h2>
+            <button type="button" class="add-module-dialog-close" aria-label="Close dialog" @click="closeAddModuleDialog">✕</button>
+          </div>
+          <div class="add-module-categories">
+            <section class="add-module-category" aria-labelledby="add-module-filters-heading">
+              <h3 id="add-module-filters-heading">Filters</h3>
+              <button type="button" @click="addModuleFromDialog(addFilter)">Add Filter</button>
+            </section>
+
+            <section class="add-module-category" aria-labelledby="add-module-eq-heading">
+              <h3 id="add-module-eq-heading">EQ</h3>
+              <button type="button" @click="addModuleFromDialog(addSingleBandEq)">Add EQ</button>
+              <button type="button" @click="addModuleFromDialog(addMultibandEq)">Add Parametric EQ</button>
+            </section>
+
+            <section class="add-module-category" aria-labelledby="add-module-overdrive-heading">
+              <h3 id="add-module-overdrive-heading">Overdrive</h3>
+              <button type="button" @click="addModuleFromDialog(addOverdrive)">Add Overdrive</button>
+            </section>
+
+            <section class="add-module-category" aria-labelledby="add-module-modulation-fx-heading">
+              <h3 id="add-module-modulation-fx-heading">Modulation FX</h3>
+              <button type="button" @click="addModuleFromDialog(addChorus)">Add Chorus</button>
+              <button type="button" @click="addModuleFromDialog(addFlanger)">Add Flanger</button>
+              <button type="button" @click="addModuleFromDialog(addTremolo)">Add Tremolo</button>
+            </section>
+
+            <section class="add-module-category" aria-labelledby="add-module-time-heading">
+              <h3 id="add-module-time-heading">Time-based</h3>
+              <button type="button" @click="addModuleFromDialog(addDelay)">Add Delay</button>
+              <button type="button" @click="addModuleFromDialog(addReverb)">Add Reverb</button>
+            </section>
+
+            <section class="add-module-category" aria-labelledby="add-module-dynamics-heading">
+              <h3 id="add-module-dynamics-heading">Dynamics</h3>
+              <button type="button" @click="addModuleFromDialog(addCompressor)">Add Compressor</button>
+              <button type="button" @click="addModuleFromDialog(addGate)">Add Gate</button>
+              <button type="button" @click="addModuleFromDialog(addLimiter)">Add Limiter</button>
+            </section>
+
+            <section v-if="!isMasterChannel && !amplitudeModulation" class="add-module-category" aria-labelledby="add-module-am-heading">
+              <h3 id="add-module-am-heading">Modulation</h3>
+              <button type="button" @click="addModuleFromDialog(addAmplitudeModulation)">Add Amplitude Modulation</button>
+            </section>
+          </div>
+        </div>
+      </dialog>

@@ -4,7 +4,6 @@ import type { Waveform } from '../services/synthEngine'
 
 defineProps<{
   flangerIndex: number
-  flangerCount: number
   bypassed: boolean
   waveform: Waveform
   rate: number
@@ -12,6 +11,8 @@ defineProps<{
   delay: number
   feedback: number
   mix: number
+  canMoveUp: boolean
+  canMoveDown: boolean
 }>()
 
 const emit = defineEmits<{
@@ -34,8 +35,8 @@ const emit = defineEmits<{
     :heading-id="`flanger-${flangerIndex}-heading`"
     :content-id="`flanger-${flangerIndex}-content`"
     :bypassed="bypassed"
-    :can-move-up="flangerIndex > 0"
-    :can-move-down="flangerIndex < flangerCount - 1"
+    :can-move-up="canMoveUp"
+    :can-move-down="canMoveDown"
     @toggle-bypass="emit('toggle-bypass')"
     @move-up="emit('move-up')"
     @move-down="emit('move-down')"

@@ -10,6 +10,8 @@ defineProps<{
   resonance: number
   mix: number
   overdrive: number
+  canMoveUp: boolean
+  canMoveDown: boolean
 }>()
 
 const emit = defineEmits<{
@@ -19,6 +21,8 @@ const emit = defineEmits<{
   'update:mix': [value: number]
   'update:overdrive': [value: number]
   'toggle-bypass': []
+  'move-up': []
+  'move-down': []
   remove: []
 }>()
 </script>
@@ -29,7 +33,11 @@ const emit = defineEmits<{
     :heading-id="`delay-${delayIndex}-heading`"
     :content-id="`delay-${delayIndex}-content`"
     :bypassed="bypassed"
+    :can-move-up="canMoveUp"
+    :can-move-down="canMoveDown"
     @toggle-bypass="emit('toggle-bypass')"
+    @move-up="emit('move-up')"
+    @move-down="emit('move-down')"
     @remove="emit('remove')"
   >
     <div class="modulation-controls">

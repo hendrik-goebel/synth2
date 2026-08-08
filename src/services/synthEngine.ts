@@ -271,6 +271,9 @@ export type EqSettings = {
 
 export type EffectGroup = 'filters' | 'overdrives' | 'choruses' | 'flangers' | 'tremolos' | 'dynamics' | 'delays' | 'reverbs' | 'eqs'
 
+/** A single audio module identified by its group and its index within that group's settings array. */
+export type FlatAudioModule = { type: EffectGroup; index: number }
+
 export type AmplitudeModulationSettings = {
   rate: number
   depth: number
@@ -492,7 +495,7 @@ export class SynthEngine {
   private amplitudeModulationBypassed = false
   private lfos: LfoModule[] = []
   private envelopeSettings: { settings: EnvelopeSettings; bypassed: boolean }[] = []
-  private effectOrder: EffectGroup[] = ['filters', 'overdrives', 'choruses', 'flangers', 'tremolos', 'delays', 'reverbs', 'eqs', 'dynamics']
+  private flatAudioOrder: FlatAudioModule[] = []
 
   constructor(initialSettings: OscillatorSettings = createOscillatorSettings(), outputSettings: OutputSettings = createOutputSettings(), options: SynthEngineOptions = {}) {
     this.audioContext = options.audioContext ?? new AudioContext()
@@ -632,14 +635,52 @@ export class SynthEngine {
     const gainNode = this.audioContext.createGain()
     this.filters.push({ node: filter, gainNode, settings: { ...settings } })
     this.applyFilterSettings(this.filters.length - 1)
+    this.appendFlatAudioModule('filters', this.filters.length - 1)
     this.routeOutput()
   }
 
-  setEffectOrder(order: EffectGroup[]): void {
-    if (order.length !== this.effectOrder.length || new Set(order).size !== order.length || order.some((group) => !this.effectOrder.includes(group))) {
-      throw new Error('Invalid effect order')
+  /** Returns the modules of an audio group in a form usable for validation and length lookups. */
+  private audioGroupArrays(): Record<EffectGroup, unknown[]> {
+    return {
+      filters: this.filters,
+      overdrives: this.overdrives,
+      choruses: this.choruses,
+      flangers: this.flangers,
+      tremolos: this.tremolos,
+      dynamics: this.dynamics,
+      delays: this.delays,
+      reverbs: this.reverbs,
+      eqs: this.eqs,
     }
-    this.effectOrder = [...order]
+  }
+
+  private appendFlatAudioModule(type: EffectGroup, index: number): void {
+    this.flatAudioOrder = [...this.flatAudioOrder, { type, index }]
+  }
+
+  private removeFlatAudioModule(type: EffectGroup, index: number): void {
+    this.flatAudioOrder = this.flatAudioOrder
+      .filter((entry) => !(entry.type === type && entry.index === index))
+      .map((entry) => (entry.type === type && entry.index > index ? { ...entry, index: entry.index - 1 } : entry))
+  }
+
+  /** Sets the exact processing order of individual audio modules across all groups. */
+  setFlatAudioOrder(order: FlatAudioModule[]): void {
+    const arrays = this.audioGroupArrays()
+    const seen = new Set<string>()
+    const counts: Partial<Record<EffectGroup, number>> = {}
+    order.forEach((entry) => {
+      const key = `${entry.type}:${entry.index}`
+      if (seen.has(key)) throw new Error('Invalid flat audio order: duplicate entry')
+      seen.add(key)
+      const array = arrays[entry.type]
+      if (!array || entry.index < 0 || entry.index >= array.length) throw new Error('Invalid flat audio order: index out of range')
+      counts[entry.type] = (counts[entry.type] ?? 0) + 1
+    })
+    ;(Object.keys(arrays) as EffectGroup[]).forEach((group) => {
+      if ((counts[group] ?? 0) !== arrays[group].length) throw new Error('Invalid flat audio order: missing modules')
+    })
+    this.flatAudioOrder = [...order]
     this.routeOutput()
   }
 
@@ -648,6 +689,7 @@ export class SynthEngine {
     this.filters[index].node.disconnect()
     this.filters[index].gainNode.disconnect()
     this.filters.splice(index, 1)
+    this.removeFlatAudioModule('filters', index)
     this.routeOutput()
   }
 
@@ -684,19 +726,12 @@ export class SynthEngine {
     if (!dynamics) throw new RangeError(`Unknown dynamics index: ${index}`)
     this.destroyDynamicsModule(dynamics)
     this.dynamics.splice(index, 1)
+    this.removeFlatAudioModule('dynamics', index)
     this.routeOutput()
   }
 
   setDynamicsBypassed(index: number, bypassed: boolean): void {
     this.setDynamicsSettings(index, { bypassed })
-  }
-
-  moveDynamics(index: number, direction: -1 | 1): void {
-    const targetIndex = index + direction
-    if (!this.dynamics[index]) throw new RangeError(`Unknown dynamics index: ${index}`)
-    if (targetIndex < 0 || targetIndex >= this.dynamics.length) return
-    ;[this.dynamics[index], this.dynamics[targetIndex]] = [this.dynamics[targetIndex], this.dynamics[index]]
-    this.routeOutput()
   }
 
   addDelay(settings: DelaySettings = createDelaySettings()): void {
@@ -711,6 +746,7 @@ export class SynthEngine {
     this.delays.push({ node, feedback, resonance, drive, driveGain, wet, dry, output, settings: { ...settings } })
     node.connect(feedback).connect(resonance).connect(node)
     this.applyDelaySettings(this.delays[this.delays.length - 1])
+    this.appendFlatAudioModule('delays', this.delays.length - 1)
     this.routeOutput()
   }
 
@@ -733,6 +769,7 @@ export class SynthEngine {
     delay.dry.disconnect()
     delay.output.disconnect()
     this.delays.splice(index, 1)
+    this.removeFlatAudioModule('delays', index)
     this.routeOutput()
   }
 
@@ -762,6 +799,7 @@ export class SynthEngine {
     tone.connect(feedbackTone).connect(feedbackDelay).connect(feedbackGain).connect(dcBlocker)
     this.overdrives.push(overdrive)
     this.applyOverdriveSettings(overdrive)
+    this.appendFlatAudioModule('overdrives', this.overdrives.length - 1)
     this.routeOutput()
   }
 
@@ -787,6 +825,7 @@ export class SynthEngine {
     overdrive.dry.disconnect()
     overdrive.output.disconnect()
     this.overdrives.splice(index, 1)
+    this.removeFlatAudioModule('overdrives', index)
     this.routeOutput()
   }
 
@@ -794,14 +833,6 @@ export class SynthEngine {
     const overdrive = this.overdrives[index]
     if (!overdrive) throw new RangeError(`Unknown overdrive index: ${index}`)
     overdrive.settings = { ...overdrive.settings, bypassed }
-    this.routeOutput()
-  }
-
-  moveOverdrive(index: number, direction: -1 | 1): void {
-    const targetIndex = index + direction
-    if (!this.overdrives[index]) throw new RangeError(`Unknown overdrive index: ${index}`)
-    if (targetIndex < 0 || targetIndex >= this.overdrives.length) return
-    ;[this.overdrives[index], this.overdrives[targetIndex]] = [this.overdrives[targetIndex], this.overdrives[index]]
     this.routeOutput()
   }
 
@@ -821,6 +852,7 @@ export class SynthEngine {
     this.choruses.push(chorus)
     this.applyChorusSettings(chorus)
     lfo.start()
+    this.appendFlatAudioModule('choruses', this.choruses.length - 1)
     this.routeOutput()
   }
 
@@ -844,19 +876,12 @@ export class SynthEngine {
     chorus.dry.disconnect()
     chorus.output.disconnect()
     this.choruses.splice(index, 1)
+    this.removeFlatAudioModule('choruses', index)
     this.routeOutput()
   }
 
   setChorusBypassed(index: number, bypassed: boolean): void {
     this.setChorusSettings(index, { bypassed })
-  }
-
-  moveChorus(index: number, direction: -1 | 1): void {
-    const targetIndex = index + direction
-    if (!this.choruses[index]) throw new RangeError(`Unknown chorus index: ${index}`)
-    if (targetIndex < 0 || targetIndex >= this.choruses.length) return
-    ;[this.choruses[index], this.choruses[targetIndex]] = [this.choruses[targetIndex], this.choruses[index]]
-    this.routeOutput()
   }
 
   addFlanger(settings: FlangerSettings = createFlangerSettings()): void {
@@ -877,6 +902,7 @@ export class SynthEngine {
     this.flangers.push(flanger)
     this.applyFlangerSettings(flanger)
     lfo.start()
+    this.appendFlatAudioModule('flangers', this.flangers.length - 1)
     this.routeOutput()
   }
 
@@ -901,19 +927,12 @@ export class SynthEngine {
     flanger.dry.disconnect()
     flanger.output.disconnect()
     this.flangers.splice(index, 1)
+    this.removeFlatAudioModule('flangers', index)
     this.routeOutput()
   }
 
   setFlangerBypassed(index: number, bypassed: boolean): void {
     this.setFlangerSettings(index, { bypassed })
-  }
-
-  moveFlanger(index: number, direction: -1 | 1): void {
-    const targetIndex = index + direction
-    if (!this.flangers[index]) throw new RangeError(`Unknown flanger index: ${index}`)
-    if (targetIndex < 0 || targetIndex >= this.flangers.length) return
-    ;[this.flangers[index], this.flangers[targetIndex]] = [this.flangers[targetIndex], this.flangers[index]]
-    this.routeOutput()
   }
 
   addTremolo(settings: TremoloSettings = createTremoloSettings()): void {
@@ -932,6 +951,7 @@ export class SynthEngine {
     this.tremolos.push(tremolo)
     this.applyTremoloSettings(tremolo)
     lfo.start()
+    this.appendFlatAudioModule('tremolos', this.tremolos.length - 1)
     this.routeOutput()
   }
 
@@ -955,19 +975,12 @@ export class SynthEngine {
     tremolo.dry.disconnect()
     tremolo.output.disconnect()
     this.tremolos.splice(index, 1)
+    this.removeFlatAudioModule('tremolos', index)
     this.routeOutput()
   }
 
   setTremoloBypassed(index: number, bypassed: boolean): void {
     this.setTremoloSettings(index, { bypassed })
-  }
-
-  moveTremolo(index: number, direction: -1 | 1): void {
-    const targetIndex = index + direction
-    if (!this.tremolos[index]) throw new RangeError(`Unknown tremolo index: ${index}`)
-    if (targetIndex < 0 || targetIndex >= this.tremolos.length) return
-    ;[this.tremolos[index], this.tremolos[targetIndex]] = [this.tremolos[targetIndex], this.tremolos[index]]
-    this.routeOutput()
   }
 
   addEq(settings: EqSettings = createSingleBandEqSettings()): void {
@@ -990,6 +1003,7 @@ export class SynthEngine {
     eq.settings.lfos.forEach((lfo) => eq.lfos.push(this.createLfoModule(lfo, lfo.bypassed)))
     this.eqs.push(eq)
     this.refreshLfoConnections()
+    this.appendFlatAudioModule('eqs', this.eqs.length - 1)
     this.routeOutput()
   }
 
@@ -1000,6 +1014,7 @@ export class SynthEngine {
     this.eqs.splice(index, 1)
     this.reindexEqModulationTargets()
     this.refreshLfoConnections()
+    this.removeFlatAudioModule('eqs', index)
     this.routeOutput()
   }
 
@@ -1007,16 +1022,6 @@ export class SynthEngine {
     const eq = this.eqs[index]
     if (!eq) throw new RangeError(`Unknown EQ index: ${index}`)
     eq.settings = { ...eq.settings, bypassed }
-    this.routeOutput()
-  }
-
-  moveEq(index: number, direction: -1 | 1): void {
-    const targetIndex = index + direction
-    if (!this.eqs[index]) throw new RangeError(`Unknown EQ index: ${index}`)
-    if (targetIndex < 0 || targetIndex >= this.eqs.length) return
-    ;[this.eqs[index], this.eqs[targetIndex]] = [this.eqs[targetIndex], this.eqs[index]]
-    this.reindexEqModulationTargets()
-    this.refreshLfoConnections()
     this.routeOutput()
   }
 
@@ -1154,6 +1159,7 @@ export class SynthEngine {
 
     this.reverbs.push(reverb)
     this.applyReverbSettings(reverb, true)
+    this.appendFlatAudioModule('reverbs', this.reverbs.length - 1)
     this.routeOutput()
   }
 
@@ -1181,6 +1187,7 @@ export class SynthEngine {
     reverb.dry.disconnect()
     reverb.output.disconnect()
     this.reverbs.splice(index, 1)
+    this.removeFlatAudioModule('reverbs', index)
     this.routeOutput()
   }
 
@@ -1536,110 +1543,104 @@ export class SynthEngine {
     })
   }
 
+  /** Rebuilds the audio graph by connecting each module in `flatAudioOrder`, one instance at a time. */
   private routeOutput(): void {
     this.mixBus.disconnect()
     let output: AudioNode = this.mixBus
-    this.effectOrder.forEach((group) => {
-      if (group === 'filters') {
-        this.filters.forEach(({ node, gainNode, settings }) => {
-          node.disconnect()
-          gainNode.disconnect()
-          if (!settings.bypassed) output = output.connect(node).connect(gainNode)
-        })
-      }
-      if (group === 'dynamics') {
-        this.dynamics.forEach((dynamics) => {
-          this.connectDynamicsModule(dynamics)
-          if (!dynamics.settings.bypassed) {
-            output.connect(dynamics.input)
-            output = dynamics.output
-          }
-        })
-      }
-      if (group === 'delays') {
-        this.delays.forEach((delay) => {
-          delay.node.disconnect()
-          delay.driveGain.disconnect()
-          delay.wet.disconnect()
-          delay.dry.disconnect()
-          delay.output.disconnect()
-          delay.node.connect(delay.feedback)
-          delay.feedback.disconnect()
-          delay.feedback.connect(delay.resonance).connect(delay.node)
-          if (!delay.settings.bypassed) {
-            output.connect(delay.drive)
-            output.connect(delay.dry)
-            delay.drive.connect(delay.driveGain).connect(delay.node)
-            delay.node.connect(delay.wet)
-            delay.dry.connect(delay.output)
-            delay.wet.connect(delay.output)
-            output = delay.output
-          }
-        })
-      }
-      if (group === 'overdrives') {
-        this.overdrives.forEach((overdrive) => {
-          overdrive.output.disconnect()
-          if (!overdrive.settings.bypassed) {
-            output.connect(overdrive.input)
-            overdrive.wet.connect(overdrive.output)
-            overdrive.dry.connect(overdrive.output)
-            output = overdrive.output
-          }
-        })
-      }
-      if (group === 'choruses') {
-        this.choruses.forEach((chorus) => {
-          chorus.output.disconnect()
-          if (!chorus.settings.bypassed) {
-            output.connect(chorus.input)
-            output = chorus.output
-          }
-        })
-      }
-      if (group === 'flangers') {
-        this.flangers.forEach((flanger) => {
-          flanger.output.disconnect()
-          if (!flanger.settings.bypassed) {
-            output.connect(flanger.input)
-            output = flanger.output
-          }
-        })
-      }
-      if (group === 'tremolos') {
-        this.tremolos.forEach((tremolo) => {
-          tremolo.output.disconnect()
-          if (!tremolo.settings.bypassed) {
-            output.connect(tremolo.input)
-            output = tremolo.output
-          }
-        })
-      }
-      if (group === 'reverbs') {
-        this.reverbs.forEach((reverb) => {
-          reverb.output.disconnect()
-          if (!reverb.settings.bypassed) {
-            output.connect(reverb.input)
-            output = reverb.output
-          }
-        })
-      }
-      if (group === 'eqs') {
-        this.eqs.forEach((eq) => {
-          eq.input.disconnect()
-          eq.output.disconnect()
-          eq.bands.forEach((band) => band.disconnect())
-          if (!eq.settings.bypassed) {
-            let eqOutput: AudioNode = eq.input
-            eq.settings.bands.forEach((bandSettings, index) => {
-              const band = eq.bands[index]
-              if (band && !bandSettings.bypassed) eqOutput = eqOutput.connect(band)
-            })
-            output.connect(eq.input)
-            eqOutput.connect(eq.output)
-            output = eq.output
-          }
-        })
+    this.flatAudioOrder.forEach(({ type, index }) => {
+      if (type === 'filters') {
+        const filter = this.filters[index]
+        if (!filter) return
+        const { node, gainNode, settings } = filter
+        node.disconnect()
+        gainNode.disconnect()
+        if (!settings.bypassed) output = output.connect(node).connect(gainNode)
+      } else if (type === 'dynamics') {
+        const dynamics = this.dynamics[index]
+        if (!dynamics) return
+        this.connectDynamicsModule(dynamics)
+        if (!dynamics.settings.bypassed) {
+          output.connect(dynamics.input)
+          output = dynamics.output
+        }
+      } else if (type === 'delays') {
+        const delay = this.delays[index]
+        if (!delay) return
+        delay.node.disconnect()
+        delay.driveGain.disconnect()
+        delay.wet.disconnect()
+        delay.dry.disconnect()
+        delay.output.disconnect()
+        delay.node.connect(delay.feedback)
+        delay.feedback.disconnect()
+        delay.feedback.connect(delay.resonance).connect(delay.node)
+        if (!delay.settings.bypassed) {
+          output.connect(delay.drive)
+          output.connect(delay.dry)
+          delay.drive.connect(delay.driveGain).connect(delay.node)
+          delay.node.connect(delay.wet)
+          delay.dry.connect(delay.output)
+          delay.wet.connect(delay.output)
+          output = delay.output
+        }
+      } else if (type === 'overdrives') {
+        const overdrive = this.overdrives[index]
+        if (!overdrive) return
+        overdrive.output.disconnect()
+        if (!overdrive.settings.bypassed) {
+          output.connect(overdrive.input)
+          overdrive.wet.connect(overdrive.output)
+          overdrive.dry.connect(overdrive.output)
+          output = overdrive.output
+        }
+      } else if (type === 'choruses') {
+        const chorus = this.choruses[index]
+        if (!chorus) return
+        chorus.output.disconnect()
+        if (!chorus.settings.bypassed) {
+          output.connect(chorus.input)
+          output = chorus.output
+        }
+      } else if (type === 'flangers') {
+        const flanger = this.flangers[index]
+        if (!flanger) return
+        flanger.output.disconnect()
+        if (!flanger.settings.bypassed) {
+          output.connect(flanger.input)
+          output = flanger.output
+        }
+      } else if (type === 'tremolos') {
+        const tremolo = this.tremolos[index]
+        if (!tremolo) return
+        tremolo.output.disconnect()
+        if (!tremolo.settings.bypassed) {
+          output.connect(tremolo.input)
+          output = tremolo.output
+        }
+      } else if (type === 'reverbs') {
+        const reverb = this.reverbs[index]
+        if (!reverb) return
+        reverb.output.disconnect()
+        if (!reverb.settings.bypassed) {
+          output.connect(reverb.input)
+          output = reverb.output
+        }
+      } else if (type === 'eqs') {
+        const eq = this.eqs[index]
+        if (!eq) return
+        eq.input.disconnect()
+        eq.output.disconnect()
+        eq.bands.forEach((band) => band.disconnect())
+        if (!eq.settings.bypassed) {
+          let eqOutput: AudioNode = eq.input
+          eq.settings.bands.forEach((bandSettings, bandIndex) => {
+            const band = eq.bands[bandIndex]
+            if (band && !bandSettings.bypassed) eqOutput = eqOutput.connect(band)
+          })
+          output.connect(eq.input)
+          eqOutput.connect(eq.output)
+          output = eq.output
+        }
       }
     })
     output.connect(this.outputGain)
@@ -1672,6 +1673,7 @@ export class SynthEngine {
 
     this.dynamics.push(dynamics)
     this.applyDynamicsSettings(dynamics)
+    this.appendFlatAudioModule('dynamics', this.dynamics.length - 1)
     this.routeOutput()
   }
 
