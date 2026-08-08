@@ -780,6 +780,114 @@ select:disabled {
   font-size: 0.7rem;
 }
 
+/* Compact desktop layout: keep the full signal path visible with less scrolling. */
+.app {
+  padding: 18px 16px;
+}
+
+.panel {
+  width: min(1180px, 100%);
+  padding: clamp(14px, 2.2vw, 24px);
+  gap: 16px;
+  border-radius: 16px;
+}
+
+h1 {
+  font-size: clamp(1.45rem, 3vw, 1.9rem);
+}
+
+.channel-bar,
+.instrument-selector {
+  padding: 8px 10px;
+  border-radius: 9px;
+}
+
+.output-controls {
+  gap: 10px;
+  padding: 12px;
+}
+
+.output-control-grid,
+.oscillator-content,
+.eq-band-controls {
+  gap: 12px 16px;
+}
+
+select {
+  padding: 6px 26px 6px 9px;
+}
+
+button {
+  padding: 6px 10px;
+  font-size: 0.7rem;
+}
+
+.section-frame {
+  padding: 16px;
+  border-radius: 12px;
+}
+
+.synth-section {
+  padding: 14px;
+  border-radius: 14px;
+}
+
+.synth-section > .section-frame-heading {
+  padding-bottom: 9px;
+}
+
+.synth-section > .section-frame-content,
+.section-frame-content,
+.oscillator-content,
+.effect-type {
+  padding-top: 12px;
+}
+
+.effect-chain,
+.oscillators-section,
+.oscillators-content,
+.eq-bands {
+  gap: 12px;
+}
+
+.effect-type {
+  gap: 9px;
+}
+
+.section-frame-heading h2,
+.section-heading h2 {
+  font-size: 0.62rem;
+}
+
+.control {
+  gap: 4px 9px;
+  font-size: 0.72rem;
+}
+
+.midi-controls {
+  gap: 9px;
+  padding-top: 14px;
+}
+
+.field,
+.seed-field {
+  font-size: 0.64rem;
+}
+
+.seed-panel {
+  padding: 10px 12px;
+}
+
+.seed-field input {
+  padding: 6px 8px;
+}
+
+@media (max-width: 560px) {
+  .panel {
+    gap: 16px;
+  }
+}
+
 @media (max-width: 560px) {
   .app {
     padding: 14px;

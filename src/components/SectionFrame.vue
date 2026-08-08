@@ -1,14 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-
-defineProps<{
-  title: string
-  headingId: string
-  contentId: string
-  bypassed: boolean
-  canMoveUp?: boolean
-  canMoveDown?: boolean
-}>()
+import { isSectionInitiallyOpen } from '../services/sectionCollapse'
 
 const emit = defineEmits<{
   'toggle-bypass': []
@@ -17,7 +9,16 @@ const emit = defineEmits<{
   remove: []
 }>()
 
-const isCollapsed = ref(false)
+const props = defineProps<{
+  title: string
+  headingId: string
+  contentId: string
+  bypassed: boolean
+  canMoveUp?: boolean
+  canMoveDown?: boolean
+}>()
+
+const isCollapsed = ref(!isSectionInitiallyOpen(props.headingId))
 </script>
 
 <template>

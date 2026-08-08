@@ -8,6 +8,7 @@ import OscillatorControls from './components/OscillatorControls.vue'
 import NoiseControls from './components/NoiseControls.vue'
 import FilterControls from './components/FilterControls.vue'
 import SectionFrame from './components/SectionFrame.vue'
+import { clearMarkedOpenSections, markEnvelopeOpen, markSectionOpen } from './services/sectionCollapse'
 import DelayControls from './components/DelayControls.vue'
 import OverdriveControls from './components/OverdriveControls.vue'
 import EnvelopeControls from './components/EnvelopeControls.vue'
@@ -131,7 +132,7 @@ const masterChannel: ChannelState = {
   selectedInstrumentId: '',
 }
 const isMasterChannel = computed(() => selectedChannel.value === 0)
-const areOscillatorsCollapsed = ref(false)
+const areOscillatorsCollapsed = ref(true)
 const areModulationEnvelopesCollapsed = ref(true)
 const addModuleDialog = ref<HTMLDialogElement | null>(null)
 const seedInput = ref('')
@@ -174,6 +175,7 @@ function loadChannel(channelNumber: number) {
 }
 
 function loadChannelState(channel: ChannelState) {
+  clearMarkedOpenSections()
   activeSynth = channel.synth
   oscillators.value = channel.oscillators
   output.value = channel.output
@@ -897,6 +899,7 @@ function moveModule(type: ModuleKind, index: number, direction: -1 | 1) {
 
 function addOscillator() {
   const settings = createRandomOscillatorSettings()
+  markSectionOpen(`oscillator-${oscillators.value.length}-heading`)
   oscillators.value.push(settings)
   activeSynth.addOscillator(settings)
 }
@@ -921,6 +924,7 @@ function removeNoise() {
 
 function addFilter() {
   const settings = createFilterSettings()
+  markSectionOpen(`filter-${filters.value.length}-heading`)
   filters.value.push(settings)
   activeSynth.addFilter(settings)
   appendModuleOrderEntry('filters', filters.value.length - 1)
@@ -944,6 +948,7 @@ function toggleFilterBypass(index: number) {
 
 function addDelay() {
   const settings = createDelaySettings()
+  markSectionOpen(`delay-${delays.value.length}-heading`)
   delays.value.push(settings)
   activeSynth.addDelay(settings)
   appendModuleOrderEntry('delays', delays.value.length - 1)
@@ -985,6 +990,7 @@ function toggleDelayBypass(index: number) {
 
 function addOverdrive() {
   const settings = createOverdriveSettings()
+  markSectionOpen(`overdrive-${overdrives.value.length}-heading`)
   overdrives.value.push(settings)
   activeSynth.addOverdrive(settings)
   appendModuleOrderEntry('overdrives', overdrives.value.length - 1)
@@ -1010,6 +1016,7 @@ function toggleOverdriveBypass(index: number) {
 
 function addChorus() {
   const settings = createChorusSettings()
+  markSectionOpen(`chorus-${choruses.value.length}-heading`)
   choruses.value.push(settings)
   activeSynth.addChorus(settings)
   appendModuleOrderEntry('choruses', choruses.value.length - 1)
@@ -1035,6 +1042,7 @@ function toggleChorusBypass(index: number) {
 
 function addFlanger() {
   const settings = createFlangerSettings()
+  markSectionOpen(`flanger-${flangers.value.length}-heading`)
   flangers.value.push(settings)
   activeSynth.addFlanger(settings)
   appendModuleOrderEntry('flangers', flangers.value.length - 1)
@@ -1060,6 +1068,7 @@ function toggleFlangerBypass(index: number) {
 
 function addTremolo() {
   const settings = createTremoloSettings()
+  markSectionOpen(`tremolo-${tremolos.value.length}-heading`)
   tremolos.value.push(settings)
   activeSynth.addTremolo(settings)
   appendModuleOrderEntry('tremolos', tremolos.value.length - 1)
@@ -1084,6 +1093,7 @@ function toggleTremoloBypass(index: number) {
 }
 
 function addSingleBandEq() {
+  markSectionOpen(`eq-${eqs.value.length}-heading`)
   const settings = createSingleBandEqSettings()
   eqs.value.push(settings)
   activeSynth.addEq(settings)
@@ -1091,6 +1101,7 @@ function addSingleBandEq() {
 }
 
 function addMultibandEq() {
+  markSectionOpen(`eq-${eqs.value.length}-heading`)
   const settings = createMultibandEqSettings()
   eqs.value.push(settings)
   activeSynth.addEq(settings)
@@ -1194,6 +1205,7 @@ function eqLfos(eqIndex: number) {
 }
 
 function addEqEnvelope(eqIndex: number) {
+  markEnvelopeOpen(eqEnvelopes(eqIndex).length)
   const target = eqModulationTargetOptions(eqIndex)[0]?.value
   const eq = eqs.value[eqIndex]
   if (!eq || !target) return
@@ -1267,6 +1279,7 @@ function removeEqLfo(eqIndex: number, lfoIndex: number) {
 
 function addReverb() {
   const settings = createReverbSettings()
+  markSectionOpen(`reverb-${reverbs.value.length}-heading`)
   reverbs.value.push(settings)
   activeSynth.addReverb(settings)
   appendModuleOrderEntry('reverbs', reverbs.value.length - 1)
@@ -1291,6 +1304,7 @@ function toggleReverbBypass(index: number) {
 }
 
 function addCompressor() {
+  markSectionOpen(`dynamics-${dynamics.value.length}-heading`)
   const settings = createCompressorSettings()
   dynamics.value.push(settings)
   activeSynth.addCompressor(settings)
@@ -1298,6 +1312,7 @@ function addCompressor() {
 }
 
 function addGate() {
+  markSectionOpen(`dynamics-${dynamics.value.length}-heading`)
   const settings = createGateSettings()
   dynamics.value.push(settings)
   activeSynth.addGate(settings)
@@ -1305,6 +1320,7 @@ function addGate() {
 }
 
 function addLimiter() {
+  markSectionOpen(`dynamics-${dynamics.value.length}-heading`)
   const settings = createLimiterSettings()
   dynamics.value.push(settings)
   activeSynth.addLimiter(settings)
@@ -1382,6 +1398,7 @@ function toggleAmplitudeModulationBypass() {
 
 function addEnvelope(destination: EnvelopeDestination) {
   const settings = { ...createEnvelopeSettings(), destination, bypassed: false }
+  markEnvelopeOpen(envelopes.value.length)
   activeSynth.addEnvelope(settings)
   envelopes.value.push(settings)
 }
