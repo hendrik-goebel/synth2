@@ -80,5 +80,6 @@ const emit = defineEmits<{
         <input type="range" min="0" max="1" step="0.01" :value="mix" @input="emit('update:mix', Number(($event.target as HTMLInputElement).value))">
       </label>
     </div>
+    <slot name="modulation" />
   </SectionFrame>
 </template>

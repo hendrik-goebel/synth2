@@ -90,5 +90,6 @@ const emit = defineEmits<{
         <input type="range" min="-24" max="24" step="0.1" :value="props.gain" @input="emit('update:gain', Number(($event.target as HTMLInputElement).value))">
       </label>
     </div>
+    <slot name="modulation" />
   </SectionFrame>
 </template>

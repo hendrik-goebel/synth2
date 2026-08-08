@@ -47,5 +47,6 @@ const emit = defineEmits<{
       <label class="control"><span>Delay</span><output>{{ Math.round(delay * 1000) }} ms</output><input type="range" min="0" max="0.045" step="0.001" :value="delay" @input="emit('update:delay', Number(($event.target as HTMLInputElement).value))"></label>
       <label class="control"><span>Mix</span><output>{{ Math.round(mix * 100) }}%</output><input type="range" min="0" max="1" step="0.01" :value="mix" @input="emit('update:mix', Number(($event.target as HTMLInputElement).value))"></label>
     </div>
+    <slot name="modulation" />
   </SectionFrame>
 </template>

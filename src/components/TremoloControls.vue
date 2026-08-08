@@ -44,5 +44,6 @@ const emit = defineEmits<{
       <label class="control"><span>Depth</span><output>{{ Math.round(depth * 100) }}%</output><input type="range" min="0" max="1" step="0.01" :value="depth" @input="emit('update:depth', Number(($event.target as HTMLInputElement).value))"></label>
       <label class="control"><span>Mix</span><output>{{ Math.round(mix * 100) }}%</output><input type="range" min="0" max="1" step="0.01" :value="mix" @input="emit('update:mix', Number(($event.target as HTMLInputElement).value))"></label>
     </div>
+    <slot name="modulation" />
   </SectionFrame>
 </template>

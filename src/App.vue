@@ -1794,8 +1794,9 @@ onUnmounted(() => {
                 @move-up="moveModule('filters', entry.index, -1)"
                 @move-down="moveModule('filters', entry.index, 1)"
                 @remove="removeFilter(entry.index)"
-              />
-              <LfoControls
+              >
+                <template #modulation>
+                  <LfoControls
                 :lfos="lfosForModule('filter', entry.index)"
                 :target-options="lfoTargetOptions('filter', entry.index)"
                 :id-prefix="`filter-${entry.index}`"
@@ -1803,8 +1804,10 @@ onUnmounted(() => {
                 @toggle-bypass="toggleLfoBypass"
                 @remove="removeLfo"
                 @add="addLfo('filter', entry.index)"
-              />
-              <EnvelopeControls :envelopes="envelopesFor(filterEnvelopeDestinations)" :destination-options="filterEnvelopeDestinations" :id-prefix="`filter-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('filterCutoff')" />
+                  />
+                  <EnvelopeControls :envelopes="envelopesFor(filterEnvelopeDestinations)" :destination-options="filterEnvelopeDestinations" :id-prefix="`filter-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('filterCutoff')" />
+                </template>
+              </FilterControls>
             </template>
 
             <template v-else-if="entry.type === 'eqs' && eqs[entry.index]">
@@ -1821,8 +1824,9 @@ onUnmounted(() => {
                 @move-up="moveModule('eqs', entry.index, -1)"
                 @move-down="moveModule('eqs', entry.index, 1)"
                 @remove="removeEq(entry.index)"
-              />
-              <EnvelopeControls
+              >
+                <template #modulation>
+                  <EnvelopeControls
                 :envelopes="eqEnvelopes(entry.index)"
                 :destination-options="eqModulationTargetOptions(entry.index)"
                 :id-prefix="`eq-${entry.index}`"
@@ -1830,8 +1834,8 @@ onUnmounted(() => {
                 @toggle-bypass="toggleEqEnvelopeBypass(entry.index, $event)"
                 @remove="removeEqEnvelope(entry.index, $event)"
                 @add="addEqEnvelope(entry.index)"
-              />
-              <LfoControls
+                  />
+                  <LfoControls
                 :lfos="eqLfos(entry.index)"
                 :target-options="eqModulationTargetOptions(entry.index)"
                 :id-prefix="`eq-${entry.index}`"
@@ -1839,7 +1843,9 @@ onUnmounted(() => {
                 @toggle-bypass="toggleEqLfoBypass(entry.index, $event)"
                 @remove="removeEqLfo(entry.index, $event)"
                 @add="addEqLfo(entry.index)"
-              />
+                  />
+                </template>
+              </EqControls>
             </template>
 
             <template v-else-if="entry.type === 'overdrives' && overdrives[entry.index]">
@@ -1856,8 +1862,9 @@ onUnmounted(() => {
                 @move-up="moveModule('overdrives', entry.index, -1)"
                 @move-down="moveModule('overdrives', entry.index, 1)"
                 @remove="removeOverdrive(entry.index)"
-              />
-              <LfoControls
+              >
+                <template #modulation>
+                  <LfoControls
                 :lfos="lfosForModule('overdrive', entry.index)"
                 :target-options="lfoTargetOptions('overdrive', entry.index)"
                 :id-prefix="`overdrive-${entry.index}`"
@@ -1865,8 +1872,10 @@ onUnmounted(() => {
                 @toggle-bypass="toggleLfoBypass"
                 @remove="removeLfo"
                 @add="addLfo('overdrive', entry.index)"
-              />
-              <EnvelopeControls :envelopes="envelopesFor(overdriveEnvelopeDestinations)" :destination-options="overdriveEnvelopeDestinations" :id-prefix="`overdrive-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('overdriveDrive')" />
+                  />
+                  <EnvelopeControls :envelopes="envelopesFor(overdriveEnvelopeDestinations)" :destination-options="overdriveEnvelopeDestinations" :id-prefix="`overdrive-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('overdriveDrive')" />
+                </template>
+              </OverdriveControls>
             </template>
 
             <template v-else-if="entry.type === 'choruses' && choruses[entry.index]">
@@ -1884,8 +1893,9 @@ onUnmounted(() => {
                 @move-up="moveModule('choruses', entry.index, -1)"
                 @move-down="moveModule('choruses', entry.index, 1)"
                 @remove="removeChorus(entry.index)"
-              />
-              <LfoControls
+              >
+                <template #modulation>
+                  <LfoControls
                 :lfos="lfosForModule('chorus', entry.index)"
                 :target-options="lfoTargetOptions('chorus', entry.index)"
                 :id-prefix="`chorus-${entry.index}`"
@@ -1893,8 +1903,10 @@ onUnmounted(() => {
                 @toggle-bypass="toggleLfoBypass"
                 @remove="removeLfo"
                 @add="addLfo('chorus', entry.index)"
-              />
-              <EnvelopeControls :envelopes="envelopesFor(chorusEnvelopeDestinations)" :destination-options="chorusEnvelopeDestinations" :id-prefix="`chorus-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('chorusRate')" />
+                  />
+                  <EnvelopeControls :envelopes="envelopesFor(chorusEnvelopeDestinations)" :destination-options="chorusEnvelopeDestinations" :id-prefix="`chorus-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('chorusRate')" />
+                </template>
+              </ChorusControls>
             </template>
 
             <template v-else-if="entry.type === 'flangers' && flangers[entry.index]">
@@ -1913,8 +1925,9 @@ onUnmounted(() => {
                 @move-up="moveModule('flangers', entry.index, -1)"
                 @move-down="moveModule('flangers', entry.index, 1)"
                 @remove="removeFlanger(entry.index)"
-              />
-              <LfoControls
+              >
+                <template #modulation>
+                  <LfoControls
                 :lfos="lfosForModule('flanger', entry.index)"
                 :target-options="lfoTargetOptions('flanger', entry.index)"
                 :id-prefix="`flanger-${entry.index}`"
@@ -1922,8 +1935,10 @@ onUnmounted(() => {
                 @toggle-bypass="toggleLfoBypass"
                 @remove="removeLfo"
                 @add="addLfo('flanger', entry.index)"
-              />
-              <EnvelopeControls :envelopes="envelopesFor(flangerEnvelopeDestinations)" :destination-options="flangerEnvelopeDestinations" :id-prefix="`flanger-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('flangerRate')" />
+                  />
+                  <EnvelopeControls :envelopes="envelopesFor(flangerEnvelopeDestinations)" :destination-options="flangerEnvelopeDestinations" :id-prefix="`flanger-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('flangerRate')" />
+                </template>
+              </FlangerControls>
             </template>
 
             <template v-else-if="entry.type === 'tremolos' && tremolos[entry.index]">
@@ -1940,8 +1955,9 @@ onUnmounted(() => {
                 @move-up="moveModule('tremolos', entry.index, -1)"
                 @move-down="moveModule('tremolos', entry.index, 1)"
                 @remove="removeTremolo(entry.index)"
-              />
-              <LfoControls
+              >
+                <template #modulation>
+                  <LfoControls
                 :lfos="lfosForModule('tremolo', entry.index)"
                 :target-options="lfoTargetOptions('tremolo', entry.index)"
                 :id-prefix="`tremolo-${entry.index}`"
@@ -1949,8 +1965,10 @@ onUnmounted(() => {
                 @toggle-bypass="toggleLfoBypass"
                 @remove="removeLfo"
                 @add="addLfo('tremolo', entry.index)"
-              />
-              <EnvelopeControls :envelopes="envelopesFor(tremoloEnvelopeDestinations)" :destination-options="tremoloEnvelopeDestinations" :id-prefix="`tremolo-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('tremoloRate')" />
+                  />
+                  <EnvelopeControls :envelopes="envelopesFor(tremoloEnvelopeDestinations)" :destination-options="tremoloEnvelopeDestinations" :id-prefix="`tremolo-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('tremoloRate')" />
+                </template>
+              </TremoloControls>
             </template>
 
             <template v-else-if="entry.type === 'delays' && delays[entry.index]">
@@ -1968,8 +1986,9 @@ onUnmounted(() => {
                 @move-up="moveModule('delays', entry.index, -1)"
                 @move-down="moveModule('delays', entry.index, 1)"
                 @remove="removeDelay(entry.index)"
-              />
-              <LfoControls
+              >
+                <template #modulation>
+                  <LfoControls
                 :lfos="lfosForModule('delay', entry.index)"
                 :target-options="lfoTargetOptions('delay', entry.index)"
                 :id-prefix="`delay-${entry.index}`"
@@ -1977,8 +1996,8 @@ onUnmounted(() => {
                 @toggle-bypass="toggleLfoBypass"
                 @remove="removeLfo"
                 @add="addLfo('delay', entry.index)"
-              />
-              <EnvelopeControls
+                  />
+                  <EnvelopeControls
                 :envelopes="envelopesFor(delayEnvelopeDestinations)"
                 :destination-options="delayEnvelopeDestinations"
                 :id-prefix="`delay-${entry.index}`"
@@ -1986,7 +2005,9 @@ onUnmounted(() => {
                 @toggle-bypass="toggleEnvelopeBypass"
                 @remove="removeEnvelope"
                 @add="addEnvelope('delayTime')"
-              />
+                  />
+                </template>
+              </DelayControls>
             </template>
 
             <template v-else-if="entry.type === 'reverbs' && reverbs[entry.index]">
@@ -2005,8 +2026,9 @@ onUnmounted(() => {
                 @move-up="moveModule('reverbs', entry.index, -1)"
                 @move-down="moveModule('reverbs', entry.index, 1)"
                 @remove="removeReverb(entry.index)"
-              />
-              <LfoControls
+              >
+                <template #modulation>
+                  <LfoControls
                 :lfos="lfosForModule('reverb', entry.index)"
                 :target-options="lfoTargetOptions('reverb', entry.index)"
                 :id-prefix="`reverb-${entry.index}`"
@@ -2014,8 +2036,10 @@ onUnmounted(() => {
                 @toggle-bypass="toggleLfoBypass"
                 @remove="removeLfo"
                 @add="addLfo('reverb', entry.index)"
-              />
-              <EnvelopeControls :envelopes="envelopesFor(reverbEnvelopeDestinations)" :destination-options="reverbEnvelopeDestinations" :id-prefix="`reverb-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('reverbDecay')" />
+                  />
+                  <EnvelopeControls :envelopes="envelopesFor(reverbEnvelopeDestinations)" :destination-options="reverbEnvelopeDestinations" :id-prefix="`reverb-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('reverbDecay')" />
+                </template>
+              </ReverbControls>
             </template>
 
             <template v-else-if="entry.type === 'dynamics' && dynamics[entry.index]">
