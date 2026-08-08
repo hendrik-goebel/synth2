@@ -119,13 +119,13 @@ const masterChannel: ChannelState = {
 }
 const isMasterChannel = computed(() => selectedChannel.value === 0)
 const areOscillatorsCollapsed = ref(false)
-const areFiltersCollapsed = ref(false)
-const areDynamicsCollapsed = ref(false)
-const areDelaysCollapsed = ref(false)
-const areOverdrivesCollapsed = ref(false)
-const areEffectsCollapsed = ref(false)
-const areReverbsCollapsed = ref(false)
-const areEqsCollapsed = ref(false)
+const areFiltersCollapsed = ref(true)
+const areDynamicsCollapsed = ref(true)
+const areDelaysCollapsed = ref(true)
+const areOverdrivesCollapsed = ref(true)
+const areEffectsCollapsed = ref(true)
+const areReverbsCollapsed = ref(true)
+const areEqsCollapsed = ref(true)
 const seedInput = ref('')
 const seedStatus = ref('')
 let firstInteractionHandled = false
@@ -187,6 +187,7 @@ function loadChannelState(channel: ChannelState) {
   isAmplitudeModulationBypassed.value = channel.isAmplitudeModulationBypassed
   selectedInstrumentId.value = channel.selectedInstrumentId
   activeVoices.value = activeSynth.getActiveVoiceCount()
+  syncEffectCollapseStates()
 }
 
 function addChannel() {
@@ -469,6 +470,7 @@ function applyInstrumentPreset(instrumentId: string) {
   effectOrder.value = normalizeEffectOrder(preset.effectOrder)
   isAmplitudeModulationBypassed.value = preset.isAmplitudeModulationBypassed
   selectedInstrumentId.value = preset.id
+  syncEffectCollapseStates()
   saveActiveChannel()
   previousSynth.destroy()
 
@@ -774,6 +776,47 @@ function createRandomOscillatorSettings(): OscillatorSettings {
     fmAmount: randomInteger(0, 100) / 100,
     fmSource: waveforms[randomInteger(0, waveforms.length - 1)],
   }
+}
+
+function settingsEqual(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true
+  if (!left || !right || typeof left !== 'object' || typeof right !== 'object') return false
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return Array.isArray(left)
+      && Array.isArray(right)
+      && left.length === right.length
+      && left.every((value, index) => settingsEqual(value, right[index]))
+  }
+
+  const leftSettings = left as Record<string, unknown>
+  const rightSettings = right as Record<string, unknown>
+  const leftKeys = Object.keys(leftSettings)
+  const rightKeys = Object.keys(rightSettings)
+  return leftKeys.length === rightKeys.length
+    && leftKeys.every((key) => key in rightSettings && settingsEqual(leftSettings[key], rightSettings[key]))
+}
+
+function containsChangedSettings<T>(settings: readonly T[], createDefaults: () => T): boolean {
+  return settings.some((setting) => !settingsEqual(setting, createDefaults()))
+}
+
+function syncEffectCollapseStates() {
+  areFiltersCollapsed.value = !containsChangedSettings(filters.value, createFilterSettings)
+  areOverdrivesCollapsed.value = !containsChangedSettings(overdrives.value, createOverdriveSettings)
+  areEffectsCollapsed.value = !(
+    containsChangedSettings(choruses.value, createChorusSettings)
+    || containsChangedSettings(flangers.value, createFlangerSettings)
+    || containsChangedSettings(tremolos.value, createTremoloSettings)
+  )
+  areDelaysCollapsed.value = !containsChangedSettings(delays.value, createDelaySettings)
+  areReverbsCollapsed.value = !containsChangedSettings(reverbs.value, createReverbSettings)
+  areEqsCollapsed.value = !eqs.value.some((eq) => !settingsEqual(eq, eq.kind === 'single' ? createSingleBandEqSettings() : createMultibandEqSettings()))
+  areDynamicsCollapsed.value = !dynamics.value.some((dynamicsSettings) => {
+    const defaults = dynamicsSettings.type === 'compressor'
+      ? createCompressorSettings()
+      : dynamicsSettings.type === 'gate' ? createGateSettings() : createLimiterSettings()
+    return !settingsEqual(dynamicsSettings, defaults)
+  })
 }
 
 function addOscillator() {
