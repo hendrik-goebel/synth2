@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue'
 import { instrumentCategories, instrumentPresets, type InstrumentPreset } from './instruments'
 import { MidiService } from './services/midiService'
+import { decodeSeed, encodeSeed } from './services/seedService'
 import { createDelaySettings, createEnvelopeSettings, createFilterSettings, createNoiseSettings, createOutputSettings, createOverdriveSettings, createReverbSettings, createCompressorSettings, createGateSettings, createLimiterSettings, createOscillatorSettings, type AmplitudeModulationSettings, type DelaySettings, type DynamicsSettings, type DynamicsSettingsChanges, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type LfoSettings, type NoiseSettings, type OscillatorSettings, type OutputSettings, type OverdriveSettings, type ReverbSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
 import NoiseControls from './components/NoiseControls.vue'
@@ -19,6 +20,16 @@ import OutputControls from './components/OutputControls.vue'
 
 type EnvelopeModule = EnvelopeSettings & { bypassed: boolean }
 type LfoControlModule = LfoSettings & { bypassed: boolean }
+type SynthSetup = Omit<InstrumentPreset, 'id' | 'name' | 'category'>
+type SeedChannel = SynthSetup & { selectedInstrumentId: string }
+type SeedState = {
+  version: 1
+  selectedChannel: number
+  channels: SeedChannel[]
+}
+const effectGroups: EffectGroup[] = ['filters', 'overdrives', 'delays', 'reverbs', 'dynamics']
+const MAX_SEED_MODULES = 16
+const MAX_SEED_MODULATORS = 32
 type ChannelState = {
   synth: SynthEngine
   oscillators: OscillatorSettings[]
@@ -60,7 +71,7 @@ const amplitudeModulation = ref<AmplitudeModulationSettings | null>(null)
 const envelopes = ref<EnvelopeModule[]>([])
 const lfos = ref<LfoControlModule[]>([])
 const dynamics = ref<DynamicsSettings[]>([])
-const effectOrder = ref<EffectGroup[]>(['filters', 'overdrives', 'delays', 'reverbs', 'dynamics'])
+const effectOrder = ref<EffectGroup[]>([...effectGroups])
 const isAmplitudeModulationBypassed = ref(false)
 const selectedInstrumentId = ref('')
 const channels = shallowRef<ChannelState[]>([])
@@ -70,6 +81,8 @@ const areDynamicsCollapsed = ref(false)
 const areDelaysCollapsed = ref(false)
 const areOverdrivesCollapsed = ref(false)
 const areReverbsCollapsed = ref(false)
+const seedInput = ref('')
+const seedStatus = ref('')
 let firstInteractionHandled = false
 let midiConnectionStarted = false
 let audioEnabled = false
@@ -100,6 +113,10 @@ function loadChannel(channelNumber: number) {
   if (!channel) return
   saveActiveChannel()
   selectedChannel.value = channelNumber
+  loadChannelState(channel)
+}
+
+function loadChannelState(channel: ChannelState) {
   activeSynth = channel.synth
   oscillators.value = channel.oscillators
   output.value = channel.output
@@ -150,6 +167,8 @@ function addChannel() {
 }
 
 function handleChannelKey(event: KeyboardEvent) {
+  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLTextAreaElement) return
+
   const channelNumber = Number(event.key)
   if (!Number.isInteger(channelNumber) || channelNumber < 1 || channelNumber > 9 || channelNumber > channels.value.length) return
 
@@ -298,39 +317,44 @@ function handlePanic() {
   activeVoices.value = 0
 }
 
-function createSynthFromPreset(preset: InstrumentPreset): SynthEngine {
-  const [firstOscillator, ...additionalOscillators] = preset.oscillators
+function createSynthFromSetup(setup: SynthSetup): SynthEngine {
+  const [firstOscillator, ...additionalOscillators] = setup.oscillators
   if (!firstOscillator) {
-    throw new Error(`Instrument "${preset.name}" has no oscillators.`)
+    throw new Error('The setup has no oscillators.')
   }
 
-  const synth = new SynthEngine(firstOscillator, preset.output)
-  synth.setFilterSettings(0, preset.filters[0])
-  additionalOscillators.forEach((settings) => synth.addOscillator(settings))
-  preset.filters.slice(1).forEach((settings) => synth.addFilter(settings))
-  if (preset.noise) synth.addNoise(preset.noise)
-  preset.overdrives.forEach((settings) => synth.addOverdrive(settings))
-  preset.delays.forEach((settings) => synth.addDelay(settings))
-  preset.reverbs.forEach((settings) => synth.addReverb(settings))
-  preset.dynamics.forEach((settings) => {
-    if (settings.type === 'compressor') synth.addCompressor(settings)
-    else if (settings.type === 'gate') synth.addGate(settings)
-    else synth.addLimiter(settings)
-  })
-  if (preset.amplitudeModulation) {
-    synth.addAmplitudeModulation(preset.amplitudeModulation)
-    synth.setAmplitudeModulationBypassed(preset.isAmplitudeModulationBypassed)
+  const synth = new SynthEngine(firstOscillator, setup.output)
+  try {
+    synth.setFilterSettings(0, setup.filters[0])
+    additionalOscillators.forEach((settings) => synth.addOscillator(settings))
+    setup.filters.slice(1).forEach((settings) => synth.addFilter(settings))
+    if (setup.noise) synth.addNoise(setup.noise)
+    setup.overdrives.forEach((settings) => synth.addOverdrive(settings))
+    setup.delays.forEach((settings) => synth.addDelay(settings))
+    setup.reverbs.forEach((settings) => synth.addReverb(settings))
+    setup.dynamics.forEach((settings) => {
+      if (settings.type === 'compressor') synth.addCompressor(settings)
+      else if (settings.type === 'gate') synth.addGate(settings)
+      else synth.addLimiter(settings)
+    })
+    if (setup.amplitudeModulation) {
+      synth.addAmplitudeModulation(setup.amplitudeModulation)
+      synth.setAmplitudeModulationBypassed(setup.isAmplitudeModulationBypassed)
+    }
+    setup.envelopes.forEach(({ bypassed, ...settings }) => {
+      const index = synth.addEnvelope(settings)
+      synth.setEnvelopeBypassed(index, bypassed)
+    })
+    setup.lfos.forEach(({ bypassed, ...settings }) => {
+      const index = synth.addLfo(settings)
+      synth.setLfoBypassed(index, bypassed)
+    })
+    synth.setEffectOrder(setup.effectOrder)
+    return synth
+  } catch (error) {
+    synth.destroy()
+    throw error
   }
-  preset.envelopes.forEach(({ bypassed, ...settings }) => {
-    const index = synth.addEnvelope(settings)
-    synth.setEnvelopeBypassed(index, bypassed)
-  })
-  preset.lfos.forEach(({ bypassed, ...settings }) => {
-    const index = synth.addLfo(settings)
-    synth.setLfoBypassed(index, bypassed)
-  })
-  synth.setEffectOrder(preset.effectOrder)
-  return synth
 }
 
 function applyInstrumentPreset(instrumentId: string) {
@@ -340,7 +364,7 @@ function applyInstrumentPreset(instrumentId: string) {
   }
 
   const previousSynth = activeSynth
-  const synth = createSynthFromPreset(preset)
+  const synth = createSynthFromSetup(preset)
   previousSynth.stopAllNotes()
   activeSynth = synth
   oscillators.value = preset.oscillators.map((settings) => ({ ...settings }))
@@ -367,6 +391,152 @@ function applyInstrumentPreset(instrumentId: string) {
     })
   }
   activeVoices.value = channels.value.reduce((count, channel) => count + channel.synth.getActiveVoiceCount(), 0)
+}
+
+function createSeedChannel(channel: ChannelState): SeedChannel {
+  return {
+    oscillators: channel.oscillators,
+    output: channel.output,
+    noise: channel.noise,
+    filters: channel.filters,
+    delays: channel.delays,
+    overdrives: channel.overdrives,
+    bpm: channel.bpm,
+    reverbs: channel.reverbs,
+    amplitudeModulation: channel.amplitudeModulation,
+    envelopes: channel.envelopes,
+    lfos: channel.lfos,
+    dynamics: channel.dynamics,
+    effectOrder: channel.effectOrder,
+    isAmplitudeModulationBypassed: channel.isAmplitudeModulationBypassed,
+    selectedInstrumentId: channel.selectedInstrumentId,
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function isObjectArray(value: unknown, maximumLength: number, minimumLength = 0): value is Record<string, unknown>[] {
+  return Array.isArray(value) && value.length >= minimumLength && value.length <= maximumLength && value.every(isRecord)
+}
+
+function isEffectOrder(value: unknown): value is EffectGroup[] {
+  return Array.isArray(value)
+    && value.length === effectGroups.length
+    && effectGroups.every((group) => value.filter((valueGroup) => valueGroup === group).length === 1)
+}
+
+function isSeedChannel(value: unknown): value is SeedChannel {
+  if (!isRecord(value)) return false
+
+  return typeof value.selectedInstrumentId === 'string'
+    && typeof value.bpm === 'number'
+    && isRecord(value.output)
+    && (value.noise === null || isRecord(value.noise))
+    && (value.amplitudeModulation === null || isRecord(value.amplitudeModulation))
+    && typeof value.isAmplitudeModulationBypassed === 'boolean'
+    && isObjectArray(value.oscillators, MAX_SEED_MODULES, 1)
+    && isObjectArray(value.filters, MAX_SEED_MODULES, 1)
+    && isObjectArray(value.delays, MAX_SEED_MODULES)
+    && isObjectArray(value.overdrives, MAX_SEED_MODULES)
+    && isObjectArray(value.reverbs, MAX_SEED_MODULES)
+    && isObjectArray(value.envelopes, MAX_SEED_MODULATORS)
+    && isObjectArray(value.lfos, MAX_SEED_MODULATORS)
+    && isObjectArray(value.dynamics, MAX_SEED_MODULES)
+    && isEffectOrder(value.effectOrder)
+}
+
+function isSeedState(value: unknown): value is SeedState {
+  if (!isRecord(value) || value.version !== 1 || !Array.isArray(value.channels) || typeof value.selectedChannel !== 'number' || !Number.isInteger(value.selectedChannel)) return false
+
+  const selectedChannel = value.selectedChannel
+  return value.channels.length > 0
+    && value.channels.length <= 16
+    && selectedChannel >= 1
+    && selectedChannel <= value.channels.length
+    && value.channels.every(isSeedChannel)
+}
+
+function createChannelFromSeed(seedChannel: SeedChannel): ChannelState {
+  const synth = createSynthFromSetup(seedChannel)
+
+  return {
+    synth,
+    oscillators: seedChannel.oscillators.map((settings) => ({ ...settings })),
+    output: { ...seedChannel.output },
+    noise: seedChannel.noise ? { ...seedChannel.noise } : null,
+    filters: seedChannel.filters.map((settings) => ({ ...settings })),
+    delays: seedChannel.delays.map((settings) => ({ ...settings })),
+    overdrives: seedChannel.overdrives.map((settings) => ({ ...settings })),
+    bpm: seedChannel.bpm,
+    reverbs: seedChannel.reverbs.map((settings) => ({ ...settings })),
+    amplitudeModulation: seedChannel.amplitudeModulation ? { ...seedChannel.amplitudeModulation } : null,
+    envelopes: seedChannel.envelopes.map((settings) => ({ ...settings })),
+    lfos: seedChannel.lfos.map((settings) => ({ ...settings })),
+    dynamics: seedChannel.dynamics.map((settings) => ({ ...settings })),
+    effectOrder: [...seedChannel.effectOrder],
+    isAmplitudeModulationBypassed: seedChannel.isAmplitudeModulationBypassed,
+    selectedInstrumentId: seedChannel.selectedInstrumentId,
+  }
+}
+
+function generateSeed() {
+  saveActiveChannel()
+  seedInput.value = encodeSeed({
+    version: 1,
+    selectedChannel: selectedChannel.value,
+    channels: channels.value.map(createSeedChannel),
+  } satisfies SeedState)
+  seedStatus.value = 'Seed generated.'
+}
+
+async function copySeed() {
+  if (!seedInput.value) {
+    seedStatus.value = 'Generate or paste a seed first.'
+    return
+  }
+
+  if (!navigator.clipboard) {
+    seedStatus.value = 'Clipboard access is unavailable. Copy the seed from the field.'
+    return
+  }
+
+  try {
+    await navigator.clipboard.writeText(seedInput.value)
+    seedStatus.value = 'Seed copied.'
+  } catch (error: unknown) {
+    seedStatus.value = error instanceof Error ? error.message : 'Failed to copy the seed.'
+  }
+}
+
+function loadSeed() {
+  const createdChannels: ChannelState[] = []
+
+  try {
+    const decoded = decodeSeed(seedInput.value.trim())
+    if (!isSeedState(decoded)) throw new Error('This seed has an invalid setup.')
+
+    decoded.channels.forEach((channel) => createdChannels.push(createChannelFromSeed(channel)))
+    const previousChannels = channels.value
+    previousChannels.forEach(({ synth }) => synth.stopAllNotes())
+    channels.value = createdChannels
+    selectedChannel.value = decoded.selectedChannel
+    loadChannelState(createdChannels[decoded.selectedChannel - 1])
+    midiService.setChannel(selectedChannel.value)
+    previousChannels.forEach(({ synth }) => synth.destroy())
+    activeVoices.value = 0
+    seedStatus.value = 'Seed loaded.'
+
+    if (audioEnabled) {
+      void Promise.all(createdChannels.map(({ synth }) => synth.activate())).catch((error: unknown) => {
+        audioStatus.value = error instanceof Error ? error.message : 'Failed to activate the loaded setup.'
+      })
+    }
+  } catch (error: unknown) {
+    createdChannels.forEach(({ synth }) => synth.destroy())
+    seedStatus.value = error instanceof Error ? error.message : 'Failed to load the seed.'
+  }
 }
 
 function randomInteger(min: number, max: number): number {
@@ -1220,6 +1390,21 @@ onUnmounted(() => {
         </div>
         <span class="status midi-status" aria-live="polite">{{ midiStatus }}</span>
       </section>
+    </section>
+
+    <section class="seed-panel" aria-label="Setup seed">
+      <div class="seed-panel-content">
+        <label class="seed-field">
+          <span>Setup seed</span>
+          <input v-model="seedInput" spellcheck="false" autocomplete="off" aria-label="Setup seed">
+        </label>
+        <div class="seed-actions">
+          <button type="button" @click="generateSeed">Generate</button>
+          <button type="button" :disabled="!seedInput" @click="copySeed">Copy</button>
+          <button type="button" :disabled="!seedInput" @click="loadSeed">Load</button>
+        </div>
+        <span class="seed-status" aria-live="polite">{{ seedStatus }}</span>
+      </div>
     </section>
   </main>
 </template>
