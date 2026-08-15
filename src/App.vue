@@ -1484,7 +1484,7 @@ function updateEnvelopeSettings(index: number, settings: Partial<EnvelopeSetting
 
 function lfoTargetOptions(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'overdrive' | 'chorus' | 'flanger' | 'tremolo' | 'reverb' | 'output', index: number): { value: LfoSettings['target']; label: string }[] {
   const targets = {
-    oscillator: [['detune', 'Detune'], ['level', 'Level'], ['stereoSpread', 'Stereo spread']],
+    oscillator: [['detune', 'Detune'], ['level', 'Level'], ['unisonDetune', 'Unison detune'], ['stereoSpread', 'Stereo spread'], ['fmAmount', 'FM amount']],
     noise: [['level', 'Level'], ['stereoSpread', 'Stereo spread']],
     filter: [['cutoff', 'Cutoff'], ['resonance', 'Resonance'], ['gain', 'Gain']],
     delay: [['time', 'Time'], ['feedback', 'Feedback'], ['mix', 'Mix'], ['overdrive', 'Overdrive']],
@@ -1506,6 +1506,8 @@ function lfosForModule(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'ov
 function addLfo(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'overdrive' | 'chorus' | 'flanger' | 'tremolo' | 'reverb' | 'output', index: number) {
   const target = lfoTargetOptions(module, index)[0].value
   const settings: LfoControlModule = { waveform: 'sine', rate: 5, depth: 0.25, target, bypassed: false }
+  const idPrefix = module === 'output' ? 'output' : `${module}-${index}`
+  markSectionOpen(`${idPrefix}-lfo-${lfos.value.length}-heading`)
   activeSynth.addLfo(settings)
   lfos.value.push(settings)
 }

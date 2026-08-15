@@ -3,6 +3,7 @@ type Voice = {
   kind: 'oscillator' | 'noise'
   oscillator?: OscillatorNode
   modulator?: OscillatorNode
+  fmGain?: GainNode
   amplitudeModulator?: OscillatorNode
   amplitudeModulationGain?: GainNode
   gainNode: GainNode
@@ -283,7 +284,9 @@ export type AmplitudeModulationSettings = {
 export type LfoTarget =
   | `oscillator:${number}:detune`
   | `oscillator:${number}:level`
+  | `oscillator:${number}:unisonDetune`
   | `oscillator:${number}:stereoSpread`
+  | `oscillator:${number}:fmAmount`
   | `noise:${number}:level`
   | `noise:${number}:stereoSpread`
   | `filter:${number}:cutoff`
@@ -1332,7 +1335,7 @@ export class SynthEngine {
     const [module, , possibleBandIndex, possibleParameter] = settings.target.split(':')
     const parameter = module === 'eq' ? possibleParameter : possibleBandIndex
     const ranges: Record<string, number> = {
-      detune: 1200, level: MAX_GAIN, stereoSpread: 1, cutoff: 19980, resonance: 3,
+      detune: 1200, level: MAX_GAIN, unisonDetune: 100, stereoSpread: 1, fmAmount: 1000, cutoff: 19980, resonance: 3,
       gain: 24, time: 1.99, feedback: 0.95, mix: 1, overdrive: 1,
       drive: 18, tone: 10200, decay: 9.4, preDelay: 0.2, damping: 9500, width: 1,
       rate: 30, depth: 1, delay: 0.03,
@@ -1365,7 +1368,7 @@ export class SynthEngine {
       return this.activeVoices
         .flatMap((active) => active.voices)
         .filter((voice) => voice.oscillatorIndex === index)
-        .flatMap((voice) => parameter === 'detune' ? [voice.oscillator!.detune] : parameter === 'level' ? [voice.gainNode.gain] : parameter === 'stereoSpread' ? [voice.panner.pan] : [])
+        .flatMap((voice) => parameter === 'detune' || parameter === 'unisonDetune' ? [voice.oscillator!.detune] : parameter === 'level' ? [voice.gainNode.gain] : parameter === 'stereoSpread' ? [voice.panner.pan] : parameter === 'fmAmount' && voice.fmGain ? [voice.fmGain.gain] : [])
     }
     if (module === 'noise') {
       return this.activeVoices.flatMap((active) => active.voices)
@@ -2003,6 +2006,7 @@ export class SynthEngine {
       modulator.connect(modulationGain).connect(oscillator.frequency)
       modulator.start()
       voice.modulator = modulator
+      voice.fmGain = modulationGain
     }
     return voice
   }
