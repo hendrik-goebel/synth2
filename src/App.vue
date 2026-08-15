@@ -133,7 +133,7 @@ const masterChannel: ChannelState = {
 }
 const isMasterChannel = computed(() => selectedChannel.value === 0)
 const areOscillatorsCollapsed = ref(true)
-const areModulationEnvelopesCollapsed = ref(true)
+const areModulesCollapsed = ref(true)
 const addModuleDialog = ref<HTMLDialogElement | null>(null)
 const seedInput = ref('')
 const seedStatus = ref('')
@@ -248,18 +248,11 @@ function handleKeydown(event: KeyboardEvent) {
   handleChannelKey(event)
 }
 
-/**
- * Keep performance controls from retaining focus after they are adjusted, so
- * application-level keyboard shortcuts are immediately available again. Text
- * entry fields are deliberately excluded so they remain usable for typing.
- */
 function releaseControlFocus(event: Event) {
   const target = event.target
   if (!(target instanceof HTMLElement)) return
 
   const control = target.closest('button, select, input[type="range"], input[type="checkbox"], input[type="radio"], input[type="color"]')
-  // A native select needs to retain focus until its option click has completed.
-  // Its subsequent change event will release focus instead.
   if (event.type === 'pointerup' && control instanceof HTMLSelectElement) return
 
   if (control instanceof HTMLButtonElement || control instanceof HTMLSelectElement || control instanceof HTMLInputElement) {
@@ -1652,7 +1645,15 @@ onUnmounted(() => {
             @toggle-bypass="toggleOscillatorBypass(index)"
             @remove="removeOscillator(index)"
           />
+          </template>
+          <div class="module-actions">
+            <button type="button" class="add-oscillator-button" @click="addOscillator">Add OSC</button>
+            <button v-if="!noise" type="button" class="add-oscillator-button" @click="addNoise">Add Noise</button>
+            <button v-if="!amplitudeModulation" type="button" class="add-am-button" @click="addAmplitudeModulation">Add AM</button>
+          </div>
           <LfoControls
+            v-for="(_oscillator, index) in oscillators"
+            :key="`oscillator-lfo-${index}`"
             :lfos="lfosForModule('oscillator', index)"
             :target-options="lfoTargetOptions('oscillator', index)"
             :id-prefix="`oscillator-${index}`"
@@ -1661,12 +1662,6 @@ onUnmounted(() => {
             @remove="removeLfo"
             @add="addLfo('oscillator', index)"
           />
-          </template>
-          <div class="module-actions">
-            <button type="button" class="add-oscillator-button" @click="addOscillator">Add OSC</button>
-            <button v-if="!noise" type="button" class="add-oscillator-button" @click="addNoise">Add Noise</button>
-            <button v-if="!amplitudeModulation" type="button" class="add-am-button" @click="addAmplitudeModulation">Add AM</button>
-          </div>
           <EnvelopeControls
             :envelopes="envelopesFor(oscillatorEnvelopeDestinations)"
             :destination-options="oscillatorEnvelopeDestinations"
@@ -1710,132 +1705,20 @@ onUnmounted(() => {
         </NoiseControls>
       </template>
 
-      <section v-if="!isMasterChannel" class="synth-section oscillators-section" aria-labelledby="modulation-envelopes-heading">
-        <h2 id="modulation-envelopes-heading">
+      <section class="synth-section module-chain-section" aria-labelledby="modules-heading">
+        <h2 id="modules-heading">
           <button
             type="button"
             class="oscillators-toggle"
-            :aria-expanded="!areModulationEnvelopesCollapsed"
-            aria-controls="modulation-envelopes-content"
-            @click="areModulationEnvelopesCollapsed = !areModulationEnvelopesCollapsed"
+            :aria-expanded="!areModulesCollapsed"
+            aria-controls="modules-content"
+            @click="areModulesCollapsed = !areModulesCollapsed"
           >
-            Modulation Envelopes
+            Modules
           </button>
         </h2>
-        <div v-show="!areModulationEnvelopesCollapsed" id="modulation-envelopes-content" class="oscillators-content">
-          <div class="effect-type">
-            <div class="effect-type-heading">
-              <h3>Filter</h3>
-            </div>
-            <EnvelopeControls
-              :envelopes="envelopesFor(filterEnvelopeDestinations)"
-              :destination-options="filterEnvelopeDestinations"
-              id-prefix="filter"
-              @update="updateEnvelopeSettings($event.index, $event.settings)"
-              @toggle-bypass="toggleEnvelopeBypass"
-              @remove="removeEnvelope"
-              @add="addEnvelope('filterCutoff')"
-            />
-          </div>
-
-          <div class="effect-type">
-            <div class="effect-type-heading">
-              <h3>Overdrive</h3>
-            </div>
-            <EnvelopeControls
-              :envelopes="envelopesFor(overdriveEnvelopeDestinations)"
-              :destination-options="overdriveEnvelopeDestinations"
-              id-prefix="overdrive"
-              @update="updateEnvelopeSettings($event.index, $event.settings)"
-              @toggle-bypass="toggleEnvelopeBypass"
-              @remove="removeEnvelope"
-              @add="addEnvelope('overdriveDrive')"
-            />
-          </div>
-
-          <div class="effect-type">
-            <div class="effect-type-heading">
-              <h3>Chorus</h3>
-            </div>
-            <EnvelopeControls
-              :envelopes="envelopesFor(chorusEnvelopeDestinations)"
-              :destination-options="chorusEnvelopeDestinations"
-              id-prefix="chorus"
-              @update="updateEnvelopeSettings($event.index, $event.settings)"
-              @toggle-bypass="toggleEnvelopeBypass"
-              @remove="removeEnvelope"
-              @add="addEnvelope('chorusRate')"
-            />
-          </div>
-
-          <div class="effect-type">
-            <div class="effect-type-heading">
-              <h3>Flanger</h3>
-            </div>
-            <EnvelopeControls
-              :envelopes="envelopesFor(flangerEnvelopeDestinations)"
-              :destination-options="flangerEnvelopeDestinations"
-              id-prefix="flanger"
-              @update="updateEnvelopeSettings($event.index, $event.settings)"
-              @toggle-bypass="toggleEnvelopeBypass"
-              @remove="removeEnvelope"
-              @add="addEnvelope('flangerRate')"
-            />
-          </div>
-
-          <div class="effect-type">
-            <div class="effect-type-heading">
-              <h3>Tremolo</h3>
-            </div>
-            <EnvelopeControls
-              :envelopes="envelopesFor(tremoloEnvelopeDestinations)"
-              :destination-options="tremoloEnvelopeDestinations"
-              id-prefix="tremolo"
-              @update="updateEnvelopeSettings($event.index, $event.settings)"
-              @toggle-bypass="toggleEnvelopeBypass"
-              @remove="removeEnvelope"
-              @add="addEnvelope('tremoloDepth')"
-            />
-          </div>
-
-          <div class="effect-type">
-            <div class="effect-type-heading">
-              <h3>Delay</h3>
-            </div>
-            <EnvelopeControls
-              :envelopes="envelopesFor(delayEnvelopeDestinations)"
-              :destination-options="delayEnvelopeDestinations"
-              id-prefix="delay"
-              @update="updateEnvelopeSettings($event.index, $event.settings)"
-              @toggle-bypass="toggleEnvelopeBypass"
-              @remove="removeEnvelope"
-              @add="addEnvelope('delayTime')"
-            />
-          </div>
-
-          <div class="effect-type">
-            <div class="effect-type-heading">
-              <h3>Reverb</h3>
-            </div>
-            <EnvelopeControls
-              :envelopes="envelopesFor(reverbEnvelopeDestinations)"
-              :destination-options="reverbEnvelopeDestinations"
-              id-prefix="reverb"
-              @update="updateEnvelopeSettings($event.index, $event.settings)"
-              @toggle-bypass="toggleEnvelopeBypass"
-              @remove="removeEnvelope"
-              @add="addEnvelope('reverbMix')"
-            />
-          </div>
-        </div>
-      </section>
-
-      <section class="synth-section module-chain-section" aria-labelledby="module-chain-heading">
-        <div class="module-chain-heading">
-          <h2 id="module-chain-heading">Module Chain</h2>
-        </div>
-        <p v-if="moduleOrder.length === 0" class="module-chain-empty">No modules yet. Use “Add Module” to build the signal chain.</p>
-        <div v-else class="effect-chain">
+        <div v-show="!areModulesCollapsed" id="modules-content">
+        <div class="effect-chain">
           <template v-for="entry in moduleOrder" :key="`${entry.type}:${entry.index}`">
             <template v-if="entry.type === 'filters' && filters[entry.index]">
               <FilterControls
@@ -2190,12 +2073,12 @@ onUnmounted(() => {
           </template>
         </div>
         <button type="button" class="add-module-button" @click="openAddModuleDialog">+ Add Module</button>
+        </div>
       </section>
 
-      <dialog ref="addModuleDialog" class="add-module-dialog" aria-labelledby="add-module-heading" @click="($event.target as HTMLElement).closest('.add-module-dialog-content') || closeAddModuleDialog()">
+      <dialog ref="addModuleDialog" class="add-module-dialog" aria-label="Add module" @click="($event.target as HTMLElement).closest('.add-module-dialog-content') || closeAddModuleDialog()">
         <div class="add-module-dialog-content">
           <div class="add-module-dialog-heading">
-            <h2 id="add-module-heading">Add module</h2>
             <button type="button" class="add-module-dialog-close" aria-label="Close dialog" @click="closeAddModuleDialog">✕</button>
           </div>
           <div class="add-module-categories">
