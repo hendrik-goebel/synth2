@@ -186,7 +186,7 @@ function loadChannelState(channel: ChannelState) {
   choruses.value = channel.choruses
   flangers.value = channel.flangers
   tremolos.value = channel.tremolos
-  bpm.value = channel.bpm
+  bpm.value = normalizeBpm(channel.bpm)
   reverbs.value = channel.reverbs
   amplitudeModulation.value = channel.amplitudeModulation
   envelopes.value = channel.envelopes
@@ -330,6 +330,9 @@ const midiService = new MidiService({
     if (!target) return
     target.synth.noteOff(note)
     activeVoices.value = channels.value.reduce((count, item) => count + item.synth.getActiveVoiceCount(), 0)
+  },
+  onClockTempo: (tempo) => {
+    syncMidiClockTempo(tempo)
   },
   onStateChange: (state) => {
     midiInputs.value = state.inputs
@@ -532,7 +535,7 @@ function applyInstrumentPreset(instrumentId: string) {
   choruses.value = preset.choruses.map((settings) => ({ ...settings }))
   flangers.value = preset.flangers.map((settings) => ({ ...settings }))
   tremolos.value = preset.tremolos.map((settings) => ({ ...settings }))
-  bpm.value = preset.bpm
+  bpm.value = normalizeBpm(preset.bpm)
   reverbs.value = preset.reverbs.map((settings) => ({ ...settings }))
   amplitudeModulation.value = preset.amplitudeModulation ? { ...preset.amplitudeModulation } : null
   envelopes.value = preset.envelopes.map((settings) => ({ ...settings }))
@@ -763,7 +766,7 @@ function createChannelFromSeed(seedChannel: SeedChannel): ChannelState {
     choruses: choruses.map((settings) => ({ ...settings })),
     flangers: flangers.map((settings) => ({ ...settings })),
     tremolos: tremolos.map((settings) => ({ ...settings })),
-    bpm: seedChannel.bpm,
+    bpm: normalizeBpm(seedChannel.bpm),
     reverbs: seedChannel.reverbs.map((settings) => ({ ...settings })),
     amplitudeModulation: seedChannel.amplitudeModulation ? { ...seedChannel.amplitudeModulation } : null,
     envelopes: seedChannel.envelopes.map((settings) => ({ ...settings })),
@@ -974,12 +977,31 @@ function delayTimeForBpm(noteTime: number, tempo: number) {
 }
 
 function updateBpm(value: number) {
-  bpm.value = Math.min(300, Math.max(30, Number.isFinite(value) ? value : 120))
+  bpm.value = normalizeBpm(value)
   delays.value.forEach((delay, index) => {
     const time = delayTimeForBpm(delay.noteTime, bpm.value)
     delays.value[index] = { ...delay, time }
     activeSynth.setDelaySettings(index, { time })
   })
+}
+
+function syncMidiClockTempo(value: number) {
+  const tempo = normalizeBpm(value)
+  updateBpm(tempo)
+
+  channels.value.forEach((channel) => {
+    if (channel.synth === activeSynth) return
+    channel.bpm = tempo
+    channel.delays.forEach((delay, index) => {
+      const time = delayTimeForBpm(delay.noteTime, tempo)
+      channel.delays[index] = { ...delay, time }
+      channel.synth.setDelaySettings(index, { time })
+    })
+  })
+}
+
+function normalizeBpm(value: number) {
+  return Math.round(Math.min(300, Math.max(30, Number.isFinite(value) ? value : 120)))
 }
 
 function toggleDelayBypass(index: number) {

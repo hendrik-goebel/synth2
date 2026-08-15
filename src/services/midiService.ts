@@ -17,19 +17,25 @@ type MidiState = {
 type MidiServiceOptions = {
   onNoteOn: (event: MidiNoteEvent) => void
   onNoteOff: (event: MidiNoteEvent) => void
+  onClockTempo: (bpm: number) => void
   onStateChange: (state: MidiState) => void
 }
 
 export class MidiService {
   private readonly onNoteOn: (event: MidiNoteEvent) => void
   private readonly onNoteOff: (event: MidiNoteEvent) => void
+  private readonly onClockTempo: (bpm: number) => void
   private readonly onStateChange: (state: MidiState) => void
   private midiAccess: MIDIAccess | null = null
   private selectedInputId: string | null = null
+  private lastClockTimestamp: number | null = null
+  private readonly clockIntervals: number[] = []
+  private clockTicksSinceTempoUpdate = 0
 
   constructor(options: MidiServiceOptions) {
     this.onNoteOn = options.onNoteOn
     this.onNoteOff = options.onNoteOff
+    this.onClockTempo = options.onClockTempo
     this.onStateChange = options.onStateChange
   }
 
@@ -124,7 +130,24 @@ export class MidiService {
     }
 
     const [status, note, velocity] = event.data
-    if (status === undefined || note === undefined || velocity === undefined) {
+    if (status === undefined) {
+      return
+    }
+
+    // MIDI clock is a one-byte realtime message sent 24 times per quarter note.
+    if (status === 0xf8) {
+      this.handleClockTick(event.timeStamp)
+      return
+    }
+
+    // Start and stop delimit separate clock runs, so a long gap cannot affect
+    // the next tempo estimate.
+    if (status === 0xfa || status === 0xfb || status === 0xfc) {
+      this.resetClockTracking()
+      return
+    }
+
+    if (note === undefined || velocity === undefined) {
       return
     }
 
@@ -139,6 +162,35 @@ export class MidiService {
     if (command === 0x80 || (command === 0x90 && velocity === 0)) {
       this.onNoteOff({ channel, note, velocity })
     }
+  }
+
+  private handleClockTick(timestamp: number): void {
+    if (this.lastClockTimestamp !== null) {
+      const interval = timestamp - this.lastClockTimestamp
+      // Ignore duplicate timestamps and clock gaps caused by a stopped or
+      // disconnected transport. Valid tempos for this UI are 30–300 BPM.
+      if (interval >= 8 && interval <= 84) {
+        this.clockIntervals.push(interval)
+        if (this.clockIntervals.length > 24) this.clockIntervals.shift()
+        this.clockTicksSinceTempoUpdate += 1
+
+        if (this.clockIntervals.length >= 12 && this.clockTicksSinceTempoUpdate >= 6) {
+          const averageInterval = this.clockIntervals.reduce((sum, value) => sum + value, 0) / this.clockIntervals.length
+          this.onClockTempo(60000 / (averageInterval * 24))
+          this.clockTicksSinceTempoUpdate = 0
+        }
+      } else {
+        this.resetClockTracking()
+      }
+    }
+
+    this.lastClockTimestamp = timestamp
+  }
+
+  private resetClockTracking(): void {
+    this.lastClockTimestamp = null
+    this.clockIntervals.length = 0
+    this.clockTicksSinceTempoUpdate = 0
   }
 
   private publishState(statusText: string): void {
