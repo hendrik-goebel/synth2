@@ -487,7 +487,8 @@ function createSynthFromSetup(setup: SynthSetup): SynthEngine {
 
   const synth = createChannelSynth(firstOscillator, setup.output)
   try {
-    synth.setFilterSettings(0, setup.filters[0])
+    if (setup.filters[0]) synth.setFilterSettings(0, setup.filters[0])
+    else synth.removeFilter(0)
     additionalOscillators.forEach((settings) => synth.addOscillator(settings))
     setup.filters.slice(1).forEach((settings) => synth.addFilter(settings))
     if (setup.noise) synth.addNoise(setup.noise)
@@ -526,8 +527,36 @@ function createSynthFromSetup(setup: SynthSetup): SynthEngine {
   }
 }
 
+function createEmptyInstrumentPreset(): InstrumentPreset {
+  return {
+    id: 'empty',
+    name: 'Empty',
+    category: 'Bass',
+    oscillators: [createOscillatorSettings()],
+    output: createOutputSettings(),
+    noise: null,
+    filters: [],
+    delays: [],
+    overdrives: [],
+    choruses: [],
+    flangers: [],
+    tremolos: [],
+    bpm: 120,
+    reverbs: [],
+    amplitudeModulation: null,
+    envelopes: [],
+    lfos: [],
+    dynamics: [],
+    eqs: [],
+    effectOrder: [],
+    isAmplitudeModulationBypassed: false,
+  }
+}
+
 function applyInstrumentPreset(instrumentId: string) {
-  const preset = instrumentPresets.find((instrument) => instrument.id === instrumentId)
+  const preset = instrumentId === 'empty'
+    ? createEmptyInstrumentPreset()
+    : instrumentPresets.find((instrument) => instrument.id === instrumentId)
   if (!preset) {
     return
   }
@@ -1597,6 +1626,7 @@ onUnmounted(() => {
         <span>Instrument</span>
         <select :value="selectedInstrumentId" @change="applyInstrumentPreset(($event.target as HTMLSelectElement).value)">
           <option value="" disabled>Select instrument</option>
+          <option value="empty">Empty</option>
           <optgroup v-for="category in instrumentCategories" :key="category" :label="category">
             <option v-for="instrument in instrumentPresets.filter((item) => item.category === category)" :key="instrument.id" :value="instrument.id">
               {{ instrument.name }}
