@@ -248,6 +248,25 @@ function handleKeydown(event: KeyboardEvent) {
   handleChannelKey(event)
 }
 
+/**
+ * Keep performance controls from retaining focus after they are adjusted, so
+ * application-level keyboard shortcuts are immediately available again. Text
+ * entry fields are deliberately excluded so they remain usable for typing.
+ */
+function releaseControlFocus(event: Event) {
+  const target = event.target
+  if (!(target instanceof HTMLElement)) return
+
+  const control = target.closest('button, select, input[type="range"], input[type="checkbox"], input[type="radio"], input[type="color"]')
+  // A native select needs to retain focus until its option click has completed.
+  // Its subsequent change event will release focus instead.
+  if (event.type === 'pointerup' && control instanceof HTMLSelectElement) return
+
+  if (control instanceof HTMLButtonElement || control instanceof HTMLSelectElement || control instanceof HTMLInputElement) {
+    control.blur()
+  }
+}
+
 channels.value.push({
   synth: activeSynth,
   oscillators: oscillators.value,
@@ -1537,7 +1556,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="app" @pointerdown.capture="handleFirstInteraction">
+  <main class="app" @pointerdown.capture="handleFirstInteraction" @pointerup.capture="releaseControlFocus" @change.capture="releaseControlFocus">
     <section class="panel">
       <header class="topbar">
         <div>
