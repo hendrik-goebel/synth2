@@ -482,6 +482,10 @@ export class SynthEngine {
   private readonly outputPanner: StereoPannerNode
   private readonly ownsAudioContext: boolean
   private activeVoices: { note: number; velocity: number; voices: Voice[] }[] = []
+  // MIDI permits the same pitch to be pressed again before the earlier press
+  // has sent its note-off. Keep those presses balanced so the earlier note-off
+  // cannot silence the freshly retriggered voice.
+  private readonly heldNoteCounts = new Map<number, number>()
   private settings: OscillatorSettings[]
   private outputSettings: OutputSettings
   private noiseSettings?: NoiseSettings
@@ -531,6 +535,7 @@ export class SynthEngine {
     if (!this.hasAudibleSources() || velocity <= 0) {
       return
     }
+    this.heldNoteCounts.set(note, (this.heldNoteCounts.get(note) ?? 0) + 1)
     const glideFromNote = this.activeVoices.at(-1)?.note
     if (this.activeVoices.some((active) => active.note === note)) this.stopNote(note)
     this.activeVoices.push({ note, velocity, voices: this.createVoices(note, velocity, glideFromNote) })
@@ -539,12 +544,19 @@ export class SynthEngine {
   }
 
   noteOff(note: number): void {
+    const heldCount = this.heldNoteCounts.get(note) ?? 0
+    if (heldCount > 1) {
+      this.heldNoteCounts.set(note, heldCount - 1)
+      return
+    }
+    this.heldNoteCounts.delete(note)
     this.stopNote(note)
   }
 
   stopAllNotes(): void {
     this.activeVoices.forEach(({ voices }) => voices.forEach((voice) => this.stopVoice(voice)))
     this.activeVoices = []
+    this.heldNoteCounts.clear()
   }
 
   getActiveVoiceCount(): number {

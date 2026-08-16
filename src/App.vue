@@ -922,14 +922,6 @@ function canMoveModule(type: ModuleKind, index: number, direction: -1 | 1): bool
   return position >= 0 && targetPosition >= 0 && targetPosition < moduleOrder.value.length
 }
 
-function canMoveModuleUp(type: ModuleKind, index: number): boolean {
-  return canMoveModule(type, index, -1)
-}
-
-function canMoveModuleDown(type: ModuleKind, index: number): boolean {
-  return canMoveModule(type, index, 1)
-}
-
 /** Reorders a module relative to every other module in the chain, regardless of type (supports cross-type ordering). */
 function moveModule(type: ModuleKind, index: number, direction: -1 | 1) {
   const position = moduleOrder.value.findIndex((entry) => entry.type === type && entry.index === index)

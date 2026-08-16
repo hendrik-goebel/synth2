@@ -301,6 +301,10 @@ select:disabled {
     #332b14;
 }
 
+.add-module-button {
+  margin-top: 14px;
+}
+
 .synth-section {
   position: relative;
   padding: clamp(18px, 3vw, 26px);
