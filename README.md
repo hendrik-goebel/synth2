@@ -1,5 +1,25 @@
-# Vue 3 + TypeScript + Vite
+# Synth2
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+A browser-based synthesizer built with Vue 3, TypeScript, Vite, the Web MIDI API,
+and the Web Audio API.
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+## Requirements
+
+- Node.js 22.12 or newer
+- npm
+
+## Development
+
+```bash
+npm ci
+npm run dev
+```
+
+Create a production build with:
+
+```bash
+npm run build
+```
+
+If installation fails with a missing Rolldown native binding, remove the local
+`node_modules` directory and run `npm ci` again using a supported Node version.
