@@ -23,3 +23,4 @@ npm run build
 
 If installation fails with a missing Rolldown native binding, remove the local
 `node_modules` directory and run `npm ci` again using a supported Node version.
+test
