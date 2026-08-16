@@ -235,6 +235,23 @@ function addChannel() {
   loadChannel(channels.value.length)
 }
 
+/** Ensures MIDI channels 1–4 each receive a freshly selected instrument preset. */
+function randomizeFirstFourChannels() {
+  const previousChannel = selectedChannel.value
+
+  while (channels.value.length < 4) {
+    addChannel()
+  }
+
+  for (let channelNumber = 1; channelNumber <= 4; channelNumber += 1) {
+    loadChannel(channelNumber)
+    const preset = instrumentPresets[Math.floor(Math.random() * instrumentPresets.length)]
+    applyInstrumentPreset(preset.id)
+  }
+
+  loadChannel(previousChannel)
+}
+
 function handleChannelKey(event: KeyboardEvent) {
   if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLTextAreaElement) return
 
@@ -1672,6 +1689,7 @@ onUnmounted(() => {
           <h1>Synth2</h1>
         </div>
         <div class="topbar-actions">
+          <button type="button" class="randomize-button" title="Randomize instruments on channels 1–4" @click="randomizeFirstFourChannels">RAND</button>
           <output class="voice-count" title="Active voices">{{ activeVoices }}</output>
           <label class="bpm-control">
             <span class="bpm-label">BPM</span>
