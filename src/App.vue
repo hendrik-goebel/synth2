@@ -534,7 +534,7 @@ function createMasterFromSeed(seedMaster: SeedMasterChannel): ChannelState {
   const choruses = seedMaster.choruses ?? []
   const flangers = seedMaster.flangers ?? []
   const tremolos = seedMaster.tremolos ?? []
-  const counts = moduleCounts({ ...seedMaster, oscillators: [], eqs, choruses, flangers, tremolos })
+  const counts = moduleCounts({ ...seedMaster, eqs, choruses, flangers, tremolos })
   const resolvedModuleOrder = resolveModuleOrder(seedMaster.moduleOrder, seedMaster.effectOrder ?? effectGroups, counts, false)
   const synth = new SynthEngine(createOscillatorSettings(), seedMaster.output, {
     effectsOnly: true,
