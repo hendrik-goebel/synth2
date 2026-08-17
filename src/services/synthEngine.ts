@@ -78,6 +78,18 @@ type ReverbModule = {
   output: GainNode
   settings: ReverbSettings
 }
+type ResonatorModule = {
+  input: GainNode
+  driveGain: GainNode
+  filter: BiquadFilterNode
+  shaper: WaveShaperNode
+  feedbackTone: BiquadFilterNode
+  feedbackGain: GainNode
+  wet: GainNode
+  dry: GainNode
+  output: GainNode
+  settings: ResonatorSettings
+}
 type DynamicsModule = {
   input: GainNode
   output: GainNode
@@ -208,6 +220,16 @@ export type ReverbSettings = {
   mix: number
 }
 
+export type ResonatorSettings = {
+  bypassed: boolean
+  frequency: number
+  decay: number
+  feedback: number
+  damping: number
+  drive: number
+  mix: number
+}
+
 export type CompressorSettings = {
   type: 'compressor'
   bypassed: boolean
@@ -270,7 +292,7 @@ export type EqSettings = {
   lfos: EqLfoSettings[]
 }
 
-export type EffectGroup = 'filters' | 'overdrives' | 'choruses' | 'flangers' | 'tremolos' | 'dynamics' | 'delays' | 'reverbs' | 'eqs'
+export type EffectGroup = 'filters' | 'overdrives' | 'choruses' | 'flangers' | 'tremolos' | 'dynamics' | 'delays' | 'resonators' | 'reverbs' | 'eqs'
 
 /** A single audio module identified by its group and its index within that group's settings array. */
 export type FlatAudioModule = { type: EffectGroup; index: number }
@@ -312,6 +334,12 @@ export type LfoTarget =
   | `tremolo:${number}:rate`
   | `tremolo:${number}:depth`
   | `tremolo:${number}:mix`
+  | `resonator:${number}:frequency`
+  | `resonator:${number}:decay`
+  | `resonator:${number}:feedback`
+  | `resonator:${number}:damping`
+  | `resonator:${number}:drive`
+  | `resonator:${number}:mix`
   | `reverb:${number}:preDelay`
   | `reverb:${number}:damping`
   | `reverb:${number}:mix`
@@ -359,6 +387,12 @@ export type EnvelopeDestination =
   | 'tremoloRate'
   | 'tremoloDepth'
   | 'tremoloMix'
+  | 'resonatorFrequency'
+  | 'resonatorDecay'
+  | 'resonatorFeedback'
+  | 'resonatorDamping'
+  | 'resonatorDrive'
+  | 'resonatorMix'
   | 'reverbDecay'
   | 'reverbMix'
   | 'reverbPreDelay'
@@ -430,6 +464,10 @@ export function createReverbSettings(): ReverbSettings {
   return { bypassed: false, hallType: 'concert-hall', decay: 3.5, preDelay: 0.025, damping: 0.6, width: 0.9, mix: 0.25 }
 }
 
+export function createResonatorSettings(): ResonatorSettings {
+  return { bypassed: false, frequency: 780, decay: 1.1, feedback: 0.52, damping: 0.7, drive: 0.08, mix: 0.38 }
+}
+
 export function createCompressorSettings(): CompressorSettings {
   return { type: 'compressor', bypassed: false, threshold: -24, knee: 30, ratio: 12, attack: 0.003, release: 0.25, makeupGain: 0 }
 }
@@ -496,6 +534,7 @@ export class SynthEngine {
   private choruses: ChorusModule[] = []
   private flangers: FlangerModule[] = []
   private tremolos: TremoloModule[] = []
+  private resonators: ResonatorModule[] = []
   private reverbs: ReverbModule[] = []
   private eqs: EqModule[] = []
   private amplitudeModulation?: AmplitudeModulationSettings
@@ -662,6 +701,7 @@ export class SynthEngine {
       choruses: this.choruses,
       flangers: this.flangers,
       tremolos: this.tremolos,
+      resonators: this.resonators,
       dynamics: this.dynamics,
       delays: this.delays,
       reverbs: this.reverbs,
@@ -1148,6 +1188,58 @@ export class SynthEngine {
     eq.settings.lfos.splice(lfoIndex, 1)
   }
 
+  addResonator(settings: ResonatorSettings = createResonatorSettings()): void {
+    const input = this.audioContext.createGain()
+    const driveGain = this.audioContext.createGain()
+    const filter = this.audioContext.createBiquadFilter()
+    const shaper = this.audioContext.createWaveShaper()
+    const feedbackTone = this.audioContext.createBiquadFilter()
+    const feedbackGain = this.audioContext.createGain()
+    const wet = this.audioContext.createGain()
+    const dry = this.audioContext.createGain()
+    const output = this.audioContext.createGain()
+    const resonator = { input, driveGain, filter, shaper, feedbackTone, feedbackGain, wet, dry, output, settings: { ...settings } }
+
+    input.connect(driveGain).connect(filter).connect(shaper).connect(wet).connect(output)
+    shaper.connect(feedbackTone).connect(feedbackGain).connect(filter)
+    input.connect(dry).connect(output)
+    this.resonators.push(resonator)
+    this.applyResonatorSettings(resonator)
+    this.appendFlatAudioModule('resonators', this.resonators.length - 1)
+    this.routeOutput()
+  }
+
+  setResonatorSettings(index: number, changes: Partial<ResonatorSettings>): void {
+    const resonator = this.resonators[index]
+    if (!resonator) throw new RangeError(`Unknown resonator index: ${index}`)
+    resonator.settings = { ...resonator.settings, ...changes }
+    this.applyResonatorSettings(resonator)
+  }
+
+  removeResonator(index: number): void {
+    const resonator = this.resonators[index]
+    if (!resonator) throw new RangeError(`Unknown resonator index: ${index}`)
+    resonator.input.disconnect()
+    resonator.driveGain.disconnect()
+    resonator.filter.disconnect()
+    resonator.shaper.disconnect()
+    resonator.feedbackTone.disconnect()
+    resonator.feedbackGain.disconnect()
+    resonator.wet.disconnect()
+    resonator.dry.disconnect()
+    resonator.output.disconnect()
+    this.resonators.splice(index, 1)
+    this.removeFlatAudioModule('resonators', index)
+    this.routeOutput()
+  }
+
+  setResonatorBypassed(index: number, bypassed: boolean): void {
+    const resonator = this.resonators[index]
+    if (!resonator) throw new RangeError(`Unknown resonator index: ${index}`)
+    resonator.settings = { ...resonator.settings, bypassed }
+    this.routeOutput()
+  }
+
   addReverb(settings: ReverbSettings = createReverbSettings()): void {
     const input = this.audioContext.createGain()
     const preDelay = this.audioContext.createDelay(0.25)
@@ -1308,6 +1400,18 @@ export class SynthEngine {
     this.choruses = []
     this.flangers = []
     this.tremolos = []
+    this.resonators.forEach((resonator) => {
+      resonator.input.disconnect()
+      resonator.driveGain.disconnect()
+      resonator.filter.disconnect()
+      resonator.shaper.disconnect()
+      resonator.feedbackTone.disconnect()
+      resonator.feedbackGain.disconnect()
+      resonator.wet.disconnect()
+      resonator.dry.disconnect()
+      resonator.output.disconnect()
+    })
+    this.resonators = []
     this.dynamics.forEach((dynamics) => this.destroyDynamicsModule(dynamics))
     this.dynamics = []
     this.eqs.forEach((eq) => this.destroyEqModule(eq))
@@ -1349,13 +1453,17 @@ export class SynthEngine {
     const ranges: Record<string, number> = {
       detune: 1200, level: MAX_GAIN, unisonDetune: 100, stereoSpread: 1, fmAmount: 1000, cutoff: 19980, resonance: 3,
       gain: 24, time: 1.99, feedback: 0.95, mix: 1, overdrive: 1,
-      drive: 18, tone: 10200, decay: 9.4, preDelay: 0.2, damping: 9500, width: 1,
+      drive: 18, tone: 10200, decay: 38, preDelay: 0.2, damping: 16500, width: 1,
       rate: 30, depth: 1, delay: 0.03,
       volume: 1, pan: 1, frequency: 19980, q: 17.9,
     }
     const normalizedDepth = Math.max(0, Math.min(1, settings.depth))
     const range = module === 'overdrive' && parameter === 'feedback'
       ? 0.6
+      : module === 'resonator' && parameter === 'feedback'
+        ? 0.3
+        : module === 'resonator' && parameter === 'drive'
+          ? 9
       : module === 'flanger' && parameter === 'feedback'
         ? 0.9
         : module === 'chorus' && parameter === 'depth'
@@ -1410,6 +1518,10 @@ export class SynthEngine {
     if (module === 'tremolo') {
       const tremolo = this.tremolos[index]
       return !tremolo ? [] : parameter === 'rate' ? [tremolo.lfo.frequency] : parameter === 'depth' ? [tremolo.lfoDepthGain.gain] : parameter === 'mix' ? [tremolo.wet.gain] : []
+    }
+    if (module === 'resonator') {
+      const resonator = this.resonators[index]
+      return !resonator ? [] : parameter === 'frequency' ? [resonator.filter.frequency] : parameter === 'decay' ? [resonator.filter.Q] : parameter === 'feedback' ? [resonator.feedbackGain.gain] : parameter === 'damping' ? [resonator.feedbackTone.frequency] : parameter === 'drive' ? [resonator.driveGain.gain] : parameter === 'mix' ? [resonator.wet.gain] : []
     }
     if (module === 'reverb') {
       const reverb = this.reverbs[index]
@@ -1481,6 +1593,21 @@ export class SynthEngine {
       if (toneEnvelope) this.applyPositiveEnvelopeOnNoteOn(overdrive.tone.frequency, now, toneEnvelope, 1800, 1800 + overdrive.settings.tone * 10200 * this.envelopePeakGain(velocity, toneEnvelope.velocity))
       if (overdriveFeedbackEnvelope) this.applyPositiveEnvelopeOnNoteOn(overdrive.feedbackGain.gain, now, overdriveFeedbackEnvelope, 0, Math.min(0.6, overdrive.settings.feedback) * this.envelopePeakGain(velocity, overdriveFeedbackEnvelope.velocity))
       if (overdriveMixEnvelope) this.applyPositiveEnvelopeOnNoteOn(overdrive.wet.gain, now, overdriveMixEnvelope, 0, overdrive.settings.mix * this.envelopePeakGain(velocity, overdriveMixEnvelope.velocity))
+    })
+
+    const resonatorFrequencyEnvelope = this.activeEnvelopeSettings('resonatorFrequency')
+    const resonatorDecayEnvelope = this.activeEnvelopeSettings('resonatorDecay')
+    const resonatorFeedbackEnvelope = this.activeEnvelopeSettings('resonatorFeedback')
+    const resonatorDampingEnvelope = this.activeEnvelopeSettings('resonatorDamping')
+    const resonatorDriveEnvelope = this.activeEnvelopeSettings('resonatorDrive')
+    const resonatorMixEnvelope = this.activeEnvelopeSettings('resonatorMix')
+    this.resonators.forEach((resonator) => {
+      if (resonatorFrequencyEnvelope) this.applyPositiveEnvelopeOnNoteOn(resonator.filter.frequency, now, resonatorFrequencyEnvelope, 40, resonator.settings.frequency * this.envelopePeakGain(velocity, resonatorFrequencyEnvelope.velocity))
+      if (resonatorDecayEnvelope) this.applyPositiveEnvelopeOnNoteOn(resonator.filter.Q, now, resonatorDecayEnvelope, 1, 1 + resonator.settings.decay * 38 * this.envelopePeakGain(velocity, resonatorDecayEnvelope.velocity))
+      if (resonatorFeedbackEnvelope) this.applyPositiveEnvelopeOnNoteOn(resonator.feedbackGain.gain, now, resonatorFeedbackEnvelope, 0, resonator.settings.feedback * this.envelopePeakGain(velocity, resonatorFeedbackEnvelope.velocity))
+      if (resonatorDampingEnvelope) this.applyPositiveEnvelopeOnNoteOn(resonator.feedbackTone.frequency, now, resonatorDampingEnvelope, 1500, 18000 - resonator.settings.damping * 16500 * this.envelopePeakGain(velocity, resonatorDampingEnvelope.velocity))
+      if (resonatorDriveEnvelope) this.applyPositiveEnvelopeOnNoteOn(resonator.driveGain.gain, now, resonatorDriveEnvelope, 1, 1 + resonator.settings.drive * 9 * this.envelopePeakGain(velocity, resonatorDriveEnvelope.velocity))
+      if (resonatorMixEnvelope) this.applyPositiveEnvelopeOnNoteOn(resonator.wet.gain, now, resonatorMixEnvelope, 0, resonator.settings.mix * this.envelopePeakGain(velocity, resonatorMixEnvelope.velocity))
     })
 
     const reverbDecayEnvelope = this.activeEnvelopeSettings('reverbDecay')
@@ -1639,6 +1766,14 @@ export class SynthEngine {
         if (!reverb.settings.bypassed) {
           output.connect(reverb.input)
           output = reverb.output
+        }
+      } else if (type === 'resonators') {
+        const resonator = this.resonators[index]
+        if (!resonator) return
+        resonator.output.disconnect()
+        if (!resonator.settings.bypassed) {
+          output.connect(resonator.input)
+          output = resonator.output
         }
       } else if (type === 'eqs') {
         const eq = this.eqs[index]
@@ -1944,6 +2079,24 @@ export class SynthEngine {
     if (replaceImpulse) convolver.buffer = this.createHallImpulse(settings)
   }
 
+  private applyResonatorSettings(resonator: ResonatorModule): void {
+    const { driveGain, filter, shaper, feedbackTone, feedbackGain, wet, dry, output, settings } = resonator
+    const now = this.audioContext.currentTime
+    filter.type = 'bandpass'
+    filter.frequency.setTargetAtTime(settings.frequency, now, 0.02)
+    filter.Q.setTargetAtTime(1 + settings.decay * 38, now, 0.02)
+    driveGain.gain.setTargetAtTime(1 + settings.drive * 9, now, 0.02)
+    shaper.curve = this.createWarmOverdriveCurve(settings.drive)
+    shaper.oversample = '2x'
+    feedbackTone.type = 'lowpass'
+    feedbackTone.frequency.setTargetAtTime(18000 - settings.damping * 16500, now, 0.02)
+    feedbackTone.Q.setTargetAtTime(0.5 + settings.damping * 2, now, 0.02)
+    feedbackGain.gain.setTargetAtTime(settings.feedback, now, 0.02)
+    wet.gain.setTargetAtTime(settings.mix, now, 0.02)
+    dry.gain.setTargetAtTime(1 - settings.mix, now, 0.02)
+    output.gain.setTargetAtTime(1 / Math.max(1, 1 + settings.mix * (0.5 + settings.feedback * 2)), now, 0.02)
+  }
+
   private createHallImpulse(settings: ReverbSettings): AudioBuffer {
     const hallTypes: Record<HallType, { duration: number; density: number; reflections: number; reflectionWindow: number }> = {
       'small-hall': { duration: 0.72, density: 0.8, reflections: 56, reflectionWindow: 0.055 },
@@ -2232,7 +2385,7 @@ export class SynthEngine {
   }
 
   private clampEnvelopeDestination(value: EnvelopeDestination | undefined, fallback: EnvelopeDestination): EnvelopeDestination {
-    return value === 'oscillatorLevel' || value === 'oscillatorPitch' || value === 'noiseLevel' || value === 'filterCutoff' || value === 'filterResonance' || value === 'delayTime' || value === 'delayFeedback' || value === 'delayMix' || value === 'overdriveDrive' || value === 'overdriveTone' || value === 'overdriveFeedback' || value === 'overdriveMix' || value === 'chorusRate' || value === 'chorusDepth' || value === 'chorusDelay' || value === 'chorusMix' || value === 'flangerRate' || value === 'flangerDepth' || value === 'flangerDelay' || value === 'flangerFeedback' || value === 'flangerMix' || value === 'tremoloRate' || value === 'tremoloDepth' || value === 'tremoloMix' || value === 'reverbDecay' || value === 'reverbMix' || value === 'reverbPreDelay' || value === 'reverbDamping' || value === 'reverbWidth' ? value : fallback
+    return value === 'oscillatorLevel' || value === 'oscillatorPitch' || value === 'noiseLevel' || value === 'filterCutoff' || value === 'filterResonance' || value === 'delayTime' || value === 'delayFeedback' || value === 'delayMix' || value === 'overdriveDrive' || value === 'overdriveTone' || value === 'overdriveFeedback' || value === 'overdriveMix' || value === 'chorusRate' || value === 'chorusDepth' || value === 'chorusDelay' || value === 'chorusMix' || value === 'flangerRate' || value === 'flangerDepth' || value === 'flangerDelay' || value === 'flangerFeedback' || value === 'flangerMix' || value === 'tremoloRate' || value === 'tremoloDepth' || value === 'tremoloMix' || value === 'resonatorFrequency' || value === 'resonatorDecay' || value === 'resonatorFeedback' || value === 'resonatorDamping' || value === 'resonatorDrive' || value === 'resonatorMix' || value === 'reverbDecay' || value === 'reverbMix' || value === 'reverbPreDelay' || value === 'reverbDamping' || value === 'reverbWidth' ? value : fallback
   }
 
   private envelopePeakGain(velocity: number, velocityAmount: number): number {

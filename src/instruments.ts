@@ -15,6 +15,7 @@ import type {
   OverdriveSettings,
   FlangerSettings,
   ReverbSettings,
+  ResonatorSettings,
   TremoloSettings,
   Waveform,
 } from './services/synthEngine'
@@ -35,6 +36,7 @@ export type InstrumentPreset = {
   flangers: FlangerSettings[]
   tremolos: TremoloSettings[]
   bpm: number
+  resonators?: ResonatorSettings[]
   reverbs: ReverbSettings[]
   amplitudeModulation: AmplitudeModulationSettings | null
   envelopes: Array<EnvelopeSettings & { bypassed: boolean }>
