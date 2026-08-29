@@ -911,7 +911,7 @@ function isSeedChannel(value: unknown): value is SeedChannel {
     && (value.amplitudeModulation === null || isRecord(value.amplitudeModulation))
     && typeof value.isAmplitudeModulationBypassed === 'boolean'
     && isObjectArray(value.oscillators, MAX_SEED_MODULES, 1)
-    && hasValidSeedModules(value, 1)
+    && hasValidSeedModules(value, 0)
 }
 
 function isSeedMasterChannel(value: unknown): value is SeedMasterChannel {
