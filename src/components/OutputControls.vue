@@ -26,7 +26,7 @@ const lfoTargetOptions = [
 </script>
 
 <template>
-  <section class="output-controls" aria-labelledby="output-heading">
+  <section class="output-controls ambient amb-surface amb-chamfer amb-elevation-1 amb-rounded-md" aria-labelledby="output-heading">
     <h2 id="output-heading">Output</h2>
     <div class="output-control-grid">
       <label class="control">

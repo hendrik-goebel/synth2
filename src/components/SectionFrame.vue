@@ -22,7 +22,7 @@ const isCollapsed = ref(!isSectionInitiallyOpen(props.headingId))
 </script>
 
 <template>
-  <section class="section-frame" :aria-labelledby="headingId">
+  <section class="section-frame ambient amb-surface amb-chamfer amb-elevation-1 amb-rounded-md" :aria-labelledby="headingId">
     <header class="section-frame-heading">
       <h2 :id="headingId">
         <button

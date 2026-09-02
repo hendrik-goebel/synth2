@@ -1762,8 +1762,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="app" @pointerdown.capture="handleFirstInteraction" @pointerup.capture="releaseControlFocus" @change.capture="releaseControlFocus">
-    <section class="panel">
+  <main class="app amb-light-tl" @pointerdown.capture="handleFirstInteraction" @pointerup.capture="releaseControlFocus" @change.capture="releaseControlFocus">
+    <section class="panel ambient amb-surface amb-chamfer-2 amb-elevation-2 amb-rounded-xl amb-mat-brushed">
       <header class="topbar">
         <div>
           <h1>Synth2</h1>
@@ -1779,7 +1779,7 @@ onUnmounted(() => {
         </div>
       </header>
 
-      <section class="channel-bar" aria-label="Synth channels">
+      <section class="channel-bar ambient amb-surface amb-chamfer amb-elevation-1 amb-rounded-md" aria-label="Synth channels">
         <div>
           <p class="eyebrow">Channel</p>
           <strong class="channel-number">{{ isMasterChannel ? 'MASTER' : `MIDI ${selectedChannel}` }}</strong>
@@ -1807,7 +1807,7 @@ onUnmounted(() => {
         </div>
       </section>
 
-      <label v-if="!isMasterChannel" class="instrument-selector">
+      <label v-if="!isMasterChannel" class="instrument-selector ambient amb-surface amb-chamfer amb-rounded-md">
         <span>Instrument</span>
         <select :value="selectedInstrumentId" @change="applyInstrumentPreset(($event.target as HTMLSelectElement).value)">
           <option value="" disabled>Select instrument</option>
