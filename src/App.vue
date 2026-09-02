@@ -1765,8 +1765,13 @@ onUnmounted(() => {
   <main class="app amb-light-tl" @pointerdown.capture="handleFirstInteraction" @pointerup.capture="releaseControlFocus" @change.capture="releaseControlFocus">
     <section class="panel ambient amb-surface amb-chamfer-2 amb-elevation-2 amb-rounded-xl amb-mat-brushed">
       <header class="topbar">
-        <div>
-          <h1>Synth2</h1>
+        <div class="brand-lockup">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <p class="eyebrow">Polyphonic MIDI instrument</p>
+            <h1>Synth2</h1>
+            <p class="brand-description">Shape a sound, build a signal path, then play.</p>
+          </div>
         </div>
         <div class="topbar-actions">
           <button type="button" class="randomize-button" title="Randomize instruments on channels 1–4" @click="randomizeFirstFourChannels">RAND</button>
@@ -1779,7 +1784,8 @@ onUnmounted(() => {
         </div>
       </header>
 
-      <section class="channel-bar ambient amb-surface amb-chamfer amb-elevation-1 amb-rounded-md" aria-label="Synth channels">
+      <div class="setup-grid">
+        <section class="channel-bar ambient amb-surface amb-chamfer amb-elevation-1 amb-rounded-lg" aria-label="Synth channels">
         <div>
           <p class="eyebrow">Channel</p>
           <strong class="channel-number">{{ isMasterChannel ? 'MASTER' : `MIDI ${selectedChannel}` }}</strong>
@@ -1807,7 +1813,7 @@ onUnmounted(() => {
         </div>
       </section>
 
-      <label v-if="!isMasterChannel" class="instrument-selector ambient amb-surface amb-chamfer amb-rounded-md">
+      <label v-if="!isMasterChannel" class="instrument-selector ambient amb-surface amb-chamfer amb-elevation-1 amb-rounded-lg">
         <span>Instrument</span>
         <select :value="selectedInstrumentId" @change="applyInstrumentPreset(($event.target as HTMLSelectElement).value)">
           <option value="" disabled>Select instrument</option>
@@ -1831,8 +1837,10 @@ onUnmounted(() => {
         @remove-lfo="removeLfo"
         @add-lfo="addLfo('output', 0)"
       />
+      </div>
 
-      <section v-if="!isMasterChannel" class="synth-section oscillators-section" aria-labelledby="oscillators-heading">
+      <div class="synth-workspace">
+        <section v-if="!isMasterChannel" class="synth-section oscillators-section ambient amb-surface amb-chamfer amb-elevation-1 amb-rounded-lg" aria-labelledby="oscillators-heading">
         <h2 id="oscillators-heading">
           <button
             type="button"
@@ -1920,7 +1928,7 @@ onUnmounted(() => {
         </NoiseControls>
       </template>
 
-      <section class="synth-section module-chain-section" aria-labelledby="modules-heading">
+      <section class="synth-section module-chain-section ambient amb-surface amb-chamfer amb-elevation-1 amb-rounded-lg" aria-labelledby="modules-heading">
         <h2 id="modules-heading">
           <button
             type="button"
@@ -2322,6 +2330,7 @@ onUnmounted(() => {
         <button type="button" class="add-module-button" @click="openAddModuleDialog">+ Add Module</button>
         </div>
       </section>
+      </div>
 
       <dialog ref="addModuleDialog" class="add-module-dialog" aria-label="Add module" @click="($event.target as HTMLElement).closest('.add-module-dialog-content') || closeAddModuleDialog()">
         <div class="add-module-dialog-content">
@@ -2374,12 +2383,13 @@ onUnmounted(() => {
         </div>
       </dialog>
 
-      <div class="audio-bar">
+      <div class="connection-grid">
+        <div class="audio-bar ambient amb-surface amb-chamfer amb-elevation-1 amb-rounded-lg">
         <button type="button" class="audio-button" @click="handleEnableAudio">Audio</button>
         <span class="status" aria-live="polite">{{ audioStatus }}</span>
       </div>
 
-      <section class="midi-controls" aria-labelledby="midi-heading">
+      <section class="midi-controls ambient amb-surface amb-chamfer amb-elevation-1 amb-rounded-lg" aria-labelledby="midi-heading">
         <div class="section-heading">
           <h2 id="midi-heading">MIDI</h2>
           <button type="button" class="connect-button" @click="handleConnectMidi">Connect</button>
@@ -2408,7 +2418,7 @@ onUnmounted(() => {
         <span class="status midi-status" aria-live="polite">{{ midiStatus }}</span>
       </section>
 
-      <section class="seed-panel" aria-label="Setup seed">
+      <section class="seed-panel ambient amb-surface amb-chamfer amb-elevation-1 amb-rounded-lg" aria-label="Setup seed">
         <div class="seed-panel-content">
           <label class="seed-field">
             <span>Setup seed</span>
@@ -2422,6 +2432,7 @@ onUnmounted(() => {
           <span class="seed-status" aria-live="polite">{{ seedStatus }}</span>
         </div>
       </section>
+      </div>
     </section>
   </main>
 </template>
