@@ -7,7 +7,6 @@ import { createChorusSettings, createDelaySettings, createEnvelopeSettings, crea
 import OscillatorControls from './components/OscillatorControls.vue'
 import NoiseControls from './components/NoiseControls.vue'
 import FilterControls from './components/FilterControls.vue'
-import SectionFrame from './components/SectionFrame.vue'
 import { clearMarkedOpenSections, markEnvelopeOpen, markSectionOpen } from './services/sectionCollapse'
 import DelayControls from './components/DelayControls.vue'
 import OverdriveControls from './components/OverdriveControls.vue'
@@ -26,7 +25,7 @@ import TremoloControls from './components/TremoloControls.vue'
 
 type EnvelopeModule = EnvelopeSettings & { bypassed: boolean }
 type LfoControlModule = LfoSettings & { bypassed: boolean }
-/** A processor type that can appear as a card in the module chain. Includes Amplitude Modulation, which never participates in audio routing. */
+/** A processor type accepted in module order data; the legacy modulation value is ignored when loading. */
 type ModuleKind = EffectGroup | 'amplitudeModulation'
 /** A single instance of a module type, identified by its position within that type's own settings array. */
 type ModuleOrderEntry = { type: ModuleKind; index: number }
@@ -141,6 +140,9 @@ const masterChannel: ChannelState = {
 const isMasterChannel = computed(() => selectedChannel.value === 0)
 const areOscillatorsCollapsed = ref(true)
 const areModulesCollapsed = ref(true)
+const areConnectionsCollapsed = ref(true)
+const draggedModuleKey = ref<string | null>(null)
+const dragOverModuleKey = ref<string | null>(null)
 const addModuleDialog = ref<HTMLDialogElement | null>(null)
 const seedInput = ref('')
 const seedStatus = ref('')
@@ -542,10 +544,6 @@ function createSynthFromSetup(setup: SynthSetup): SynthEngine {
       else synth.addLimiter(settings)
     })
     setup.eqs.forEach((settings) => synth.addEq(settings))
-    if (setup.amplitudeModulation) {
-      synth.addAmplitudeModulation(setup.amplitudeModulation)
-      synth.setAmplitudeModulationBypassed(setup.isAmplitudeModulationBypassed)
-    }
     setup.envelopes.forEach(({ bypassed, ...settings }) => {
       const index = synth.addEnvelope(settings)
       synth.setEnvelopeBypassed(index, bypassed)
@@ -669,9 +667,14 @@ function applyInstrumentPreset(instrumentId: string) {
   }
 
   const counts = moduleCounts(preset)
-  const resolvedModuleOrder = expandGroupOrderToModuleOrder(normalizeEffectOrder(preset.effectOrder), counts, !!preset.amplitudeModulation)
+  const resolvedModuleOrder = expandGroupOrderToModuleOrder(normalizeEffectOrder(preset.effectOrder), counts, false)
   const previousSynth = activeSynth
-  const synth = createSynthFromSetup({ ...preset, moduleOrder: resolvedModuleOrder })
+  const synth = createSynthFromSetup({
+    ...preset,
+    amplitudeModulation: null,
+    isAmplitudeModulationBypassed: false,
+    moduleOrder: resolvedModuleOrder,
+  })
   previousSynth.stopAllNotes()
   activeSynth = synth
   oscillators.value = preset.oscillators.map((settings) => ({ ...settings }))
@@ -686,13 +689,13 @@ function applyInstrumentPreset(instrumentId: string) {
   bpm.value = normalizeBpm(preset.bpm)
   resonators.value = (preset.resonators ?? []).map((settings) => ({ ...settings }))
   reverbs.value = preset.reverbs.map((settings) => ({ ...settings }))
-  amplitudeModulation.value = preset.amplitudeModulation ? { ...preset.amplitudeModulation } : null
+  amplitudeModulation.value = null
   envelopes.value = preset.envelopes.map((settings) => ({ ...settings }))
   lfos.value = preset.lfos.map((settings) => ({ ...settings }))
   dynamics.value = preset.dynamics.map((settings) => ({ ...settings }))
   eqs.value = normalizeEqs(preset.eqs)
   moduleOrder.value = resolvedModuleOrder
-  isAmplitudeModulationBypassed.value = preset.isAmplitudeModulationBypassed
+  isAmplitudeModulationBypassed.value = false
   selectedInstrumentId.value = preset.id
   saveActiveChannel()
   previousSynth.destroy()
@@ -941,9 +944,18 @@ function createChannelFromSeed(seedChannel: SeedChannel): ChannelState {
   const tremolos = seedChannel.tremolos ?? []
   const resonators = normalizeResonators(seedChannel.resonators)
   const counts = moduleCounts({ ...seedChannel, eqs, choruses, flangers, tremolos, resonators })
-  const hasAmplitudeModulation = !!seedChannel.amplitudeModulation
-  const resolvedModuleOrder = resolveModuleOrder(seedChannel.moduleOrder, seedChannel.effectOrder ?? effectGroups, counts, hasAmplitudeModulation)
-  const synth = createSynthFromSetup({ ...seedChannel, eqs, choruses, flangers, tremolos, resonators, moduleOrder: resolvedModuleOrder })
+  const resolvedModuleOrder = resolveModuleOrder(seedChannel.moduleOrder, seedChannel.effectOrder ?? effectGroups, counts, false)
+  const synth = createSynthFromSetup({
+    ...seedChannel,
+    eqs,
+    choruses,
+    flangers,
+    tremolos,
+    resonators,
+    amplitudeModulation: null,
+    isAmplitudeModulationBypassed: false,
+    moduleOrder: resolvedModuleOrder,
+  })
 
   return {
     synth,
@@ -959,13 +971,13 @@ function createChannelFromSeed(seedChannel: SeedChannel): ChannelState {
     bpm: normalizeBpm(seedChannel.bpm),
     resonators: resonators.map((settings) => ({ ...settings })),
     reverbs: seedChannel.reverbs.map((settings) => ({ ...settings })),
-    amplitudeModulation: seedChannel.amplitudeModulation ? { ...seedChannel.amplitudeModulation } : null,
+    amplitudeModulation: null,
     envelopes: seedChannel.envelopes.map((settings) => ({ ...settings })),
     lfos: seedChannel.lfos.map((settings) => ({ ...settings })),
     dynamics: seedChannel.dynamics.map((settings) => ({ ...settings })),
     eqs,
     moduleOrder: resolvedModuleOrder,
-    isAmplitudeModulationBypassed: seedChannel.isAmplitudeModulationBypassed,
+    isAmplitudeModulationBypassed: false,
     selectedInstrumentId: seedChannel.selectedInstrumentId,
   }
 }
@@ -1071,7 +1083,7 @@ function removeModuleOrderEntry(type: ModuleKind, index: number) {
     .map((entry) => (entry.type === type && entry.index > index ? { ...entry, index: entry.index - 1 } : entry))
 }
 
-/** Pushes the current module order's audio-routable entries (i.e. excluding Amplitude Modulation) to the active synth. */
+/** Pushes the current audio-routable module order to the active synth. */
 function syncFlatAudioOrder() {
   const flatOrder = moduleOrder.value
     .filter((entry): entry is ModuleOrderEntry & { type: EffectGroup } => entry.type !== 'amplitudeModulation')
@@ -1094,6 +1106,49 @@ function moveModule(type: ModuleKind, index: number, direction: -1 | 1) {
   ;[nextOrder[position], nextOrder[targetPosition]] = [nextOrder[targetPosition], nextOrder[position]]
   moduleOrder.value = nextOrder
   syncFlatAudioOrder()
+}
+
+function moduleKey(entry: ModuleOrderEntry): string {
+  return `${entry.type}:${entry.index}`
+}
+
+function handleModuleDragStart(event: DragEvent, entry: ModuleOrderEntry) {
+  const key = moduleKey(entry)
+  draggedModuleKey.value = key
+  dragOverModuleKey.value = null
+  if (!event.dataTransfer) return
+  event.dataTransfer.effectAllowed = 'move'
+  event.dataTransfer.setData('text/plain', key)
+}
+
+function handleModuleDragOver(event: DragEvent, entry: ModuleOrderEntry) {
+  if (!draggedModuleKey.value || draggedModuleKey.value === moduleKey(entry)) return
+  dragOverModuleKey.value = moduleKey(entry)
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+}
+
+function handleModuleDrop(event: DragEvent, target: ModuleOrderEntry) {
+  event.preventDefault()
+  const sourceKey = draggedModuleKey.value ?? event.dataTransfer?.getData('text/plain')
+  const targetKey = moduleKey(target)
+  const sourceIndex = moduleOrder.value.findIndex((entry) => moduleKey(entry) === sourceKey)
+  const targetIndex = moduleOrder.value.findIndex((entry) => moduleKey(entry) === targetKey)
+
+  if (sourceIndex >= 0 && targetIndex >= 0 && sourceIndex !== targetIndex) {
+    const nextOrder = [...moduleOrder.value]
+    const [movedEntry] = nextOrder.splice(sourceIndex, 1)
+    nextOrder.splice(targetIndex, 0, movedEntry)
+    moduleOrder.value = nextOrder
+    syncFlatAudioOrder()
+  }
+
+  draggedModuleKey.value = null
+  dragOverModuleKey.value = null
+}
+
+function handleModuleDragEnd() {
+  draggedModuleKey.value = null
+  dragOverModuleKey.value = null
 }
 
 function addOscillator() {
@@ -1610,36 +1665,6 @@ function toggleNoiseBypass() {
   updateNoiseSettings({ bypassed: !noise.value.bypassed })
 }
 
-function addAmplitudeModulation() {
-  const settings: AmplitudeModulationSettings = { rate: 5, depth: 0.5, waveform: 'sine' }
-  amplitudeModulation.value = settings
-  isAmplitudeModulationBypassed.value = false
-  activeSynth.addAmplitudeModulation(settings)
-  appendModuleOrderEntry('amplitudeModulation', 0)
-}
-
-function updateAmplitudeModulation(settings: Partial<AmplitudeModulationSettings>) {
-  if (!amplitudeModulation.value) {
-    return
-  }
-
-  amplitudeModulation.value = { ...amplitudeModulation.value, ...settings }
-  activeSynth.setAmplitudeModulationSettings(settings)
-}
-
-function removeAmplitudeModulation() {
-  activeSynth.removeAmplitudeModulation()
-  amplitudeModulation.value = null
-  isAmplitudeModulationBypassed.value = false
-  removeModuleOrderEntry('amplitudeModulation', 0)
-}
-
-function toggleAmplitudeModulationBypass() {
-  const bypassed = !isAmplitudeModulationBypassed.value
-  activeSynth.setAmplitudeModulationBypassed(bypassed)
-  isAmplitudeModulationBypassed.value = bypassed
-}
-
 function addEnvelope(destination: EnvelopeDestination) {
   const settings = { ...createEnvelopeSettings(), destination, bypassed: false }
   markEnvelopeOpen(envelopes.value.length)
@@ -1872,7 +1897,6 @@ onUnmounted(() => {
           <div class="module-actions">
             <button type="button" class="add-oscillator-button" @click="addOscillator">Add OSC</button>
             <button v-if="!noise" type="button" class="add-oscillator-button" @click="addNoise">Add Noise</button>
-            <button v-if="!amplitudeModulation" type="button" class="add-am-button" @click="addAmplitudeModulation">Add AM</button>
           </div>
           <LfoControls
             v-for="(_oscillator, index) in oscillators"
@@ -1942,7 +1966,28 @@ onUnmounted(() => {
         </h2>
         <div v-show="!areModulesCollapsed" id="modules-content">
         <div class="effect-chain">
-          <template v-for="entry in moduleOrder" :key="`${entry.type}:${entry.index}`">
+          <div
+            v-for="entry in moduleOrder"
+            :key="moduleKey(entry)"
+            class="module-chain-item"
+            :class="{
+              'module-chain-item-dragging': draggedModuleKey === moduleKey(entry),
+              'module-chain-item-drag-over': dragOverModuleKey === moduleKey(entry),
+            }"
+            @dragover.prevent="handleModuleDragOver($event, entry)"
+            @drop="handleModuleDrop($event, entry)"
+          >
+            <button
+              type="button"
+              class="module-drag-handle"
+              draggable="true"
+              :aria-label="`Drag ${entry.type} module ${entry.index + 1} to reorder`"
+              title="Drag to reorder"
+              @dragstart="handleModuleDragStart($event, entry)"
+              @dragend="handleModuleDragEnd"
+            >
+              ⠿
+            </button>
             <template v-if="entry.type === 'filters' && filters[entry.index]">
               <FilterControls
                 :filter-index="entry.index"
@@ -2288,44 +2333,7 @@ onUnmounted(() => {
               </template>
             </template>
 
-            <SectionFrame
-              v-else-if="entry.type === 'amplitudeModulation' && amplitudeModulation"
-              class="synth-section modulation-section"
-              title="Amplitude modulation"
-              heading-id="am-heading"
-              content-id="am-content"
-              :bypassed="isAmplitudeModulationBypassed"
-              :can-move-up="canMoveModule('amplitudeModulation', 0, -1)"
-              :can-move-down="canMoveModule('amplitudeModulation', 0, 1)"
-              @toggle-bypass="toggleAmplitudeModulationBypass"
-              @move-up="moveModule('amplitudeModulation', 0, -1)"
-              @move-down="moveModule('amplitudeModulation', 0, 1)"
-              @remove="removeAmplitudeModulation"
-            >
-              <div class="modulation-controls">
-                <label class="control">
-                  <span>Wave</span>
-                  <select :value="amplitudeModulation.waveform" @change="updateAmplitudeModulation({ waveform: ($event.target as HTMLSelectElement).value as Waveform })">
-                    <option value="sine">Sine</option>
-                    <option value="triangle">Triangle</option>
-                    <option value="sawtooth">Sawtooth</option>
-                    <option value="square">Square</option>
-                    <option value="random">Random</option>
-                  </select>
-                </label>
-                <label class="control">
-                  <span>Rate</span>
-                  <output>{{ amplitudeModulation.rate }} Hz</output>
-                  <input type="range" min="1" max="30" step="1" :value="amplitudeModulation.rate" @input="updateAmplitudeModulation({ rate: Number(($event.target as HTMLInputElement).value) })">
-                </label>
-                <label class="control">
-                  <span>Depth</span>
-                  <output>{{ Math.round(amplitudeModulation.depth * 100) }}%</output>
-                  <input type="range" min="0" max="1" step="0.01" :value="amplitudeModulation.depth" @input="updateAmplitudeModulation({ depth: Number(($event.target as HTMLInputElement).value) })">
-                </label>
-              </div>
-            </SectionFrame>
-          </template>
+          </div>
         </div>
         <button type="button" class="add-module-button" @click="openAddModuleDialog">+ Add Module</button>
         </div>
@@ -2375,21 +2383,26 @@ onUnmounted(() => {
               <button type="button" @click="addModuleFromDialog(addLimiter)">Add Limiter</button>
             </section>
 
-            <section v-if="!isMasterChannel && !amplitudeModulation" class="add-module-category" aria-labelledby="add-module-am-heading">
-              <h3 id="add-module-am-heading">Modulation</h3>
-              <button type="button" @click="addModuleFromDialog(addAmplitudeModulation)">Add Amplitude Modulation</button>
-            </section>
           </div>
         </div>
       </dialog>
 
-      <div class="connection-grid">
-        <div class="audio-bar ambient amb-surface amb-chamfer amb-elevation-1 amb-rounded-lg">
-        <button type="button" class="audio-button" @click="handleEnableAudio">Audio</button>
-        <span class="status" aria-live="polite">{{ audioStatus }}</span>
-      </div>
+      <section class="connection-panel ambient amb-surface amb-chamfer amb-elevation-1 amb-rounded-lg" aria-labelledby="connections-heading">
+        <h2 id="connections-heading">
+          <button
+            type="button"
+            class="oscillators-toggle"
+            :aria-expanded="!areConnectionsCollapsed"
+            aria-controls="connections-content"
+            @click="areConnectionsCollapsed = !areConnectionsCollapsed"
+          >
+            Connections &amp; Setup
+          </button>
+        </h2>
 
-      <section class="midi-controls ambient amb-surface amb-chamfer amb-elevation-1 amb-rounded-lg" aria-labelledby="midi-heading">
+        <div v-show="!areConnectionsCollapsed" id="connections-content" class="connection-grid">
+
+      <section class="midi-controls" aria-labelledby="midi-heading">
         <div class="section-heading">
           <h2 id="midi-heading">MIDI</h2>
           <button type="button" class="connect-button" @click="handleConnectMidi">Connect</button>
@@ -2418,7 +2431,7 @@ onUnmounted(() => {
         <span class="status midi-status" aria-live="polite">{{ midiStatus }}</span>
       </section>
 
-      <section class="seed-panel ambient amb-surface amb-chamfer amb-elevation-1 amb-rounded-lg" aria-label="Setup seed">
+      <section class="seed-panel" aria-label="Setup seed">
         <div class="seed-panel-content">
           <label class="seed-field">
             <span>Setup seed</span>
@@ -2432,7 +2445,8 @@ onUnmounted(() => {
           <span class="seed-status" aria-live="polite">{{ seedStatus }}</span>
         </div>
       </section>
-      </div>
+        </div>
+      </section>
     </section>
   </main>
 </template>

@@ -25,6 +25,14 @@ button:disabled, select:disabled { cursor: not-allowed; opacity: .44; }
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #79ecd2; outline-offset: 4px; }
 #app, .app { min-height: 100vh; }
 
+/* Keep Ambient CSS's directional light, but use a shallower physical lift. */
+.ambient.amb-elevation-1 { --amb-elevation: .4; }
+.ambient.amb-elevation-2 { --amb-elevation: .8; }
+
+/* Third-level module cards sit flush inside their parent surface. */
+.synth-section .section-frame.ambient,
+.output-controls .section-frame.ambient { --amb-elevation: 0; }
+
 .app {
   --amb-albedo: #25343b;
   --amb-light-hue: 184;
@@ -45,7 +53,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   border: 1px solid rgb(221 245 240 / 13%);
 }
 
-.topbar, .topbar-actions, .brand-lockup, .channel-bar, .channel-actions, .audio-bar,
+.topbar, .topbar-actions, .brand-lockup, .channel-bar, .channel-actions,
 .section-heading, .module-heading-actions, .effect-type-heading, .eq-band-header,
 .eq-band-actions, .seed-actions { display: flex; align-items: center; }
 .topbar, .channel-bar, .section-heading, .effect-type-heading, .eq-band-header { justify-content: space-between; }
@@ -61,7 +69,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
     conic-gradient(from 30deg, #18282b, #5fd5bd, #152428, #5fd5bd, #18282b);
   border: 1px solid #8bf4dd;
   border-radius: 12px;
-  box-shadow: inset 5px 5px 10px rgb(255 255 255 / 16%), inset -6px -7px 12px rgb(0 0 0 / 38%), 0 9px 22px rgb(0 0 0 / 30%);
+  box-shadow: inset 5px 5px 10px rgb(255 255 255 / 16%), inset -6px -7px 12px rgb(0 0 0 / 38%), 0 4px 12px rgb(0 0 0 / 28%);
 }
 h1 { margin: 1px 0 0; color: #f7fbfa; font-size: clamp(1.65rem, 3vw, 2.4rem); font-weight: 720; letter-spacing: -.06em; line-height: .96; }
 .brand-description { margin: 6px 0 0; color: #a8b9bb; font-size: .75rem; line-height: 1.4; }
@@ -113,7 +121,7 @@ button, select, .seed-field input {
   background: linear-gradient(145deg, #26363d, #172329);
   border: 1px solid #496068;
   border-radius: 11px;
-  box-shadow: inset 1px 1px 1px rgb(255 255 255 / 9%), 0 3px 8px rgb(0 0 0 / 22%);
+  box-shadow: inset 1px 1px 1px rgb(255 255 255 / 9%), 0 2px 5px rgb(0 0 0 / 22%);
 }
 button {
   min-height: 36px;
@@ -124,20 +132,20 @@ button {
   text-transform: uppercase;
   transition: color 150ms ease, background 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 }
-button:hover { color: #fff; background: linear-gradient(145deg, #31464e, #1c2b31); border-color: #759198; box-shadow: inset 1px 1px 1px rgb(255 255 255 / 12%), 0 5px 12px rgb(0 0 0 / 26%); }
+button:hover { color: #fff; background: linear-gradient(145deg, #31464e, #1c2b31); border-color: #759198; box-shadow: inset 1px 1px 1px rgb(255 255 255 / 12%), 0 3px 7px rgb(0 0 0 / 24%); }
 button:active { transform: translateY(1px); box-shadow: inset 2px 2px 5px rgb(0 0 0 / 32%); }
 select { width: 100%; min-height: 36px; padding: 7px 32px 7px 10px; }
 
-.randomize-button, .add-channel-button, .audio-button, .connect-button,
-.add-oscillator-button, .add-am-button, .add-env-button, .add-filter-button,
+.randomize-button, .add-channel-button, .connect-button,
+.add-oscillator-button, .add-env-button, .add-filter-button,
 .add-eq-button, .add-module-button {
   color: #09241f;
   background: linear-gradient(145deg, #9af5df, #55c7af);
   border-color: #a6f9e5;
-  box-shadow: inset 1px 1px 1px rgb(255 255 255 / 50%), 0 5px 12px rgb(0 0 0 / 25%);
+  box-shadow: inset 1px 1px 1px rgb(255 255 255 / 50%), 0 2px 6px rgb(0 0 0 / 24%);
 }
-.randomize-button:hover, .add-channel-button:hover, .audio-button:hover, .connect-button:hover,
-.add-oscillator-button:hover, .add-am-button:hover, .add-env-button:hover, .add-filter-button:hover,
+.randomize-button:hover, .add-channel-button:hover, .connect-button:hover,
+.add-oscillator-button:hover, .add-env-button:hover, .add-filter-button:hover,
 .add-eq-button:hover, .add-module-button:hover { color: #071d19; background: linear-gradient(145deg, #b6ffed, #70d9c1); }
 .panic-button, .module-remove { color: #ffd9d7; border-color: #8d5558; background: linear-gradient(145deg, #57353a, #352126); }
 .module-bypass { color: #cae8ff; border-color: #52758d; }
@@ -155,10 +163,10 @@ select { width: 100%; min-height: 36px; padding: 7px 32px 7px 10px; }
 .output-controls h2 { margin: 0; }
 .output-control-grid, .oscillator-content, .eq-band-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 22px; }
 
-.synth-workspace { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(14px, 2vw, 24px); align-items: start; }
+.synth-workspace { display: grid; grid-template-columns: 1fr; gap: clamp(14px, 2vw, 24px); align-items: start; }
 .synth-section { --amb-albedo: #203038; min-width: 0; padding: clamp(14px, 1.8vw, 22px); border: 1px solid #40565d; }
 .synth-section.oscillators-section { border-top: 3px solid #73ddc6; }
-.synth-section.module-chain-section { grid-column: 1 / -1; border-top: 3px solid #dab873; }
+.synth-section.module-chain-section { grid-column: 1; border-top: 3px solid #dab873; }
 .synth-section > .section-frame-content, .oscillator-content, .effect-type { padding-top: 14px; }
 .oscillators-section, .oscillators-content, .effect-chain, .eq-bands, .envelope-list { display: grid; gap: 14px; }
 .synth-section > h2 { margin: 0; }
@@ -182,10 +190,46 @@ select { width: 100%; min-height: 36px; padding: 7px 32px 7px 10px; }
 .section-frame { --amb-albedo: #27373e; min-width: 0; padding: 16px; }
 .section-frame-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .section-frame-heading h2 { flex: 1; margin: 0; }
-.section-frame-content { padding-top: 15px; }
+.section-frame-content {
+  display: grid;
+  gap: 14px;
+  padding-top: 15px;
+}
 .effect-order-actions { display: inline-flex; gap: 5px; }
 .effect-order-actions button, .module-remove, .module-bypass { min-height: 30px; padding: 5px 7px; font-size: .58rem; }
 .effect-chain { gap: 18px; }
+.module-chain-item {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  min-width: 0;
+  border-radius: 10px;
+  transition: background 120ms ease, opacity 120ms ease, outline-color 120ms ease;
+}
+.module-chain-item > :not(.module-drag-handle) { grid-column: 2; min-width: 0; }
+.module-drag-handle {
+  grid-column: 1;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  min-height: 36px;
+  margin-top: 9px;
+  padding: 0;
+  color: #81999c;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  box-shadow: none;
+  cursor: grab;
+  font-size: 1.05rem;
+  line-height: 1;
+  touch-action: none;
+}
+.module-drag-handle:hover { color: #91ecd8; background: rgb(145 236 216 / 8%); border: 0; box-shadow: none; }
+.module-drag-handle:active { cursor: grabbing; transform: none; box-shadow: none; }
+.module-chain-item-dragging { opacity: .42; }
+.module-chain-item-drag-over { background: rgb(145 236 216 / 6%); outline: 1px dashed rgb(145 236 216 / 58%); outline-offset: 4px; }
 .effect-type { display: grid; gap: 12px; border-top: 1px solid rgb(221 241 245 / 13%); }
 .effect-type:first-child { padding-top: 0; border-top: 0; }
 .effect-type-heading h3 { margin: 0; }
@@ -198,22 +242,34 @@ select { width: 100%; min-height: 36px; padding: 7px 32px 7px 10px; }
 .modulation-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 22px; }
 .filter-control-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .envelope-controls { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.lfo-list, .envelope-list { display: grid; gap: 14px; }
+.add-env-button { width: max-content; justify-self: start; }
 .module-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 1px; }
-.add-module-button { width: 100%; margin-top: 18px; }
+.add-module-button { width: max-content; justify-self: start; margin: 18px 0 4px; }
 .eq-band { padding: 14px; background: #1b292f; border: 1px solid #40535c; border-radius: 10px; }
 .eq-band-header { gap: 10px; margin-bottom: 12px; }
 .eq-band-actions { gap: 6px; }
 
-.connection-grid { display: grid; grid-template-columns: minmax(220px, .72fr) minmax(0, 1.28fr); gap: clamp(12px, 1.6vw, 20px); padding-top: 2px; }
-.audio-bar, .midi-controls, .seed-panel { --amb-albedo: #21343a; padding: 16px; }
-.audio-bar { align-items: flex-start; flex-direction: column; justify-content: center; gap: 10px; }
-.audio-button { min-width: 92px; }
+.connection-panel {
+  --amb-albedo: #243239;
+  padding: 14px 16px;
+  border: 1px solid rgb(183 211 211 / 7%);
+}
+.connection-panel > h2 { margin: 0; }
+.connection-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  padding-top: 12px;
+}
+.midi-controls, .seed-panel { padding: 14px 0; background: transparent; }
+.midi-controls { border-bottom: 1px solid rgb(183 211 211 / 10%); }
 .status { color: #acbdbe; font-size: .72rem; line-height: 1.4; }
 .midi-controls { display: grid; gap: 13px; }
 .midi-fields { display: grid; grid-template-columns: minmax(0, 1fr) 100px; gap: 12px; }
 .field { display: grid; gap: 7px; }
 .midi-status { margin-top: -2px; }
-.seed-panel { grid-column: 1 / -1; }
+.seed-panel { grid-column: 1; }
 .seed-panel-content { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 9px 12px; }
 .seed-field { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 9px; min-width: 0; }
 .seed-field input { min-width: 0; min-height: 36px; padding: 7px 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .7rem; text-transform: none; }
@@ -244,8 +300,9 @@ select { width: 100%; min-height: 36px; padding: 7px 32px 7px 10px; }
   .topbar, .channel-bar { align-items: flex-start; flex-direction: column; }
   .brand-mark { width: 38px; height: 38px; border-radius: 10px; }
   .topbar-actions, .channel-actions { justify-content: flex-start; width: 100%; }
-  .channel-bar, .instrument-selector, .output-controls, .synth-section, .section-frame,
-  .audio-bar, .midi-controls, .seed-panel { padding: 14px; }
+  .channel-bar, .instrument-selector, .output-controls, .synth-section, .section-frame { padding: 14px; }
+  .connection-panel { padding: 14px; }
+  .midi-controls, .seed-panel { padding-block: 12px; }
   .output-control-grid, .oscillator-content, .modulation-controls, .filter-control-grid,
   .envelope-controls, .eq-band-controls { grid-template-columns: 1fr; }
   .midi-fields, .seed-panel-content, .seed-field { grid-template-columns: 1fr; }
