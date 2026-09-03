@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue'
+import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { instrumentCategories, instrumentPresets, type InstrumentPreset } from './instruments'
-import { MidiService } from './services/midiService'
+import { MidiService, type MidiControlChangeEvent } from './services/midiService'
 import { decodeSeed, encodeSeed } from './services/seedService'
 import { createChorusSettings, createDelaySettings, createEnvelopeSettings, createEqBandSettings, createFilterSettings, createFlangerSettings, createMultibandEqSettings, createNoiseSettings, createOutputSettings, createOverdriveSettings, createResonatorSettings, createReverbSettings, createCompressorSettings, createGateSettings, createLimiterSettings, createOscillatorSettings, createSingleBandEqSettings, createTremoloSettings, type AmplitudeModulationSettings, type ChorusSettings, type DelaySettings, type DynamicsSettings, type DynamicsSettingsChanges, type EqBandSettings, type EqEnvelopeSettings, type EqLfoSettings, type EqModulationTarget, type EqParameter, type EqSettings, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type FlangerSettings, type FlatAudioModule, type LfoSettings, type NoiseSettings, type OscillatorSettings, type OutputSettings, type OverdriveSettings, type ResonatorSettings, type ReverbSettings, type TremoloSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
@@ -89,8 +89,24 @@ const createChannelSynth = (oscillatorSettings: OscillatorSettings, outputSettin
 let activeSynth = createChannelSynth(initialOscillatorSettings, initialOutputSettings)
 const selectedChannel = ref(1)
 const selectedInputId = ref('')
+const selectedNoteInputId = ref('')
 const midiInputs = ref<{ id: string; name: string }[]>([])
 const midiStatus = ref('MIDI not connected.')
+const midiLearnTargetId = ref('')
+const midiLearnArmed = ref(false)
+const midiLearnStatus = ref('Select a parameter, then click Learn.')
+type MidiMapping = { channel: number; controller: number; targetId: string; targetChannel: number }
+type MidiParameterTarget = {
+  id: string
+  label: string
+  min: number
+  max: number
+  curve?: 'linear' | 'logarithmic'
+  apply: (value: number) => void
+}
+const midiMappings = ref<MidiMapping[]>([])
+const MIDI_MAPPINGS_STORAGE_KEY = 'synth2-midi-mappings'
+let midiMappingsLoaded = false
 const audioStatus = ref('Audio locked. Interact with the synth to enable audio.')
 const activeVoices = ref(0)
 const oscillators = ref<OscillatorSettings[]>([initialOscillatorSettings])
@@ -320,6 +336,168 @@ channels.value.push({
 })
 
 const canSelectInput = computed(() => midiInputs.value.length > 0)
+
+const midiParameterTargets = computed<MidiParameterTarget[]>(() => {
+  const targets: MidiParameterTarget[] = []
+  const add = (id: string, label: string, min: number, max: number, apply: (value: number) => void, curve?: 'linear' | 'logarithmic') => {
+    targets.push({ id, label, min, max, apply, curve })
+  }
+  add('output:volume', 'Output / Volume', 0, 1, (value) => updateOutputSettings({ volume: value }))
+  add('output:pan', 'Output / Pan', -1, 1, (value) => updateOutputSettings({ pan: value }))
+  oscillators.value.forEach((_, index) => {
+    add(`oscillator:${index}:detune`, `Oscillator ${index + 1} / Detune`, -1200, 1200, (value) => updateOscillatorSettings(index, { detune: Math.round(value) }))
+    add(`oscillator:${index}:level`, `Oscillator ${index + 1} / Level`, 0, 1, (value) => updateOscillatorSettings(index, { level: value }))
+    add(`oscillator:${index}:stereoSpread`, `Oscillator ${index + 1} / Stereo spread`, -1, 1, (value) => updateOscillatorSettings(index, { stereoSpread: value }))
+    add(`oscillator:${index}:fmAmount`, `Oscillator ${index + 1} / FM amount`, 0, 1, (value) => updateOscillatorSettings(index, { fmAmount: value }))
+  })
+  if (noise.value) {
+    add('noise:level', 'Noise / Level', 0, 1, (value) => updateNoiseSettings({ level: value }))
+    add('noise:stereoSpread', 'Noise / Stereo spread', -1, 1, (value) => updateNoiseSettings({ stereoSpread: value }))
+  }
+  filters.value.forEach((_, index) => {
+    add(`filter:${index}:cutoff`, `Filter ${index + 1} / Cutoff`, 20, 20000, (value) => updateFilterSettings(index, { cutoff: Math.round(value) }), 'logarithmic')
+    add(`filter:${index}:resonance`, `Filter ${index + 1} / Resonance`, 0, 3, (value) => updateFilterSettings(index, { resonance: value }))
+    add(`filter:${index}:gain`, `Filter ${index + 1} / Gain`, -24, 24, (value) => updateFilterSettings(index, { gain: value }))
+  })
+  const effectTargets: Array<{ group: string; label: string; values: Array<{ parameter: string; label: string; min: number; max: number; curve?: 'linear' | 'logarithmic' }> }> = [
+    { group: 'delays', label: 'Delay', values: [{ parameter: 'feedback', label: 'Feedback', min: 0, max: 0.95 }, { parameter: 'resonance', label: 'Resonance', min: 0, max: 1 }, { parameter: 'mix', label: 'Mix', min: 0, max: 1 }, { parameter: 'overdrive', label: 'Overdrive', min: 0, max: 1 }] },
+    { group: 'overdrives', label: 'Overdrive', values: [{ parameter: 'drive', label: 'Drive', min: 0, max: 1 }, { parameter: 'tone', label: 'Tone', min: 0, max: 1 }, { parameter: 'feedback', label: 'Feedback', min: 0, max: 0.95 }, { parameter: 'mix', label: 'Mix', min: 0, max: 1 }] },
+    { group: 'choruses', label: 'Chorus', values: [{ parameter: 'rate', label: 'Rate', min: 0.01, max: 20 }, { parameter: 'depth', label: 'Depth', min: 0, max: 1 }, { parameter: 'delay', label: 'Delay', min: 0, max: 0.045 }, { parameter: 'mix', label: 'Mix', min: 0, max: 1 }] },
+    { group: 'flangers', label: 'Flanger', values: [{ parameter: 'rate', label: 'Rate', min: 0.01, max: 10 }, { parameter: 'depth', label: 'Depth', min: 0, max: 1 }, { parameter: 'delay', label: 'Delay', min: 0, max: 0.01 }, { parameter: 'feedback', label: 'Feedback', min: 0, max: 0.9 }, { parameter: 'mix', label: 'Mix', min: 0, max: 1 }] },
+    { group: 'tremolos', label: 'Tremolo', values: [{ parameter: 'rate', label: 'Rate', min: 0.1, max: 30 }, { parameter: 'depth', label: 'Depth', min: 0, max: 1 }, { parameter: 'mix', label: 'Mix', min: 0, max: 1 }] },
+    { group: 'resonators', label: 'Resonator', values: [{ parameter: 'frequency', label: 'Frequency', min: 40, max: 12000, curve: 'logarithmic' }, { parameter: 'decay', label: 'Decay', min: 0, max: 5 }, { parameter: 'feedback', label: 'Feedback', min: 0, max: 0.85 }, { parameter: 'damping', label: 'Damping', min: 0, max: 1 }, { parameter: 'drive', label: 'Drive', min: 0, max: 1 }, { parameter: 'mix', label: 'Mix', min: 0, max: 1 }] },
+    { group: 'reverbs', label: 'Reverb', values: [{ parameter: 'decay', label: 'Decay', min: 0.6, max: 10 }, { parameter: 'preDelay', label: 'Pre-delay', min: 0, max: 0.2 }, { parameter: 'damping', label: 'Damping', min: 0, max: 1 }, { parameter: 'width', label: 'Width', min: 0, max: 1 }, { parameter: 'mix', label: 'Mix', min: 0, max: 1 }] },
+  ]
+  for (const effect of effectTargets) {
+    const settings = ({ delays: delays.value, overdrives: overdrives.value, choruses: choruses.value, flangers: flangers.value, tremolos: tremolos.value, resonators: resonators.value, reverbs: reverbs.value } as Record<string, unknown[]>)[effect.group] ?? []
+    settings.forEach((_, index) => effect.values.forEach((item) => {
+      const id = `${effect.group}:${index}:${item.parameter}`
+      const update = (value: number) => {
+        if (effect.group === 'delays') updateDelaySettings(index, { [item.parameter]: value })
+        else if (effect.group === 'overdrives') updateOverdriveSettings(index, { [item.parameter]: value })
+        else if (effect.group === 'choruses') updateChorusSettings(index, { [item.parameter]: value })
+        else if (effect.group === 'flangers') updateFlangerSettings(index, { [item.parameter]: value })
+        else if (effect.group === 'tremolos') updateTremoloSettings(index, { [item.parameter]: value })
+        else if (effect.group === 'resonators') updateResonatorSettings(index, { [item.parameter]: value })
+        else updateReverbSettings(index, { [item.parameter]: value })
+      }
+      add(id, `${effect.label} ${index + 1} / ${item.label}`, item.min, item.max, update, item.curve)
+    }))
+  }
+  eqs.value.forEach((eq, eqIndex) => eq.bands.forEach((_, bandIndex) => {
+    add(`eqs:${eqIndex}:${bandIndex}:frequency`, `EQ ${eqIndex + 1} / Band ${bandIndex + 1} frequency`, 20, 20000, (value) => updateEqBandSettings(eqIndex, bandIndex, { frequency: Math.round(value) }), 'logarithmic')
+    add(`eqs:${eqIndex}:${bandIndex}:q`, `EQ ${eqIndex + 1} / Band ${bandIndex + 1} Q`, 0.1, 18, (value) => updateEqBandSettings(eqIndex, bandIndex, { q: value }))
+    add(`eqs:${eqIndex}:${bandIndex}:gain`, `EQ ${eqIndex + 1} / Band ${bandIndex + 1} gain`, -24, 24, (value) => updateEqBandSettings(eqIndex, bandIndex, { gain: value }))
+  }))
+  return targets
+})
+
+function midiParameterValue(target: MidiParameterTarget, value: number): number {
+  const position = value / 127
+  const normalized = target.curve === 'logarithmic'
+    ? Math.exp(Math.log(target.min) + position * (Math.log(target.max) - Math.log(target.min)))
+    : target.min + position * (target.max - target.min)
+  return normalized
+}
+
+function handleMidiControlChange({ channel, controller, value }: MidiControlChangeEvent) {
+  if (midiLearnArmed.value && midiLearnTargetId.value) {
+    midiMappings.value = midiMappings.value.filter((mapping) => (
+      (mapping.targetId !== midiLearnTargetId.value || mapping.targetChannel !== selectedChannel.value)
+      && !(mapping.channel === channel && mapping.controller === controller)
+    ))
+    midiMappings.value.push({ channel, controller, targetId: midiLearnTargetId.value, targetChannel: selectedChannel.value })
+    midiLearnArmed.value = false
+    midiLearnStatus.value = `Learned CC ${controller} on channel ${channel}.`
+    return
+  }
+  midiMappings.value.filter((mapping) => mapping.channel === channel && mapping.controller === controller).forEach((mapping) => {
+    const target = midiParameterTargets.value.find((item) => item.id === mapping.targetId)
+    if (!target) return
+
+    const mappedValue = midiParameterValue(target, value)
+    if (mapping.targetChannel === 0 || mapping.targetChannel === selectedChannel.value) {
+      target.apply(mappedValue)
+      return
+    }
+
+    if (mapping.targetChannel > channels.value.length) return
+    const previousChannel = selectedChannel.value
+    loadChannel(mapping.targetChannel)
+    target.apply(mappedValue)
+    loadChannel(previousChannel)
+  })
+}
+
+function armMidiLearn() {
+  if (!midiLearnTargetId.value) {
+    midiLearnStatus.value = 'Select a parameter before learning.'
+    return
+  }
+  midiLearnArmed.value = true
+  midiLearnStatus.value = 'Move a control on your MIDI controller...'
+}
+
+function clearMidiMapping() {
+  midiMappings.value = midiMappings.value.filter((mapping) => (
+    mapping.targetId !== midiLearnTargetId.value || mapping.targetChannel !== selectedChannel.value
+  ))
+  midiLearnStatus.value = 'Mapping cleared.'
+}
+
+function isMidiMapping(value: unknown): value is MidiMapping {
+  if (!value || typeof value !== 'object') return false
+  const mapping = value as Partial<MidiMapping>
+  return typeof mapping.channel === 'number'
+    && Number.isInteger(mapping.channel)
+    && mapping.channel >= 1
+    && mapping.channel <= 16
+    && typeof mapping.controller === 'number'
+    && Number.isInteger(mapping.controller)
+    && mapping.controller >= 0
+    && mapping.controller <= 127
+    && typeof mapping.targetId === 'string'
+    && typeof mapping.targetChannel === 'number'
+    && Number.isInteger(mapping.targetChannel)
+    && mapping.targetChannel >= 0
+    && mapping.targetChannel <= 16
+}
+
+function loadMidiMappings() {
+  try {
+    const storedMappings = window.localStorage.getItem(MIDI_MAPPINGS_STORAGE_KEY)
+    if (!storedMappings) return
+
+    const parsed: unknown = JSON.parse(storedMappings)
+    if (!Array.isArray(parsed) || !parsed.every(isMidiMapping)) {
+      throw new Error('Invalid MIDI mapping data.')
+    }
+    midiMappings.value = parsed
+  } catch (error: unknown) {
+    midiMappings.value = []
+    midiLearnStatus.value = error instanceof Error
+      ? `Could not load saved MIDI mappings: ${error.message}`
+      : 'Could not load saved MIDI mappings.'
+  }
+}
+
+function saveMidiMappings() {
+  try {
+    window.localStorage.setItem(MIDI_MAPPINGS_STORAGE_KEY, JSON.stringify(midiMappings.value))
+  } catch (error: unknown) {
+    midiLearnStatus.value = error instanceof Error
+      ? `Could not save MIDI mappings: ${error.message}`
+      : 'Could not save MIDI mappings.'
+  }
+}
+
+watch(midiMappings, () => {
+  if (midiMappingsLoaded) saveMidiMappings()
+}, { deep: true })
+
+const selectedMidiMapping = computed(() => midiMappings.value.find((mapping) => (
+  mapping.targetId === midiLearnTargetId.value && mapping.targetChannel === selectedChannel.value
+)))
 const oscillatorEnvelopeDestinations = [
   { value: 'oscillatorLevel', label: 'Level' },
   { value: 'oscillatorPitch', label: 'Pitch' },
@@ -387,6 +565,7 @@ const midiService = new MidiService({
     target.synth.noteOff(note)
     activeVoices.value = channels.value.reduce((count, item) => count + item.synth.getActiveVoiceCount(), 0)
   },
+  onControlChange: handleMidiControlChange,
   onClockTempo: (tempo) => {
     syncMidiClockTempo(tempo)
   },
@@ -396,10 +575,11 @@ const midiService = new MidiService({
 
     if (state.selectedInputId) {
       selectedInputId.value = state.selectedInputId
-      return
+    } else {
+      selectedInputId.value = ''
     }
 
-    selectedInputId.value = ''
+    selectedNoteInputId.value = state.selectedNoteInputId ?? ''
   },
 })
 
@@ -424,11 +604,6 @@ function connectMidi() {
     .requestAccess()
     .then(() => {
       midiService.setChannel(selectedChannel.value)
-      const firstInputId = midiService.getInputs()[0]?.id
-      if (firstInputId) {
-        selectedInputId.value = firstInputId
-        midiService.setSelectedInput(firstInputId)
-      }
     })
     .catch((error: unknown) => {
       midiConnectionStarted = false
@@ -452,6 +627,10 @@ function handleFirstInteraction() {
 
 function handleInputChange() {
   midiService.setSelectedInput(selectedInputId.value || null)
+}
+
+function handleNoteInputChange() {
+  midiService.setSelectedNoteInput(selectedNoteInputId.value || null)
 }
 
 function handleChannelChange(event: Event) {
@@ -1784,6 +1963,8 @@ function addModuleFromDialog(action: () => void) {
 }
 
 onMounted(() => {
+  loadMidiMappings()
+  midiMappingsLoaded = true
   midiService.setChannel(selectedChannel.value)
   window.addEventListener('keydown', handleKeydown, true)
 })
@@ -2424,8 +2605,17 @@ onUnmounted(() => {
         </div>
         <div class="midi-fields">
           <label class="field">
-            <span>Input</span>
+            <span>Control input</span>
             <select v-model="selectedInputId" :disabled="!canSelectInput" @change="handleInputChange">
+              <option value="" disabled>Select input</option>
+              <option v-for="input in midiInputs" :key="input.id" :value="input.id">
+                {{ input.name }}
+              </option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Note input</span>
+            <select v-model="selectedNoteInputId" :disabled="!canSelectInput" @change="handleNoteInputChange">
               <option value="" disabled>Select input</option>
               <option v-for="input in midiInputs" :key="input.id" :value="input.id">
                 {{ input.name }}
@@ -2443,6 +2633,27 @@ onUnmounted(() => {
             </select>
           </label>
         </div>
+        <div class="midi-learn">
+          <label class="field">
+            <span>CC parameter</span>
+            <select v-model="midiLearnTargetId">
+              <option value="">Select parameter</option>
+              <option v-for="target in midiParameterTargets" :key="target.id" :value="target.id">
+                {{ target.label }}
+              </option>
+            </select>
+          </label>
+          <div class="midi-learn-actions">
+            <button type="button" :class="{ 'midi-learn-active': midiLearnArmed }" @click="armMidiLearn">
+              {{ midiLearnArmed ? 'Learning...' : 'Learn CC' }}
+            </button>
+            <button type="button" :disabled="!selectedMidiMapping" @click="clearMidiMapping">Clear</button>
+          </div>
+          <span v-if="selectedMidiMapping" class="midi-mapping">
+            CC {{ selectedMidiMapping.controller }} / Ch {{ selectedMidiMapping.channel }}
+          </span>
+        </div>
+        <span class="status midi-status" aria-live="polite">{{ midiLearnStatus }}</span>
         <span class="status midi-status" aria-live="polite">{{ midiStatus }}</span>
       </section>
 

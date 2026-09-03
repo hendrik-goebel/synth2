@@ -3,6 +3,20 @@
 A browser-based synthesizer built with Vue 3, TypeScript, Vite, the Web MIDI API,
 and the Web Audio API.
 
+## External MIDI controllers
+
+Use a Web MIDI-compatible browser in a secure context, click **Connect**, choose
+your MIDI input, then select a parameter under **CC parameter** and click
+**Learn CC**. Move a knob or fader on the controller to bind it; subsequent
+movements update that parameter on the learned MIDI channel. When available,
+the Akai MIDImix is selected automatically; otherwise choose it in the input
+selector. The MIDImix works with its knobs and faders as standard MIDI CC
+controls.
+
+The MIDI panel has separate **Control input** and **Note input** selectors. The
+IAC driver is preferred for notes and the Akai MIDImix for controls when both
+devices are available.
+
 ## Resonator
 
 Add a **Resonator** from the Time-based section of **Add Module**. Its warm,

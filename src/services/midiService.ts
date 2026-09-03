@@ -8,26 +8,39 @@ type MidiNoteEvent = {
   velocity: number
 }
 
+export type MidiControlChangeEvent = {
+  channel: number
+  controller: number
+  value: number
+}
+
 type MidiState = {
   inputs: Array<{ id: string; name: string }>
   selectedInputId: string | null
+  selectedNoteInputId: string | null
   statusText: string
 }
 
 type MidiServiceOptions = {
   onNoteOn: (event: MidiNoteEvent) => void
   onNoteOff: (event: MidiNoteEvent) => void
+  onControlChange: (event: MidiControlChangeEvent) => void
   onClockTempo: (bpm: number) => void
   onStateChange: (state: MidiState) => void
 }
 
+const preferredInputName = /midi[\s_-]*mix/i
+const preferredNoteInputName = /(?:iac|inter[-\s]?application)/i
+
 export class MidiService {
   private readonly onNoteOn: (event: MidiNoteEvent) => void
   private readonly onNoteOff: (event: MidiNoteEvent) => void
+  private readonly onControlChange: (event: MidiControlChangeEvent) => void
   private readonly onClockTempo: (bpm: number) => void
   private readonly onStateChange: (state: MidiState) => void
   private midiAccess: MIDIAccess | null = null
   private selectedInputId: string | null = null
+  private selectedNoteInputId: string | null = null
   private lastClockTimestamp: number | null = null
   private readonly clockIntervals: number[] = []
   private clockTicksSinceTempoUpdate = 0
@@ -35,6 +48,7 @@ export class MidiService {
   constructor(options: MidiServiceOptions) {
     this.onNoteOn = options.onNoteOn
     this.onNoteOff = options.onNoteOff
+    this.onControlChange = options.onControlChange
     this.onClockTempo = options.onClockTempo
     this.onStateChange = options.onStateChange
   }
@@ -72,6 +86,12 @@ export class MidiService {
     this.publishState(inputId ? 'MIDI input selected.' : 'No MIDI input selected.')
   }
 
+  setSelectedNoteInput(inputId: string | null): void {
+    this.selectedNoteInputId = inputId
+    this.refreshInputSubscription()
+    this.publishState(inputId ? 'MIDI note input selected.' : 'No MIDI note input selected.')
+  }
+
   setChannel(channel: number): void {
     const selectedChannel = Math.min(Math.max(channel, 1), 16)
     this.publishState(`Selected MIDI channel ${selectedChannel}.`)
@@ -98,6 +118,7 @@ export class MidiService {
     const availableInputs = this.getInputs()
     if (availableInputs.length === 0) {
       this.selectedInputId = null
+      this.selectedNoteInputId = null
       return
     }
 
@@ -106,25 +127,40 @@ export class MidiService {
       : false
 
     if (!selectedExists) {
-      this.selectedInputId = availableInputs[0].id
+      const preferredInput = availableInputs.find((input) => preferredInputName.test(input.name))
+      this.selectedInputId = preferredInput?.id ?? availableInputs[0].id
     }
 
-    if (!this.selectedInputId) {
-      return
+    const selectedNoteExists = this.selectedNoteInputId
+      ? availableInputs.some((input) => input.id === this.selectedNoteInputId)
+      : false
+
+    if (!selectedNoteExists) {
+      const preferredNoteInput = availableInputs.find((input) => preferredNoteInputName.test(input.name))
+      this.selectedNoteInputId = preferredNoteInput?.id ?? availableInputs[0].id
     }
 
-    const selectedInput = this.midiAccess.inputs.get(this.selectedInputId)
-    if (!selectedInput) {
+    const selectedInput = this.selectedInputId ? this.midiAccess.inputs.get(this.selectedInputId) : null
+    const selectedNoteInput = this.selectedNoteInputId ? this.midiAccess.inputs.get(this.selectedNoteInputId) : null
+    if (!selectedInput && !selectedNoteInput) {
       this.selectedInputId = null
+      this.selectedNoteInputId = null
       return
     }
 
-    selectedInput.onmidimessage = (event: MIDIMessageEvent) => {
-      this.handleMidiMessage(event)
+    if (selectedInput) {
+      selectedInput.onmidimessage = (event: MIDIMessageEvent) => {
+        this.handleMidiMessage(event, selectedInput === selectedNoteInput, true)
+      }
+    }
+    if (selectedNoteInput && selectedNoteInput !== selectedInput) {
+      selectedNoteInput.onmidimessage = (event: MIDIMessageEvent) => {
+        this.handleMidiMessage(event, true, false)
+      }
     }
   }
 
-  private handleMidiMessage(event: MIDIMessageEvent): void {
+  private handleMidiMessage(event: MIDIMessageEvent, acceptNotes: boolean, acceptControls: boolean): void {
     if (!event.data) {
       return
     }
@@ -154,13 +190,18 @@ export class MidiService {
     const command = status & 0xf0
     const channel = (status & 0x0f) + 1
 
+    if (command === 0xb0) {
+      if (acceptControls) this.onControlChange({ channel, controller: note, value: velocity })
+      return
+    }
+
     if (command === 0x90 && velocity > 0) {
-      this.onNoteOn({ channel, note, velocity })
+      if (acceptNotes) this.onNoteOn({ channel, note, velocity })
       return
     }
 
     if (command === 0x80 || (command === 0x90 && velocity === 0)) {
-      this.onNoteOff({ channel, note, velocity })
+      if (acceptNotes) this.onNoteOff({ channel, note, velocity })
     }
   }
 
@@ -197,6 +238,7 @@ export class MidiService {
     this.onStateChange({
       inputs: this.getInputs(),
       selectedInputId: this.selectedInputId,
+      selectedNoteInputId: this.selectedNoteInputId,
       statusText,
     })
   }

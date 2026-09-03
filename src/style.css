@@ -271,7 +271,11 @@ select { width: 100%; min-height: 36px; padding: 7px 32px 7px 10px; }
 .midi-controls { border-bottom: 1px solid rgb(183 211 211 / 10%); }
 .status { color: #acbdbe; font-size: .72rem; line-height: 1.4; }
 .midi-controls { display: grid; gap: 13px; }
-.midi-fields { display: grid; grid-template-columns: minmax(0, 1fr) 100px; gap: 12px; }
+.midi-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 100px; gap: 12px; }
+.midi-learn { display: grid; gap: 10px; }
+.midi-learn-actions { display: flex; gap: 8px; }
+.midi-learn-active { color: #09241f; background: linear-gradient(145deg, #ffd989, #d8a64c); border-color: #ffe5a8; }
+.midi-mapping { color: #91ecd8; font-size: .7rem; font-variant-numeric: tabular-nums; }
 .field { display: grid; gap: 7px; }
 .midi-status { margin-top: -2px; }
 .seed-panel { grid-column: 1; }
