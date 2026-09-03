@@ -245,8 +245,14 @@ function addChannel() {
   loadChannel(channels.value.length)
 }
 
-/** Ensures MIDI channels 1–4 each receive a freshly selected instrument preset. */
-function randomizeFirstFourChannels() {
+/** Randomizes channels 1–4 from the master, or only the currently selected MIDI channel. */
+function randomizeChannels() {
+  if (!isMasterChannel.value) {
+    const preset = instrumentPresets[Math.floor(Math.random() * instrumentPresets.length)]
+    applyInstrumentPreset(preset.id)
+    return
+  }
+
   const previousChannel = selectedChannel.value
 
   while (channels.value.length < 4) {
@@ -1797,13 +1803,18 @@ onUnmounted(() => {
         <div class="brand-lockup">
           <span class="brand-mark" aria-hidden="true"></span>
           <div>
-            <p class="eyebrow">Polyphonic MIDI instrument</p>
-            <h1>Synth2</h1>
-            <p class="brand-description">Shape a sound, build a signal path, then play.</p>
+            <p class="eyebrow">Cacophonic MIDI instrument</p>
+            <h1>Mr. Synth</h1>
+            <p class="brand-description">The synth which does, what a synth should do</p>
           </div>
         </div>
         <div class="topbar-actions">
-          <button type="button" class="randomize-button" title="Randomize instruments on channels 1–4" @click="randomizeFirstFourChannels">RAND</button>
+          <button
+            type="button"
+            class="randomize-button"
+            :title="isMasterChannel ? 'Randomize instruments on channels 1–4' : `Randomize instrument and parameters on MIDI channel ${selectedChannel}`"
+            @click="randomizeChannels"
+          >RAND</button>
           <output class="voice-count" title="Active voices">{{ activeVoices }}</output>
           <label class="bpm-control">
             <span class="bpm-label">BPM</span>
