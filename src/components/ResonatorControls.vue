@@ -26,6 +26,23 @@ const emit = defineEmits<{
   'move-down': []
   remove: []
 }>()
+
+function logarithmicPosition(value: number): number {
+  return Math.log(value / 40) / Math.log(12000 / 40)
+}
+
+function logarithmicValue(position: number): number {
+  return 40 * Math.pow(12000 / 40, position)
+}
+
+function frequencySliderValue(value: number): number {
+  return logarithmicPosition(value) * 1000
+}
+
+function updateFrequency(event: Event) {
+  const position = Number((event.target as HTMLInputElement).value) / 1000
+  emit('update:frequency', Math.round(logarithmicValue(position)))
+}
 </script>
 
 <template>
@@ -45,7 +62,7 @@ const emit = defineEmits<{
       <label class="control">
         <span>Frequency</span>
         <output>{{ Math.round(frequency) }} Hz</output>
-        <input type="range" min="40" max="12000" step="1" :value="frequency" @input="emit('update:frequency', Number(($event.target as HTMLInputElement).value))">
+        <input type="range" min="0" max="1000" step="1" :value="frequencySliderValue(frequency)" @input="updateFrequency">
       </label>
       <label class="control">
         <span>Decay</span>
