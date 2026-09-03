@@ -359,6 +359,25 @@ const midiParameterTargets = computed<MidiParameterTarget[]>(() => {
     add(`filter:${index}:resonance`, `Filter ${index + 1} / Resonance`, 0, 3, (value) => updateFilterSettings(index, { resonance: value }))
     add(`filter:${index}:gain`, `Filter ${index + 1} / Gain`, -24, 24, (value) => updateFilterSettings(index, { gain: value }))
   })
+  dynamics.value.forEach((settings, index) => {
+    if (settings.type === 'compressor') {
+      add(`dynamics:${index}:threshold`, `Compressor ${index + 1} / Threshold`, -60, 0, (value) => updateDynamicsSettings(index, { threshold: value }))
+      add(`dynamics:${index}:knee`, `Compressor ${index + 1} / Knee`, 0, 40, (value) => updateDynamicsSettings(index, { knee: value }))
+      add(`dynamics:${index}:ratio`, `Compressor ${index + 1} / Ratio`, 1, 20, (value) => updateDynamicsSettings(index, { ratio: value }))
+      add(`dynamics:${index}:attack`, `Compressor ${index + 1} / Attack`, 0, 1, (value) => updateDynamicsSettings(index, { attack: value }))
+      add(`dynamics:${index}:release`, `Compressor ${index + 1} / Release`, 0.01, 1, (value) => updateDynamicsSettings(index, { release: value }))
+      add(`dynamics:${index}:makeupGain`, `Compressor ${index + 1} / Makeup gain`, 0, 24, (value) => updateDynamicsSettings(index, { makeupGain: value }))
+    } else if (settings.type === 'gate') {
+      add(`dynamics:${index}:threshold`, `Gate ${index + 1} / Threshold`, -80, 0, (value) => updateDynamicsSettings(index, { threshold: value }))
+      add(`dynamics:${index}:attack`, `Gate ${index + 1} / Attack`, 0, 1, (value) => updateDynamicsSettings(index, { attack: value }))
+      add(`dynamics:${index}:hold`, `Gate ${index + 1} / Hold`, 0, 1, (value) => updateDynamicsSettings(index, { hold: value }))
+      add(`dynamics:${index}:release`, `Gate ${index + 1} / Release`, 0.01, 2, (value) => updateDynamicsSettings(index, { release: value }))
+    } else {
+      add(`dynamics:${index}:ceiling`, `Limiter ${index + 1} / Ceiling`, -24, 0, (value) => updateDynamicsSettings(index, { ceiling: value }))
+      add(`dynamics:${index}:release`, `Limiter ${index + 1} / Release`, 0.01, 1, (value) => updateDynamicsSettings(index, { release: value }))
+      add(`dynamics:${index}:makeupGain`, `Limiter ${index + 1} / Makeup gain`, 0, 24, (value) => updateDynamicsSettings(index, { makeupGain: value }))
+    }
+  })
   const effectTargets: Array<{ group: string; label: string; values: Array<{ parameter: string; label: string; min: number; max: number; curve?: 'linear' | 'logarithmic' }> }> = [
     { group: 'delays', label: 'Delay', values: [{ parameter: 'feedback', label: 'Feedback', min: 0, max: 0.95 }, { parameter: 'resonance', label: 'Resonance', min: 0, max: 1 }, { parameter: 'mix', label: 'Mix', min: 0, max: 1 }, { parameter: 'overdrive', label: 'Overdrive', min: 0, max: 1 }] },
     { group: 'overdrives', label: 'Overdrive', values: [{ parameter: 'drive', label: 'Drive', min: 0, max: 1 }, { parameter: 'tone', label: 'Tone', min: 0, max: 1 }, { parameter: 'feedback', label: 'Feedback', min: 0, max: 0.95 }, { parameter: 'mix', label: 'Mix', min: 0, max: 1 }] },
