@@ -1151,6 +1151,10 @@ function handleModuleDragEnd() {
   dragOverModuleKey.value = null
 }
 
+function bypassNewModule<T extends { bypassed: boolean }>(settings: T): T {
+  return { ...settings, bypassed: true }
+}
+
 function addOscillator() {
   const settings = createRandomOscillatorSettings()
   markSectionOpen(`oscillator-${oscillators.value.length}-heading`)
@@ -1177,7 +1181,7 @@ function removeNoise() {
 }
 
 function addFilter() {
-  const settings = createFilterSettings()
+  const settings = bypassNewModule(createFilterSettings())
   markSectionOpen(`filter-${filters.value.length}-heading`)
   filters.value.push(settings)
   activeSynth.addFilter(settings)
@@ -1201,7 +1205,7 @@ function toggleFilterBypass(index: number) {
 }
 
 function addDelay() {
-  const settings = createDelaySettings()
+  const settings = bypassNewModule(createDelaySettings())
   markSectionOpen(`delay-${delays.value.length}-heading`)
   delays.value.push(settings)
   activeSynth.addDelay(settings)
@@ -1262,7 +1266,7 @@ function toggleDelayBypass(index: number) {
 }
 
 function addOverdrive() {
-  const settings = createOverdriveSettings()
+  const settings = bypassNewModule(createOverdriveSettings())
   markSectionOpen(`overdrive-${overdrives.value.length}-heading`)
   overdrives.value.push(settings)
   activeSynth.addOverdrive(settings)
@@ -1288,7 +1292,7 @@ function toggleOverdriveBypass(index: number) {
 }
 
 function addChorus() {
-  const settings = createChorusSettings()
+  const settings = bypassNewModule(createChorusSettings())
   markSectionOpen(`chorus-${choruses.value.length}-heading`)
   choruses.value.push(settings)
   activeSynth.addChorus(settings)
@@ -1314,7 +1318,7 @@ function toggleChorusBypass(index: number) {
 }
 
 function addFlanger() {
-  const settings = createFlangerSettings()
+  const settings = bypassNewModule(createFlangerSettings())
   markSectionOpen(`flanger-${flangers.value.length}-heading`)
   flangers.value.push(settings)
   activeSynth.addFlanger(settings)
@@ -1340,7 +1344,7 @@ function toggleFlangerBypass(index: number) {
 }
 
 function addTremolo() {
-  const settings = createTremoloSettings()
+  const settings = bypassNewModule(createTremoloSettings())
   markSectionOpen(`tremolo-${tremolos.value.length}-heading`)
   tremolos.value.push(settings)
   activeSynth.addTremolo(settings)
@@ -1367,7 +1371,7 @@ function toggleTremoloBypass(index: number) {
 
 function addSingleBandEq() {
   markSectionOpen(`eq-${eqs.value.length}-heading`)
-  const settings = createSingleBandEqSettings()
+  const settings = bypassNewModule(createSingleBandEqSettings())
   eqs.value.push(settings)
   activeSynth.addEq(settings)
   appendModuleOrderEntry('eqs', eqs.value.length - 1)
@@ -1375,7 +1379,7 @@ function addSingleBandEq() {
 
 function addMultibandEq() {
   markSectionOpen(`eq-${eqs.value.length}-heading`)
-  const settings = createMultibandEqSettings()
+  const settings = bypassNewModule(createMultibandEqSettings())
   eqs.value.push(settings)
   activeSynth.addEq(settings)
   appendModuleOrderEntry('eqs', eqs.value.length - 1)
@@ -1551,7 +1555,7 @@ function removeEqLfo(eqIndex: number, lfoIndex: number) {
 }
 
 function addReverb() {
-  const settings = createReverbSettings()
+  const settings = bypassNewModule(createReverbSettings())
   markSectionOpen(`reverb-${reverbs.value.length}-heading`)
   reverbs.value.push(settings)
   activeSynth.addReverb(settings)
@@ -1559,7 +1563,7 @@ function addReverb() {
 }
 
 function addResonator() {
-  const settings = createResonatorSettings()
+  const settings = bypassNewModule(createResonatorSettings())
   markSectionOpen(`resonator-${resonators.value.length}-heading`)
   resonators.value.push(settings)
   activeSynth.addResonator(settings)
@@ -1604,7 +1608,7 @@ function toggleReverbBypass(index: number) {
 
 function addCompressor() {
   markSectionOpen(`dynamics-${dynamics.value.length}-heading`)
-  const settings = createCompressorSettings()
+  const settings = bypassNewModule(createCompressorSettings())
   dynamics.value.push(settings)
   activeSynth.addCompressor(settings)
   appendModuleOrderEntry('dynamics', dynamics.value.length - 1)
@@ -1612,7 +1616,7 @@ function addCompressor() {
 
 function addGate() {
   markSectionOpen(`dynamics-${dynamics.value.length}-heading`)
-  const settings = createGateSettings()
+  const settings = bypassNewModule(createGateSettings())
   dynamics.value.push(settings)
   activeSynth.addGate(settings)
   appendModuleOrderEntry('dynamics', dynamics.value.length - 1)
@@ -1620,7 +1624,7 @@ function addGate() {
 
 function addLimiter() {
   markSectionOpen(`dynamics-${dynamics.value.length}-heading`)
-  const settings = createLimiterSettings()
+  const settings = bypassNewModule(createLimiterSettings())
   dynamics.value.push(settings)
   activeSynth.addLimiter(settings)
   appendModuleOrderEntry('dynamics', dynamics.value.length - 1)

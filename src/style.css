@@ -149,6 +149,11 @@ select { width: 100%; min-height: 36px; padding: 7px 32px 7px 10px; }
 .add-eq-button:hover, .add-module-button:hover { color: #071d19; background: linear-gradient(145deg, #b6ffed, #70d9c1); }
 .panic-button, .module-remove { color: #ffd9d7; border-color: #8d5558; background: linear-gradient(145deg, #57353a, #352126); }
 .module-bypass { color: #cae8ff; border-color: #52758d; }
+.module-bypass[aria-pressed="true"] {
+  color: #09241f;
+  background: linear-gradient(145deg, #9af5df, #55c7af);
+  border-color: #a6f9e5;
+}
 
 .setup-grid { display: grid; grid-template-columns: minmax(240px, .9fr) minmax(0, 1.1fr); gap: clamp(12px, 1.6vw, 20px); }
 .channel-bar { --amb-albedo: #20363b; grid-column: 1 / -1; gap: 16px; padding: 14px 16px; }
