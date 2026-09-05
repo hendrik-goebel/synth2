@@ -53,7 +53,7 @@ type PresetDefinition = { id: string; name: string }
 const effectOrder: EffectGroup[] = ['filters', 'overdrives', 'choruses', 'flangers', 'tremolos', 'delays', 'resonators', 'reverbs', 'eqs', 'dynamics']
 
 function oscillator(waveform: Waveform, level: number, changes: Partial<OscillatorSettings> = {}): OscillatorSettings {
-  return { bypassed: false, detune: 0, glide: 0, level, waveform, unisonDetune: 0, stereoSpread: 0, fmAmount: 0, fmSource: 'sine', ...changes }
+  return { bypassed: false, detune: 0, steppedDetune: false, glide: 0, level, waveform, unisonDetune: 0, stereoSpread: 0, fmAmount: 0, fmSource: 'sine', ...changes }
 }
 
 function filter(cutoff: number, changes: Partial<FilterSettings> = {}): FilterSettings {

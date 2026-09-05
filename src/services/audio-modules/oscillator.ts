@@ -3,7 +3,7 @@ import type { OscillatorSettings, Waveform } from './types'
 const RANDOM_WAVE_HARMONIC_COUNT = 32
 
 export function createOscillatorSettings(): OscillatorSettings {
-  return { bypassed: false, detune: 0, glide: 0, level: 1, waveform: 'sine', unisonDetune: 0, stereoSpread: 0, fmAmount: 0, fmSource: 'sine' }
+  return { bypassed: false, detune: 0, steppedDetune: false, glide: 0, level: 1, waveform: 'sine', unisonDetune: 0, stereoSpread: 0, fmAmount: 0, fmSource: 'sine' }
 }
 
 export function setWaveform(audioContext: AudioContext, oscillator: OscillatorNode, waveform: Waveform): void {

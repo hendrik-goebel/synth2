@@ -1420,6 +1420,7 @@ function createRandomOscillatorSettings(): OscillatorSettings {
   return {
     bypassed: false,
     detune: 0,
+    steppedDetune: false,
     glide: randomInteger(0, 2000),
     level: randomInteger(10, 100) / 100,
     waveform: waveforms[randomInteger(0, waveforms.length - 1)],
@@ -2362,7 +2363,22 @@ function toggleOscillatorBypass(index: number) {
   updateOscillatorSettings(index, { bypassed: !oscillators.value[index].bypassed })
 }
 
+function toggleOscillatorSteppedDetune(index: number) {
+  const oscillator = oscillators.value[index]
+  if (!oscillator) return
+  const steppedDetune = !oscillator.steppedDetune
+  updateOscillatorSettings(index, {
+    steppedDetune,
+    detune: steppedDetune ? Math.round(oscillator.detune / 100) * 100 : oscillator.detune,
+  })
+}
+
 function updateOscillatorSettings(index: number, settings: Partial<OscillatorSettings>) {
+  const oscillator = oscillators.value[index]
+  if (!oscillator) return
+  if (settings.detune !== undefined && (settings.steppedDetune ?? oscillator.steppedDetune)) {
+    settings = { ...settings, detune: Math.round(settings.detune / 100) * 100 }
+  }
   oscillators.value[index] = { ...oscillators.value[index], ...settings }
   activeSynth.setOscillatorSettings(index, settings)
 }
@@ -2579,7 +2595,9 @@ onUnmounted(() => {
               v-if="source.type === 'oscillator' && oscillators[source.index]"
               :oscillator-index="source.index"
               v-bind="oscillators[source.index]"
+              :stepped-detune="oscillators[source.index].steppedDetune ?? false"
               @update:detune="updateOscillatorSettings(source.index, { detune: $event })"
+              @toggle-stepped-detune="toggleOscillatorSteppedDetune(source.index)"
               @update:glide="updateOscillatorSettings(source.index, { glide: $event })"
               @update:level="updateOscillatorSettings(source.index, { level: $event })"
               @update:waveform="updateOscillatorSettings(source.index, { waveform: $event })"

@@ -253,6 +253,10 @@ select { width: 100%; min-height: 30px; padding: 5px 28px 5px 8px; }
 .control select, .control input { grid-column: 1 / -1; }
 .control output { color: #91ecd8; font-variant-numeric: tabular-nums; }
 .control input[type="range"] { width: 100%; height: 20px; margin: 0; accent-color: #72dec7; cursor: pointer; }
+.detune-slider { display: flex; grid-column: 1 / -1; align-items: center; gap: 6px; min-width: 0; }
+.detune-slider input[type="range"] { flex: 1; min-width: 0; }
+.detune-step-toggle { flex: 0 0 auto; min-height: 20px; padding: 2px 5px; font-size: .52rem; }
+.detune-step-toggle[aria-pressed="true"] { color: #09241f; background: linear-gradient(145deg, #9af5df, #55c7af); border-color: #a6f9e5; }
 .modulation-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 14px; }
 .filter-control-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .envelope-controls { grid-template-columns: repeat(4, minmax(0, 1fr)); }

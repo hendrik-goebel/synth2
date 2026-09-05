@@ -4,6 +4,7 @@ export type NoiseColor = 'white' | 'pink' | 'brown'
 export type OscillatorSettings = {
   bypassed: boolean
   detune: number
+  steppedDetune: boolean
   glide: number
   level: number
   waveform: Waveform

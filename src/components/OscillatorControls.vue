@@ -6,6 +6,7 @@ defineProps<{
   oscillatorIndex: number
   bypassed: boolean
   detune: number
+  steppedDetune: boolean
   glide: number
   level: number
   waveform: Waveform
@@ -17,6 +18,7 @@ defineProps<{
 
 const emit = defineEmits<{
   'update:detune': [value: number]
+  'toggle-stepped-detune': []
   'update:glide': [value: number]
   'update:level': [value: number]
   'update:waveform': [value: Waveform]
@@ -59,14 +61,26 @@ const emit = defineEmits<{
     <label class="control">
       <span>Detune</span>
       <output>{{ detune }}</output>
-      <input
-        type="range"
-        min="-1200"
-        max="1200"
-        step="1"
-        :value="detune"
-        @input="emit('update:detune', Number(($event.target as HTMLInputElement).value))"
-      >
+      <div class="detune-slider">
+        <input
+          type="range"
+          min="-1200"
+          max="1200"
+          :step="steppedDetune ? 100 : 1"
+          :value="detune"
+          @input="emit('update:detune', Number(($event.target as HTMLInputElement).value))"
+        >
+        <button
+          type="button"
+          class="detune-step-toggle"
+          :aria-pressed="steppedDetune"
+          :aria-label="steppedDetune ? 'Disable stepped detune' : 'Enable stepped detune'"
+          :title="steppedDetune ? 'Stepped detune enabled' : 'Stepped detune disabled'"
+          @click="emit('toggle-stepped-detune')"
+        >
+          Step
+        </button>
+      </div>
     </label>
 
     <label class="control">
