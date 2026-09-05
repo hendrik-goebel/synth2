@@ -56,6 +56,7 @@ type SeedState = {
   selectedChannel: number
   channels: SeedChannel[]
   master?: SeedMasterChannel
+  midiMappings?: MidiMapping[]
 }
 const effectGroups: EffectGroup[] = ['filters', 'overdrives', 'choruses', 'flangers', 'tremolos', 'delays', 'resonators', 'reverbs', 'eqs', 'dynamics']
 const legacyEffectGroups: EffectGroup[] = ['filters', 'overdrives', 'delays', 'reverbs', 'dynamics']
@@ -444,8 +445,7 @@ function midiParameterValue(target: MidiParameterTarget, value: number): number 
 function handleMidiControlChange({ channel, controller, value }: MidiControlChangeEvent) {
   if (midiLearnArmed.value && midiLearnTargetId.value) {
     midiMappings.value = midiMappings.value.filter((mapping) => (
-      (mapping.targetId !== midiLearnTargetId.value || mapping.targetChannel !== selectedChannel.value)
-      && !(mapping.channel === channel && mapping.controller === controller)
+      mapping.targetId !== midiLearnTargetId.value || mapping.targetChannel !== selectedChannel.value
     ))
     midiMappings.value.push({ channel, controller, targetId: midiLearnTargetId.value, targetChannel: selectedChannel.value })
     midiLearnArmed.value = false
@@ -479,11 +479,39 @@ function armMidiLearn() {
   midiLearnStatus.value = 'Move a control on your MIDI controller...'
 }
 
-function clearMidiMapping() {
-  midiMappings.value = midiMappings.value.filter((mapping) => (
-    mapping.targetId !== midiLearnTargetId.value || mapping.targetChannel !== selectedChannel.value
-  ))
-  midiLearnStatus.value = 'Mapping cleared.'
+function addMidiParameter(mapping: MidiMapping) {
+  if (!midiLearnTargetId.value) {
+    midiLearnStatus.value = 'Select a parameter before adding an assignment.'
+    return
+  }
+
+  if (midiMappings.value.some((item) => (
+    item.channel === mapping.channel
+    && item.controller === mapping.controller
+    && item.targetId === midiLearnTargetId.value
+    && item.targetChannel === selectedChannel.value
+  ))) {
+    midiLearnStatus.value = 'This parameter is already assigned to that controller.'
+    return
+  }
+
+  midiMappings.value = [
+    ...midiMappings.value.filter((item) => (
+      item.targetId !== midiLearnTargetId.value || item.targetChannel !== selectedChannel.value
+    )),
+    {
+      channel: mapping.channel,
+      controller: mapping.controller,
+      targetId: midiLearnTargetId.value,
+      targetChannel: selectedChannel.value,
+    },
+  ]
+  midiLearnStatus.value = `Assigned CC ${mapping.controller} on channel ${mapping.channel}.`
+}
+
+function removeMidiParameter(mapping: MidiMapping) {
+  midiMappings.value = midiMappings.value.filter((item) => item !== mapping)
+  midiLearnStatus.value = `Removed CC ${mapping.controller} on channel ${mapping.channel}.`
 }
 
 function isMidiMapping(value: unknown): value is MidiMapping {
@@ -539,6 +567,13 @@ watch(midiMappings, () => {
 const selectedMidiMapping = computed(() => midiMappings.value.find((mapping) => (
   mapping.targetId === midiLearnTargetId.value && mapping.targetChannel === selectedChannel.value
 )))
+
+function midiMappingTargetLabel(mapping: MidiMapping): string {
+  return mapping.targetChannel === selectedChannel.value
+    ? midiParameterTargets.value.find((target) => target.id === mapping.targetId)?.label ?? mapping.targetId
+    : mapping.targetId
+}
+
 const oscillatorEnvelopeDestinations = [
   { value: 'oscillatorLevel', label: 'Level' },
   { value: 'oscillatorPitch', label: 'Pitch' },
@@ -1189,6 +1224,7 @@ function isSeedState(value: unknown): value is SeedState {
     && selectedChannel >= 0
     && selectedChannel <= value.channels.length
     && value.channels.every((channel) => isSeedChannel(channel))
+    && (value.midiMappings === undefined || (Array.isArray(value.midiMappings) && value.midiMappings.every(isMidiMapping)))
 }
 
 function createChannelFromSeed(seedChannel: SeedChannel): ChannelState {
@@ -1248,6 +1284,7 @@ function generateSeed() {
     selectedChannel: selectedChannel.value,
     channels: channels.value.map(createSeedChannel),
     master: createSeedChannel(masterChannel),
+    midiMappings: midiMappings.value,
   } satisfies SeedState)
   seedStatus.value = 'Seed generated.'
 }
@@ -1291,6 +1328,7 @@ function loadSeed() {
     if (createdMaster) Object.assign(masterChannel, createdMaster)
     selectedChannel.value = decoded.selectedChannel
     loadChannelState(decoded.selectedChannel === 0 ? masterChannel : createdChannels[decoded.selectedChannel - 1])
+    if (decoded.midiMappings) midiMappings.value = decoded.midiMappings
     midiService.setChannel(selectedChannel.value)
     previousChannels.forEach(({ synth }) => synth.destroy())
     if (createdMaster) previousMasterSynth.destroy()
@@ -2868,24 +2906,58 @@ onUnmounted(() => {
           </label>
         </div>
         <div class="midi-learn">
-          <label class="field">
-            <span>CC parameter</span>
-            <select v-model="midiLearnTargetId">
-              <option value="">Select parameter</option>
-              <option v-for="target in midiParameterTargets" :key="target.id" :value="target.id">
-                {{ target.label }}
-              </option>
-            </select>
-          </label>
-          <div class="midi-learn-actions">
+          <div class="midi-learn-parameter">
+            <label class="field">
+              <span>CC parameter</span>
+              <select v-model="midiLearnTargetId">
+                <option value="">Select parameter</option>
+                <option v-for="target in midiParameterTargets" :key="target.id" :value="target.id">
+                  {{ target.label }}
+                </option>
+              </select>
+            </label>
             <button type="button" :class="{ 'midi-learn-active': midiLearnArmed }" @click="armMidiLearn">
-              {{ midiLearnArmed ? 'Learning...' : 'Learn CC' }}
+              {{ midiLearnArmed ? 'Learning...' : 'Learn' }}
             </button>
-            <button type="button" :disabled="!selectedMidiMapping" @click="clearMidiMapping">Clear</button>
           </div>
           <span v-if="selectedMidiMapping" class="midi-mapping">
             CC {{ selectedMidiMapping.controller }} / Ch {{ selectedMidiMapping.channel }}
           </span>
+        </div>
+        <div v-if="midiMappings.length" class="midi-assignments" aria-label="Learned MIDI assignments">
+          <span class="midi-assignments-heading">Learned assignments</span>
+          <ul>
+            <li v-for="mapping in midiMappings" :key="`${mapping.channel}-${mapping.controller}-${mapping.targetChannel}-${mapping.targetId}`">
+              <div class="midi-assignment-details">
+                <span>Ch {{ mapping.channel }} / CC {{ mapping.controller }}</span>
+                <span>
+                  {{ mapping.targetChannel === 0 ? 'Master' : `Ch ${mapping.targetChannel}` }}
+                  / {{ midiMappingTargetLabel(mapping) }}
+                </span>
+              </div>
+              <div class="midi-assignment-actions">
+                <button
+                  type="button"
+                  class="midi-add-assignment"
+                  :disabled="!midiLearnTargetId"
+                  :aria-label="`Add the selected parameter to MIDI channel ${mapping.channel}, CC ${mapping.controller}`"
+                  title="Add the selected parameter to this controller"
+                  @click="addMidiParameter(mapping)"
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  class="midi-remove-assignment"
+                  :aria-label="`Remove the assignment for MIDI channel ${mapping.channel}, CC ${mapping.controller}`"
+                  title="Remove this assignment"
+                  @click="removeMidiParameter(mapping)"
+                >
+                  -
+                </button>
+              </div>
+            </li>
+          </ul>
         </div>
         <span class="status midi-status" aria-live="polite">{{ midiLearnStatus }}</span>
         <span class="status midi-status" aria-live="polite">{{ midiStatus }}</span>
