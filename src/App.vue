@@ -108,6 +108,7 @@ const midiLearnTargetId = ref('')
 const midiLearnArmed = ref(false)
 const midiLearnStatus = ref('Select a parameter, then click Learn.')
 type MidiMapping = { channel: number; controller: number; targetId: string; targetChannel: number }
+type MidiMappingGroup = Pick<MidiMapping, 'channel' | 'controller'> & { mappings: MidiMapping[] }
 type MidiParameterTarget = {
   id: string
   label: string
@@ -479,7 +480,7 @@ function armMidiLearn() {
   midiLearnStatus.value = 'Move a control on your MIDI controller...'
 }
 
-function addMidiParameter(mapping: MidiMapping) {
+function addMidiParameter(mapping: Pick<MidiMapping, 'channel' | 'controller'>) {
   if (!midiLearnTargetId.value) {
     midiLearnStatus.value = 'Select a parameter before adding an assignment.'
     return
@@ -509,9 +510,33 @@ function addMidiParameter(mapping: MidiMapping) {
   midiLearnStatus.value = `Assigned CC ${mapping.controller} on channel ${mapping.channel}.`
 }
 
-function removeMidiParameter(mapping: MidiMapping) {
-  midiMappings.value = midiMappings.value.filter((item) => item !== mapping)
+function hasMidiParameter(mapping: Pick<MidiMapping, 'channel' | 'controller'>): boolean {
+  return midiMappings.value.some((item) => (
+    item.channel === mapping.channel
+    && item.controller === mapping.controller
+    && item.targetId === midiLearnTargetId.value
+    && item.targetChannel === selectedChannel.value
+  ))
+}
+
+function removeMidiParameter(mapping: Pick<MidiMapping, 'channel' | 'controller'>) {
+  if (!midiLearnTargetId.value) {
+    midiLearnStatus.value = 'Select a parameter before removing an assignment.'
+    return
+  }
+
+  midiMappings.value = midiMappings.value.filter((item) => (
+    item.channel !== mapping.channel
+    || item.controller !== mapping.controller
+    || item.targetId !== midiLearnTargetId.value
+    || item.targetChannel !== selectedChannel.value
+  ))
   midiLearnStatus.value = `Removed CC ${mapping.controller} on channel ${mapping.channel}.`
+}
+
+function clearAllMidiMappings() {
+  midiMappings.value = []
+  midiLearnStatus.value = 'All MIDI assignments cleared.'
 }
 
 function isMidiMapping(value: unknown): value is MidiMapping {
@@ -567,6 +592,20 @@ watch(midiMappings, () => {
 const selectedMidiMapping = computed(() => midiMappings.value.find((mapping) => (
   mapping.targetId === midiLearnTargetId.value && mapping.targetChannel === selectedChannel.value
 )))
+
+const midiMappingGroups = computed<MidiMappingGroup[]>(() => {
+  const groups = new Map<string, MidiMappingGroup>()
+  midiMappings.value.forEach((mapping) => {
+    const key = `${mapping.channel}-${mapping.controller}`
+    const group = groups.get(key)
+    if (group) {
+      group.mappings.push(mapping)
+      return
+    }
+    groups.set(key, { channel: mapping.channel, controller: mapping.controller, mappings: [mapping] })
+  })
+  return [...groups.values()]
+})
 
 function midiMappingTargetLabel(mapping: MidiMapping): string {
   return mapping.targetChannel === selectedChannel.value
@@ -2925,14 +2964,19 @@ onUnmounted(() => {
           </span>
         </div>
         <div v-if="midiMappings.length" class="midi-assignments" aria-label="Learned MIDI assignments">
-          <span class="midi-assignments-heading">Learned assignments</span>
+          <div class="midi-assignments-header">
+            <span class="midi-assignments-heading">Learned assignments</span>
+            <button type="button" class="midi-clear-assignments" @click="clearAllMidiMappings">Clear all</button>
+          </div>
           <ul>
-            <li v-for="mapping in midiMappings" :key="`${mapping.channel}-${mapping.controller}-${mapping.targetChannel}-${mapping.targetId}`">
+            <li v-for="group in midiMappingGroups" :key="`${group.channel}-${group.controller}`">
               <div class="midi-assignment-details">
-                <span>Ch {{ mapping.channel }} / CC {{ mapping.controller }}</span>
-                <span>
-                  {{ mapping.targetChannel === 0 ? 'Master' : `Ch ${mapping.targetChannel}` }}
-                  / {{ midiMappingTargetLabel(mapping) }}
+                <span class="midi-assignment-controller">CC {{ group.controller }}:</span>
+                <span class="midi-assignment-parameters">
+                  <span v-for="mapping in group.mappings" :key="`${mapping.targetChannel}-${mapping.targetId}`">
+                    {{ mapping.targetChannel === 0 ? 'Master' : `Ch ${mapping.targetChannel}` }}
+                    / {{ midiMappingTargetLabel(mapping) }}
+                  </span>
                 </span>
               </div>
               <div class="midi-assignment-actions">
@@ -2940,18 +2984,19 @@ onUnmounted(() => {
                   type="button"
                   class="midi-add-assignment"
                   :disabled="!midiLearnTargetId"
-                  :aria-label="`Add the selected parameter to MIDI channel ${mapping.channel}, CC ${mapping.controller}`"
+                  :aria-label="`Add the selected parameter to MIDI channel ${group.channel}, CC ${group.controller}`"
                   title="Add the selected parameter to this controller"
-                  @click="addMidiParameter(mapping)"
+                  @click="addMidiParameter(group)"
                 >
                   +
                 </button>
                 <button
                   type="button"
                   class="midi-remove-assignment"
-                  :aria-label="`Remove the assignment for MIDI channel ${mapping.channel}, CC ${mapping.controller}`"
-                  title="Remove this assignment"
-                  @click="removeMidiParameter(mapping)"
+                  :disabled="!hasMidiParameter(group)"
+                  :aria-label="`Remove the selected parameter from MIDI channel ${group.channel}, CC ${group.controller}`"
+                  title="Remove the selected parameter from this controller"
+                  @click="removeMidiParameter(group)"
                 >
                   -
                 </button>

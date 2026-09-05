@@ -267,6 +267,7 @@ select { width: 100%; min-height: 30px; padding: 5px 28px 5px 8px; }
 .midi-learn-active { color: #09241f; background: linear-gradient(145deg, #ffd989, #d8a64c); border-color: #ffe5a8; }
 .midi-mapping { color: #91ecd8; font-size: .7rem; font-variant-numeric: tabular-nums; }
 .midi-assignments { display: grid; gap: 5px; }
+.midi-assignments-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .midi-assignments-heading {
   color: #a9bec0;
   font-size: .66rem;
@@ -274,6 +275,7 @@ select { width: 100%; min-height: 30px; padding: 5px 28px 5px 8px; }
   letter-spacing: .13em;
   text-transform: uppercase;
 }
+.midi-clear-assignments { min-height: 26px; padding: 3px 7px; color: #ffd9d7; border-color: #8d5558; background: linear-gradient(145deg, #57353a, #352126); }
 .midi-assignments ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .midi-assignments li {
   display: flex;
@@ -287,8 +289,10 @@ select { width: 100%; min-height: 30px; padding: 5px 28px 5px 8px; }
   font-size: .7rem;
   font-variant-numeric: tabular-nums;
 }
-.midi-assignment-details { display: grid; gap: 3px; min-width: 0; }
-.midi-assignment-details span:last-child { color: #91ecd8; overflow-wrap: anywhere; }
+.midi-assignment-details { display: flex; flex-wrap: wrap; gap: 3px 6px; min-width: 0; }
+.midi-assignment-controller { flex: 0 0 auto; }
+.midi-assignment-parameters { color: #91ecd8; overflow-wrap: anywhere; }
+.midi-assignment-parameters span + span::before { color: #81999c; content: ", "; }
 .midi-assignment-actions { display: flex; gap: 4px; }
 .midi-add-assignment, .midi-remove-assignment { min-width: 26px; min-height: 26px; padding: 0; font-size: 1rem; line-height: 1; }
 .midi-remove-assignment { color: #ffd9d7; border-color: #8d5558; background: linear-gradient(145deg, #57353a, #352126); }
