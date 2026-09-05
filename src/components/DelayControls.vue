@@ -1,29 +1,32 @@
 <script setup lang="ts">
 import SectionFrame from './SectionFrame.vue'
+import DelayOverdriveControls from './DelayOverdriveControls.vue'
+import type { DelayOverdriveSettings } from '../services/synthEngine'
 
 defineProps<{
   delayIndex: number
   bypassed: boolean
   time: number
   noteTime: number
-  feedback: number
-  resonance: number
+  repetitions: number
   mix: number
-  overdrive: number
+  overdrive?: DelayOverdriveSettings
   canMoveUp: boolean
   canMoveDown: boolean
 }>()
 
 const emit = defineEmits<{
   'update:noteTime': [value: number]
-  'update:feedback': [value: number]
-  'update:resonance': [value: number]
+  'update:repetitions': [value: number]
   'update:mix': [value: number]
-  'update:overdrive': [value: number]
+  'update:overdrive-gain': [value: number]
+  'update:overdrive-feedback': [value: number]
+  'update:overdrive-bypassed': [value: boolean]
   'toggle-bypass': []
   'move-up': []
   'move-down': []
   remove: []
+  'remove-overdrive': []
 }>()
 </script>
 
@@ -49,19 +52,9 @@ const emit = defineEmits<{
         </select>
       </label>
       <label class="control">
-        <span>Feedback</span>
-        <output>{{ Math.round(feedback * 100) }}%</output>
-        <input type="range" min="0" max="0.95" step="0.01" :value="feedback" @input="emit('update:feedback', Number(($event.target as HTMLInputElement).value))">
-      </label>
-      <label class="control">
-        <span>Resonance</span>
-        <output>{{ Math.round(resonance * 100) }}%</output>
-        <input type="range" min="0" max="1" step="0.01" :value="resonance" @input="emit('update:resonance', Number(($event.target as HTMLInputElement).value))">
-      </label>
-      <label class="control">
-        <span>Overdrive</span>
-        <output>{{ Math.round(overdrive * 100) }}%</output>
-        <input type="range" min="0" max="1" step="0.01" :value="overdrive" @input="emit('update:overdrive', Number(($event.target as HTMLInputElement).value))">
+        <span>Repetitions</span>
+        <output>{{ repetitions }}</output>
+        <input type="range" min="1" max="20" step="1" :value="repetitions" @input="emit('update:repetitions', Number(($event.target as HTMLInputElement).value))">
       </label>
       <label class="control">
         <span>Mix</span>
@@ -69,6 +62,15 @@ const emit = defineEmits<{
         <input type="range" min="0" max="1" step="0.01" :value="mix" @input="emit('update:mix', Number(($event.target as HTMLInputElement).value))">
       </label>
     </div>
+    <DelayOverdriveControls
+      v-if="overdrive !== undefined"
+      :delay-index="delayIndex"
+      v-bind="overdrive"
+      @update:gain="emit('update:overdrive-gain', $event)"
+      @update:feedback="emit('update:overdrive-feedback', $event)"
+      @toggle-bypass="emit('update:overdrive-bypassed', !overdrive.bypassed)"
+      @remove="emit('remove-overdrive')"
+    />
     <slot name="modulation" />
   </SectionFrame>
 </template>

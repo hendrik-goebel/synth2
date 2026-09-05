@@ -403,7 +403,7 @@ const midiParameterTargets = computed<MidiParameterTarget[]>(() => {
     }
   })
   const effectTargets: Array<{ group: string; label: string; values: Array<{ parameter: string; label: string; min: number; max: number; curve?: 'linear' | 'logarithmic' }> }> = [
-    { group: 'delays', label: 'Delay', values: [{ parameter: 'feedback', label: 'Feedback', min: 0, max: 0.95 }, { parameter: 'resonance', label: 'Resonance', min: 0, max: 1 }, { parameter: 'mix', label: 'Mix', min: 0, max: 1 }, { parameter: 'overdrive', label: 'Overdrive', min: 0, max: 1 }] },
+    { group: 'delays', label: 'Delay', values: [{ parameter: 'time', label: 'Time', min: 0.01, max: 2 }, { parameter: 'repetitions', label: 'Repetitions', min: 1, max: 20 }, { parameter: 'mix', label: 'Mix', min: 0, max: 1 }] },
     { group: 'overdrives', label: 'Overdrive', values: [{ parameter: 'drive', label: 'Drive', min: 0, max: 1 }, { parameter: 'tone', label: 'Tone', min: 0, max: 1 }, { parameter: 'feedback', label: 'Feedback', min: 0, max: 0.95 }, { parameter: 'mix', label: 'Mix', min: 0, max: 1 }] },
     { group: 'choruses', label: 'Chorus', values: [{ parameter: 'rate', label: 'Rate', min: 0.01, max: 20 }, { parameter: 'depth', label: 'Depth', min: 0, max: 1 }, { parameter: 'delay', label: 'Delay', min: 0, max: 0.045 }, { parameter: 'mix', label: 'Mix', min: 0, max: 1 }] },
     { group: 'flangers', label: 'Flanger', values: [{ parameter: 'rate', label: 'Rate', min: 0.01, max: 10 }, { parameter: 'depth', label: 'Depth', min: 0, max: 1 }, { parameter: 'delay', label: 'Delay', min: 0, max: 0.01 }, { parameter: 'feedback', label: 'Feedback', min: 0, max: 0.9 }, { parameter: 'mix', label: 'Mix', min: 0, max: 1 }] },
@@ -511,54 +511,26 @@ function addMidiParameter(mapping: Pick<MidiMapping, 'channel' | 'controller'>) 
   midiLearnStatus.value = `Assigned CC ${mapping.controller} on channel ${mapping.channel}.`
 }
 
-function hasMidiParameter(mapping: Pick<MidiMapping, 'channel' | 'controller'>): boolean {
-  return midiMappings.value.some((item) => (
-    item.channel === mapping.channel
-    && item.controller === mapping.controller
-    && item.targetId === midiLearnTargetId.value
-    && item.targetChannel === selectedChannel.value
-  ))
+function matchesMidiMapping(first: MidiMapping, second: MidiMapping): boolean {
+  return first.channel === second.channel
+    && first.controller === second.controller
+    && first.targetId === second.targetId
+    && first.targetChannel === second.targetChannel
 }
 
-function removeMidiParameter(mapping: Pick<MidiMapping, 'channel' | 'controller'>) {
-  if (!midiLearnTargetId.value) {
-    midiLearnStatus.value = 'Select a parameter before removing an assignment.'
-    return
-  }
-
-  midiMappings.value = midiMappings.value.filter((item) => (
-    item.channel !== mapping.channel
-    || item.controller !== mapping.controller
-    || item.targetId !== midiLearnTargetId.value
-    || item.targetChannel !== selectedChannel.value
-  ))
+function removeMidiParameter(mapping: MidiMapping) {
+  midiMappings.value = midiMappings.value.filter((item) => !matchesMidiMapping(item, mapping))
   midiLearnStatus.value = `Removed CC ${mapping.controller} on channel ${mapping.channel}.`
 }
 
-function isMidiParameterReversed(mapping: Pick<MidiMapping, 'channel' | 'controller'>): boolean {
-  return midiMappings.value.some((item) => (
-    item.channel === mapping.channel
-    && item.controller === mapping.controller
-    && item.targetId === midiLearnTargetId.value
-    && item.targetChannel === selectedChannel.value
-    && item.reversed === true
-  ))
+function isMidiParameterReversed(mapping: MidiMapping): boolean {
+  return mapping.reversed === true
 }
 
-function toggleMidiParameterReversed(mapping: Pick<MidiMapping, 'channel' | 'controller'>) {
-  if (!midiLearnTargetId.value) {
-    midiLearnStatus.value = 'Select a parameter before reversing an assignment.'
-    return
-  }
-
-  const index = midiMappings.value.findIndex((item) => (
-    item.channel === mapping.channel
-    && item.controller === mapping.controller
-    && item.targetId === midiLearnTargetId.value
-    && item.targetChannel === selectedChannel.value
-  ))
+function toggleMidiParameterReversed(mapping: MidiMapping) {
+  const index = midiMappings.value.findIndex((item) => matchesMidiMapping(item, mapping))
   if (index === -1) {
-    midiLearnStatus.value = 'This controller is not assigned to the selected parameter.'
+    midiLearnStatus.value = 'This MIDI assignment no longer exists.'
     return
   }
 
@@ -660,7 +632,7 @@ const filterEnvelopeDestinations = [
 ] satisfies { value: EnvelopeDestination; label: string }[]
 const delayEnvelopeDestinations = [
   { value: 'delayTime', label: 'Time' },
-  { value: 'delayFeedback', label: 'Feedback' },
+  { value: 'delayRepetitions', label: 'Repetitions' },
   { value: 'delayMix', label: 'Mix' },
 ] satisfies { value: EnvelopeDestination; label: string }[]
 const overdriveEnvelopeDestinations = [
@@ -1606,8 +1578,30 @@ function updateDelaySettings(index: number, settings: Partial<DelaySettings>) {
   if (settings.noteTime !== undefined) {
     settings = { ...settings, time: delayTimeForBpm(settings.noteTime, bpm.value) }
   }
+  if (settings.repetitions !== undefined) {
+    settings = { ...settings, repetitions: Math.max(1, Math.min(20, Math.round(settings.repetitions))) }
+  }
   delays.value[index] = { ...delays.value[index], ...settings }
   activeSynth.setDelaySettings(index, settings)
+}
+
+function addDelayOverdrive(index: number) {
+  updateDelaySettings(index, { overdrive: { bypassed: false, gain: 0.35, feedback: 0 } })
+}
+
+function updateDelayOverdrive(index: number, changes: Partial<NonNullable<DelaySettings['overdrive']>>) {
+  const overdrive = delays.value[index].overdrive ?? { bypassed: false, gain: 0.35, feedback: 0 }
+  updateDelaySettings(index, {
+    overdrive: {
+      bypassed: changes.bypassed ?? overdrive.bypassed,
+      gain: Math.max(0, Math.min(1, changes.gain ?? overdrive.gain)),
+      feedback: Math.max(0, Math.min(0.6, changes.feedback ?? overdrive.feedback)),
+    },
+  })
+}
+
+function removeDelayOverdrive(index: number) {
+  updateDelaySettings(index, { overdrive: undefined })
 }
 
 function delayTimeForBpm(noteTime: number, tempo: number) {
@@ -2081,7 +2075,7 @@ function lfoTargetOptions(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 
     oscillator: [['detune', 'Detune'], ['level', 'Level'], ['unisonDetune', 'Unison detune'], ['stereoSpread', 'Stereo spread'], ['fmAmount', 'FM amount']],
     noise: [['level', 'Level'], ['stereoSpread', 'Stereo spread']],
     filter: [['cutoff', 'Cutoff'], ['resonance', 'Resonance'], ['gain', 'Gain']],
-    delay: [['time', 'Time'], ['feedback', 'Feedback'], ['mix', 'Mix'], ['overdrive', 'Overdrive']],
+    delay: [['time', 'Time'], ['repetitions', 'Repetitions'], ['mix', 'Mix']],
     overdrive: [['drive', 'Drive'], ['tone', 'Tone'], ['feedback', 'Feedback'], ['mix', 'Mix']],
     chorus: [['rate', 'LFO rate'], ['depth', 'LFO depth'], ['delay', 'Delay'], ['mix', 'Mix']],
     flanger: [['rate', 'LFO rate'], ['depth', 'LFO depth'], ['delay', 'Delay'], ['feedback', 'Feedback'], ['mix', 'Mix']],
@@ -2228,9 +2222,14 @@ function closeModuleModulationDialog() {
   selectedModuleModulation.value = null
 }
 
-function addModuleModulation(type: 'lfo' | 'env') {
+function addModuleModulation(type: 'lfo' | 'env' | 'overdrive') {
   const module = selectedModuleModulation.value
   if (!module) return
+  if (type === 'overdrive') {
+    if (module.type === 'delay') addDelayOverdrive(module.index)
+    closeModuleModulationDialog()
+    return
+  }
   if (module.type === 'eq') {
     if (type === 'lfo') addEqLfo(module.index)
     else addEqEnvelope(module.index)
@@ -2263,6 +2262,9 @@ onUnmounted(() => {
 
 <template>
   <main class="app amb-light-tl" @pointerdown.capture="handleFirstInteraction" @pointerup.capture="releaseControlFocus" @change.capture="releaseControlFocus">
+    <aside class="active-channel-indicator" aria-live="polite">
+      {{ isMasterChannel ? 'MASTER' : `CH ${selectedChannel}` }}
+    </aside>
     <section class="panel ambient amb-surface amb-chamfer-2 amb-elevation-2 amb-rounded-xl amb-mat-brushed">
       <header class="topbar">
         <div class="brand-lockup">
@@ -2669,10 +2671,12 @@ onUnmounted(() => {
                 :can-move-up="canMoveModule('delays', entry.index, -1)"
                 :can-move-down="canMoveModule('delays', entry.index, 1)"
                 @update:note-time="updateDelaySettings(entry.index, { noteTime: $event })"
-                @update:feedback="updateDelaySettings(entry.index, { feedback: $event })"
-                @update:resonance="updateDelaySettings(entry.index, { resonance: $event })"
+                @update:repetitions="updateDelaySettings(entry.index, { repetitions: $event })"
                 @update:mix="updateDelaySettings(entry.index, { mix: $event })"
-                @update:overdrive="updateDelaySettings(entry.index, { overdrive: $event })"
+                @update:overdrive-gain="updateDelayOverdrive(entry.index, { gain: $event })"
+                @update:overdrive-feedback="updateDelayOverdrive(entry.index, { feedback: $event })"
+                @update:overdrive-bypassed="updateDelayOverdrive(entry.index, { bypassed: $event })"
+                @remove-overdrive="removeDelayOverdrive(entry.index)"
                 @toggle-bypass="toggleDelayBypass(entry.index)"
                 @move-up="moveModule('delays', entry.index, -1)"
                 @move-down="moveModule('delays', entry.index, 1)"
@@ -2926,6 +2930,10 @@ onUnmounted(() => {
               <h3 id="add-module-envelope-heading">Envelope</h3>
               <button type="button" @click="addModuleModulation('env')">ENV</button>
             </section>
+            <section v-if="selectedModuleModulation?.type === 'delay'" class="add-module-category" aria-labelledby="add-delay-overdrive-heading">
+              <h3 id="add-delay-overdrive-heading">Overdrive</h3>
+              <button type="button" @click="addModuleModulation('overdrive')">Overdrive</button>
+            </section>
           </div>
         </div>
       </dialog>
@@ -3005,17 +3013,38 @@ onUnmounted(() => {
             <button type="button" class="midi-clear-assignments" @click="clearAllMidiMappings">Clear all</button>
           </div>
           <ul>
-            <li v-for="group in midiMappingGroups" :key="`${group.channel}-${group.controller}`">
-              <div class="midi-assignment-details">
-                <span class="midi-assignment-controller">CC {{ group.controller }}:</span>
-                <span class="midi-assignment-parameters">
-                  <span v-for="mapping in group.mappings" :key="`${mapping.targetChannel}-${mapping.targetId}`">
+            <li v-for="group in midiMappingGroups" :key="`${group.channel}-${group.controller}`" class="midi-assignment-group">
+              <span class="midi-assignment-controller">CC {{ group.controller }}</span>
+              <ul class="midi-assignment-rows">
+                <li v-for="mapping in group.mappings" :key="`${mapping.targetChannel}-${mapping.targetId}`" class="midi-assignment-row">
+                  <span class="midi-assignment-parameter">
                     {{ mapping.targetChannel === 0 ? 'Master' : `Ch ${mapping.targetChannel}` }}
                     / {{ midiMappingTargetLabel(mapping) }}
                   </span>
-                </span>
-              </div>
-              <div class="midi-assignment-actions">
+                  <div class="midi-assignment-actions">
+                    <button
+                      type="button"
+                      class="midi-reverse-assignment"
+                      :aria-pressed="isMidiParameterReversed(mapping)"
+                      :aria-label="`Reverse ${midiMappingTargetLabel(mapping)} for CC ${group.controller}`"
+                      title="Reverse this assignment"
+                      @click="toggleMidiParameterReversed(mapping)"
+                    >
+                      R
+                    </button>
+                    <button
+                      type="button"
+                      class="midi-remove-assignment"
+                      :aria-label="`Remove ${midiMappingTargetLabel(mapping)} from CC ${group.controller}`"
+                      title="Remove this assignment"
+                      @click="removeMidiParameter(mapping)"
+                    >
+                      -
+                    </button>
+                  </div>
+                </li>
+              </ul>
+              <div class="midi-assignment-add">
                 <button
                   type="button"
                   class="midi-add-assignment"
@@ -3025,27 +3054,6 @@ onUnmounted(() => {
                   @click="addMidiParameter(group)"
                 >
                   +
-                </button>
-                <button
-                  type="button"
-                  class="midi-reverse-assignment"
-                  :disabled="!hasMidiParameter(group)"
-                  :aria-pressed="isMidiParameterReversed(group)"
-                  :aria-label="`Reverse the selected parameter for CC ${group.controller}`"
-                  title="Reverse the selected parameter"
-                  @click="toggleMidiParameterReversed(group)"
-                >
-                  R
-                </button>
-                <button
-                  type="button"
-                  class="midi-remove-assignment"
-                  :disabled="!hasMidiParameter(group)"
-                  :aria-label="`Remove the selected parameter from MIDI channel ${group.channel}, CC ${group.controller}`"
-                  title="Remove the selected parameter from this controller"
-                  @click="removeMidiParameter(group)"
-                >
-                  -
                 </button>
               </div>
             </li>

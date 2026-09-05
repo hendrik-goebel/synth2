@@ -37,6 +37,25 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   padding: clamp(8px, 1.2vw, 16px);
 }
 
+.active-channel-indicator {
+  position: fixed;
+  z-index: 10;
+  top: 12px;
+  right: 12px;
+  min-width: 44px;
+  padding: 5px 8px;
+  color: #9bf4de;
+  background: rgb(21 37 42 / 92%);
+  border: 1px solid #41575c;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 24%);
+  font-size: .66rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 .panel {
   --amb-albedo: #243239;
   display: grid;
@@ -277,10 +296,9 @@ select { width: 100%; min-height: 30px; padding: 5px 28px 5px 8px; }
 }
 .midi-clear-assignments { min-height: 26px; padding: 3px 7px; color: #ffd9d7; border-color: #8d5558; background: linear-gradient(145deg, #57353a, #352126); }
 .midi-assignments ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
-.midi-assignments li {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
+.midi-assignment-group {
+  display: grid;
+  gap: 5px;
   padding: 5px 7px;
   color: #c4d3d3;
   background: #172329;
@@ -289,11 +307,12 @@ select { width: 100%; min-height: 30px; padding: 5px 28px 5px 8px; }
   font-size: .7rem;
   font-variant-numeric: tabular-nums;
 }
-.midi-assignment-details { display: flex; flex-wrap: wrap; gap: 3px 6px; min-width: 0; }
-.midi-assignment-controller { flex: 0 0 auto; }
-.midi-assignment-parameters { color: #91ecd8; overflow-wrap: anywhere; }
-.midi-assignment-parameters span + span::before { color: #81999c; content: ", "; }
+.midi-assignment-controller { color: #a9bec0; font-size: .66rem; font-weight: 760; letter-spacing: .08em; }
+.midi-assignment-rows { gap: 3px; }
+.midi-assignment-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.midi-assignment-parameter { min-width: 0; color: #91ecd8; overflow-wrap: anywhere; }
 .midi-assignment-actions { display: flex; gap: 4px; }
+.midi-assignment-add { display: flex; justify-content: flex-end; }
 .midi-add-assignment, .midi-reverse-assignment, .midi-remove-assignment { min-width: 26px; min-height: 26px; padding: 0; font-size: 1rem; line-height: 1; }
 .midi-reverse-assignment { font-size: .66rem; }
 .midi-reverse-assignment[aria-pressed="true"] { color: #09241f; background: linear-gradient(145deg, #9af5df, #55c7af); border-color: #a6f9e5; }

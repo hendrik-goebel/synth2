@@ -23,7 +23,8 @@ export type NoiseSettings = {
 export type OutputSettings = { volume: number; pan: number }
 export type FilterType = 'lowpass' | 'highpass' | 'bandpass'
 export type FilterSettings = { bypassed: boolean; type: FilterType; cutoff: number; resonance: number; gain: number }
-export type DelaySettings = { bypassed: boolean; time: number; noteTime: number; feedback: number; resonance: number; mix: number; overdrive: number }
+export type DelayOverdriveSettings = { bypassed: boolean; gain: number; feedback: number }
+export type DelaySettings = { bypassed: boolean; time: number; noteTime: number; repetitions: number; mix: number; overdrive?: DelayOverdriveSettings }
 export type OverdriveSettings = { bypassed: boolean; drive: number; tone: number; feedback: number; mix: number }
 export type ChorusSettings = { bypassed: boolean; waveform: Waveform; rate: number; depth: number; delay: number; mix: number }
 export type FlangerSettings = { bypassed: boolean; waveform: Waveform; rate: number; depth: number; delay: number; feedback: number; mix: number }
@@ -71,7 +72,7 @@ export type LfoTarget =
   | `oscillator:${number}:detune` | `oscillator:${number}:level` | `oscillator:${number}:unisonDetune` | `oscillator:${number}:stereoSpread` | `oscillator:${number}:fmAmount`
   | `noise:${number}:level` | `noise:${number}:stereoSpread`
   | `filter:${number}:cutoff` | `filter:${number}:resonance` | `filter:${number}:gain`
-  | `delay:${number}:time` | `delay:${number}:feedback` | `delay:${number}:mix` | `delay:${number}:overdrive`
+  | `delay:${number}:time` | `delay:${number}:repetitions` | `delay:${number}:mix`
   | `overdrive:${number}:drive` | `overdrive:${number}:tone` | `overdrive:${number}:feedback` | `overdrive:${number}:mix`
   | `chorus:${number}:rate` | `chorus:${number}:depth` | `chorus:${number}:delay` | `chorus:${number}:mix`
   | `flanger:${number}:rate` | `flanger:${number}:depth` | `flanger:${number}:delay` | `flanger:${number}:feedback` | `flanger:${number}:mix`
@@ -84,7 +85,7 @@ export type LfoSettings = { waveform: Waveform; rate: number; depth: number; tar
 export type EnvelopeCurve = 'linear' | 'exponential'
 export type EnvelopeDestination =
   | 'oscillatorLevel' | 'oscillatorPitch' | 'noiseLevel' | 'filterCutoff' | 'filterResonance'
-  | 'delayTime' | 'delayFeedback' | 'delayMix'
+  | 'delayTime' | 'delayRepetitions' | 'delayMix'
   | 'overdriveDrive' | 'overdriveTone' | 'overdriveFeedback' | 'overdriveMix'
   | 'chorusRate' | 'chorusDepth' | 'chorusDelay' | 'chorusMix'
   | 'flangerRate' | 'flangerDepth' | 'flangerDelay' | 'flangerFeedback' | 'flangerMix'

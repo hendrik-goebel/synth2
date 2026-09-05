@@ -25,7 +25,7 @@ export function lfoDepth(settings: LfoSettings): number {
   const parameter = module === 'eq' ? possibleParameter : possibleBandIndex
   const ranges: Record<string, number> = {
     detune: 1200, level: 0.2, unisonDetune: 100, stereoSpread: 1, fmAmount: 1000, cutoff: 19980, resonance: 3,
-    gain: 24, time: 1.99, feedback: 0.95, mix: 1, overdrive: 1, drive: 18, tone: 10200, decay: 38,
+    gain: 24, time: 1.99, feedback: 0.95, repetitions: 0.95, mix: 1, overdrive: 1, drive: 18, tone: 10200, decay: 38,
     preDelay: 0.2, damping: 16500, width: 1, rate: 30, depth: 1, delay: 0.03, volume: 1, pan: 1,
     frequency: 19980, q: 17.9,
   }

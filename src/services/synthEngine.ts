@@ -345,6 +345,7 @@ export class SynthEngine {
     if (!delay) throw new RangeError(`Unknown delay index: ${index}`)
     delay.settings = { ...delay.settings, ...changes }
     applyDelaySettings(this.audioContext, delay)
+    if (Object.hasOwn(changes, 'overdrive')) this.routeOutput()
   }
 
   removeDelay(index: number): void {
@@ -830,7 +831,7 @@ export class SynthEngine {
     }
     if (module === 'delay') {
       const delay = this.delays[index]
-      return !delay ? [] : parameter === 'time' ? [delay.node.delayTime] : parameter === 'feedback' ? [delay.feedback.gain] : parameter === 'mix' ? [delay.wet.gain] : parameter === 'overdrive' ? [delay.driveGain.gain] : []
+      return !delay ? [] : parameter === 'time' ? [delay.node.delayTime] : parameter === 'repetitions' ? [delay.repetitions.gain] : parameter === 'mix' ? [delay.wet.gain] : []
     }
     if (module === 'overdrive') {
       const overdrive = this.overdrives[index]
@@ -880,10 +881,10 @@ export class SynthEngine {
 
     this.delays.forEach((delay, index) => {
       const timeEnvelope = this.activeEnvelopeSettings('delayTime', { type: 'delay', index })
-      const feedbackEnvelope = this.activeEnvelopeSettings('delayFeedback', { type: 'delay', index })
+      const repetitionsEnvelope = this.activeEnvelopeSettings('delayRepetitions', { type: 'delay', index })
       const mixEnvelope = this.activeEnvelopeSettings('delayMix', { type: 'delay', index })
       if (timeEnvelope) this.applyPositiveEnvelopeOnNoteOn(delay.node.delayTime, now, timeEnvelope, 0.01, delay.settings.time * this.envelopePeakGain(velocity, timeEnvelope.velocity))
-      if (feedbackEnvelope) this.applyPositiveEnvelopeOnNoteOn(delay.feedback.gain, now, feedbackEnvelope, 0, Math.min(0.98, delay.settings.feedback + delay.settings.resonance * 0.3) * this.envelopePeakGain(velocity, feedbackEnvelope.velocity))
+      if (repetitionsEnvelope) this.applyPositiveEnvelopeOnNoteOn(delay.repetitions.gain, now, repetitionsEnvelope, 0, delay.settings.repetitions * this.envelopePeakGain(velocity, repetitionsEnvelope.velocity))
       if (mixEnvelope) this.applyPositiveEnvelopeOnNoteOn(delay.wet.gain, now, mixEnvelope, 0, delay.settings.mix * this.envelopePeakGain(velocity, mixEnvelope.velocity))
     })
 
@@ -1228,7 +1229,7 @@ export class SynthEngine {
   }
 
   private clampEnvelopeDestination(value: EnvelopeDestination | undefined, fallback: EnvelopeDestination): EnvelopeDestination {
-    return value === 'oscillatorLevel' || value === 'oscillatorPitch' || value === 'noiseLevel' || value === 'filterCutoff' || value === 'filterResonance' || value === 'delayTime' || value === 'delayFeedback' || value === 'delayMix' || value === 'overdriveDrive' || value === 'overdriveTone' || value === 'overdriveFeedback' || value === 'overdriveMix' || value === 'chorusRate' || value === 'chorusDepth' || value === 'chorusDelay' || value === 'chorusMix' || value === 'flangerRate' || value === 'flangerDepth' || value === 'flangerDelay' || value === 'flangerFeedback' || value === 'flangerMix' || value === 'tremoloRate' || value === 'tremoloDepth' || value === 'tremoloMix' || value === 'resonatorFrequency' || value === 'resonatorDecay' || value === 'resonatorFeedback' || value === 'resonatorDamping' || value === 'resonatorDrive' || value === 'resonatorMix' || value === 'reverbDecay' || value === 'reverbMix' || value === 'reverbPreDelay' || value === 'reverbDamping' || value === 'reverbWidth' ? value : fallback
+    return value === 'oscillatorLevel' || value === 'oscillatorPitch' || value === 'noiseLevel' || value === 'filterCutoff' || value === 'filterResonance' || value === 'delayTime' || value === 'delayRepetitions' || value === 'delayMix' || value === 'overdriveDrive' || value === 'overdriveTone' || value === 'overdriveFeedback' || value === 'overdriveMix' || value === 'chorusRate' || value === 'chorusDepth' || value === 'chorusDelay' || value === 'chorusMix' || value === 'flangerRate' || value === 'flangerDepth' || value === 'flangerDelay' || value === 'flangerFeedback' || value === 'flangerMix' || value === 'tremoloRate' || value === 'tremoloDepth' || value === 'tremoloMix' || value === 'resonatorFrequency' || value === 'resonatorDecay' || value === 'resonatorFeedback' || value === 'resonatorDamping' || value === 'resonatorDrive' || value === 'resonatorMix' || value === 'reverbDecay' || value === 'reverbMix' || value === 'reverbPreDelay' || value === 'reverbDamping' || value === 'reverbWidth' ? value : fallback
   }
 
   private envelopePeakGain(velocity: number, velocityAmount: number): number {
