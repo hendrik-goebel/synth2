@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { instrumentCategories, instrumentPresets, type InstrumentPreset } from './instruments'
 import { MidiService, type MidiControlChangeEvent } from './services/midiService'
 import { decodeSeed, encodeSeed } from './services/seedService'
-import { createChorusSettings, createDelaySettings, createEnvelopeSettings, createEqBandSettings, createFilterSettings, createFlangerSettings, createMultibandEqSettings, createNoiseSettings, createOutputSettings, createOverdriveSettings, createResonatorSettings, createReverbSettings, createCompressorSettings, createGateSettings, createLimiterSettings, createOscillatorSettings, createSingleBandEqSettings, createTremoloSettings, type AmplitudeModulationSettings, type ChorusSettings, type DelaySettings, type DynamicsSettings, type DynamicsSettingsChanges, type EqBandSettings, type EqEnvelopeSettings, type EqLfoSettings, type EqModulationTarget, type EqParameter, type EqSettings, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type EnvelopeSource, type EnvelopeSourceType, type FilterSettings, type FlangerSettings, type FlatAudioModule, type LfoSettings, type NoiseSettings, type OscillatorSettings, type OutputSettings, type OverdriveSettings, type ResonatorSettings, type ReverbSettings, type TremoloSettings, type Waveform, SynthEngine } from './services/synthEngine'
+import { createChorusSettings, createDelaySettings, createEnvelopeSettings, createEqBandSettings, createFilterSettings, createFlangerSettings, createMultibandEqSettings, createNoiseSettings, createOutputSettings, createOverdriveSettings, createResonatorSettings, createReverbSettings, createCompressorSettings, createGateSettings, createLimiterSettings, createOscillatorSettings, createSingleBandEqSettings, createTremoloSettings, type AmplitudeModulationSettings, type ChorusSettings, type DelayModuleKind, type DelaySettings, type DynamicsSettings, type DynamicsSettingsChanges, type EqBandSettings, type EqEnvelopeSettings, type EqLfoSettings, type EqModulationTarget, type EqParameter, type EqSettings, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type EnvelopeSource, type EnvelopeSourceType, type FilterSettings, type FlangerSettings, type FlatAudioModule, type LfoSettings, type NoiseSettings, type OscillatorSettings, type OutputSettings, type OverdriveSettings, type ResonatorSettings, type ReverbModuleKind, type ReverbSettings, type TremoloSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
 import NoiseControls from './components/NoiseControls.vue'
 import FilterControls from './components/FilterControls.vue'
@@ -29,6 +29,7 @@ type LfoControlModule = LfoSettings & { bypassed: boolean }
 type ModuleKind = EffectGroup | 'amplitudeModulation'
 /** A single instance of a module type, identified by its position within that type's own settings array. */
 type ModuleOrderEntry = { type: ModuleKind; index: number }
+type LastAddedBypassTarget = { type: EffectGroup; index: number } | { type: 'delay-filter' | 'delay-overdrive' | 'delay-resonator' | 'reverb-filter' | 'reverb-overdrive' | 'reverb-resonator'; index: number }
 type SoundSourceType = 'oscillator' | 'noise'
 type SoundSourceOrderEntry = { type: SoundSourceType; index: number }
 type ModuleModulationTarget = EnvelopeSource | { type: 'eq'; index: number }
@@ -141,6 +142,7 @@ const lfos = ref<LfoControlModule[]>([])
 const dynamics = ref<DynamicsSettings[]>([])
 const eqs = ref<EqSettings[]>([])
 const moduleOrder = ref<ModuleOrderEntry[]>([{ type: 'filters', index: 0 }])
+const lastAddedBypassTarget = ref<LastAddedBypassTarget | null>(null)
 const isAmplitudeModulationBypassed = ref(false)
 const selectedInstrumentId = ref('')
 const channels = shallowRef<ChannelState[]>([])
@@ -245,6 +247,7 @@ function loadChannelState(channel: ChannelState) {
   moduleOrder.value = channel.moduleOrder
   isAmplitudeModulationBypassed.value = channel.isAmplitudeModulationBypassed
   selectedInstrumentId.value = channel.selectedInstrumentId
+  lastAddedBypassTarget.value = null
   activeVoices.value = activeSynth.getActiveVoiceCount()
 }
 
@@ -320,6 +323,10 @@ function handleChannelKey(event: KeyboardEvent) {
 function handleKeydown(event: KeyboardEvent) {
   handleFirstInteraction()
   handleChannelKey(event)
+  if (event.repeat || event.key.toLowerCase() !== 'b' || event.metaKey || event.ctrlKey || event.altKey || event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLTextAreaElement) return
+
+  event.preventDefault()
+  toggleLastAddedModuleBypass()
 }
 
 function releaseControlFocus(event: Event) {
@@ -1418,6 +1425,7 @@ function createRandomOscillatorSettings(): OscillatorSettings {
 /** Appends a new module instance to the end of the unified module order (mirrors the engine's own internal ordering). */
 function appendModuleOrderEntry(type: ModuleKind, index: number) {
   moduleOrder.value = [...moduleOrder.value, { type, index }]
+  if (type !== 'amplitudeModulation') lastAddedBypassTarget.value = { type, index }
 }
 
 /** Removes a module instance from the unified module order, reindexing later same-type entries (mirrors array splice semantics). */
@@ -1586,11 +1594,15 @@ function updateDelaySettings(index: number, settings: Partial<DelaySettings>) {
 }
 
 function addDelayOverdrive(index: number) {
-  updateDelaySettings(index, { overdrive: { bypassed: false, gain: 0.35, feedback: 0 } })
+  const moduleOrder = delayModuleOrder(delays.value[index])
+  if (!moduleOrder.includes('overdrive')) moduleOrder.push('overdrive')
+  updateDelaySettings(index, { overdrive: { bypassed: true, gain: 0, feedback: 0 }, moduleOrder })
+  markSectionOpen(`delay-${index}-overdrive-heading`)
+  lastAddedBypassTarget.value = { type: 'delay-overdrive', index }
 }
 
 function updateDelayOverdrive(index: number, changes: Partial<NonNullable<DelaySettings['overdrive']>>) {
-  const overdrive = delays.value[index].overdrive ?? { bypassed: false, gain: 0.35, feedback: 0 }
+  const overdrive = delays.value[index].overdrive ?? { bypassed: false, gain: 0, feedback: 0 }
   updateDelaySettings(index, {
     overdrive: {
       bypassed: changes.bypassed ?? overdrive.bypassed,
@@ -1601,7 +1613,62 @@ function updateDelayOverdrive(index: number, changes: Partial<NonNullable<DelayS
 }
 
 function removeDelayOverdrive(index: number) {
-  updateDelaySettings(index, { overdrive: undefined })
+  updateDelaySettings(index, { overdrive: undefined, moduleOrder: delayModuleOrder(delays.value[index]).filter((module) => module !== 'overdrive') })
+}
+
+function addDelayFilter(index: number) {
+  const moduleOrder = delayModuleOrder(delays.value[index])
+  if (!moduleOrder.includes('filter')) moduleOrder.push('filter')
+  updateDelaySettings(index, { filter: { bypassed: true, type: 'lowpass', cutoff: 12000, resonance: 0, gain: 0 }, moduleOrder })
+  markSectionOpen(`delay-${index}-filter-heading`)
+  lastAddedBypassTarget.value = { type: 'delay-filter', index }
+}
+
+function addDelayResonator(index: number) {
+  const moduleOrder = delayModuleOrder(delays.value[index])
+  if (!moduleOrder.includes('resonator')) moduleOrder.push('resonator')
+  updateDelaySettings(index, { resonator: { ...createResonatorSettings(), bypassed: true }, moduleOrder })
+  markSectionOpen(`delay-${index}-resonator-heading`)
+  lastAddedBypassTarget.value = { type: 'delay-resonator', index }
+}
+
+function updateDelayFilter(index: number, settings: Partial<FilterSettings>) {
+  const filter = delays.value[index].filter
+  if (!filter) return
+  updateDelaySettings(index, { filter: { ...filter, ...settings } })
+}
+
+function removeDelayFilter(index: number) {
+  updateDelaySettings(index, { filter: undefined, moduleOrder: delayModuleOrder(delays.value[index]).filter((module) => module !== 'filter') })
+}
+
+function updateDelayResonator(index: number, settings: Partial<ResonatorSettings>) {
+  const resonator = delays.value[index].resonator
+  if (!resonator) return
+  updateDelaySettings(index, { resonator: { ...resonator, ...settings } })
+}
+
+function removeDelayResonator(index: number) {
+  updateDelaySettings(index, { resonator: undefined, moduleOrder: delayModuleOrder(delays.value[index]).filter((module) => module !== 'resonator') })
+}
+
+function delayModuleOrder(delay: DelaySettings): DelayModuleKind[] {
+  const modules: DelayModuleKind[] = [
+    ...(delay.filter ? ['filter' as const] : []),
+    ...(delay.overdrive ? ['overdrive' as const] : []),
+    ...(delay.resonator ? ['resonator' as const] : []),
+  ]
+  const ordered = (delay.moduleOrder ?? []).filter((module, index, order) => modules.includes(module) && order.indexOf(module) === index)
+  return [...ordered, ...modules.filter((module) => !ordered.includes(module))]
+}
+
+function moveDelayModule(delayIndex: number, module: DelayModuleKind, direction: -1 | 1) {
+  const moduleOrder = delayModuleOrder(delays.value[delayIndex])
+  const index = moduleOrder.indexOf(module)
+  const destination = index + direction
+  if (index < 0 || destination < 0 || destination >= moduleOrder.length) return
+  ;[moduleOrder[index], moduleOrder[destination]] = [moduleOrder[destination], moduleOrder[index]]
+  updateDelaySettings(delayIndex, { moduleOrder })
 }
 
 function delayTimeForBpm(noteTime: number, tempo: number) {
@@ -1640,6 +1707,53 @@ function toggleDelayBypass(index: number) {
   const bypassed = !delays.value[index].bypassed
   delays.value[index] = { ...delays.value[index], bypassed }
   activeSynth.setDelayBypassed(index, bypassed)
+}
+
+function toggleLastAddedModuleBypass() {
+  const target = lastAddedBypassTarget.value
+  if (!target) return
+
+  if (target.type === 'delay-filter') {
+    const filter = delays.value[target.index]?.filter
+    if (filter) updateDelayFilter(target.index, { bypassed: !filter.bypassed })
+    return
+  }
+  if (target.type === 'delay-overdrive') {
+    const overdrive = delays.value[target.index]?.overdrive
+    if (overdrive) updateDelayOverdrive(target.index, { bypassed: !overdrive.bypassed })
+    return
+  }
+  if (target.type === 'delay-resonator') {
+    const resonator = delays.value[target.index]?.resonator
+    if (resonator) updateDelayResonator(target.index, { bypassed: !resonator.bypassed })
+    return
+  }
+  if (target.type === 'reverb-filter') {
+    const filter = reverbs.value[target.index]?.filter
+    if (filter) updateReverbFilter(target.index, { bypassed: !filter.bypassed })
+    return
+  }
+  if (target.type === 'reverb-overdrive') {
+    const overdrive = reverbs.value[target.index]?.overdrive
+    if (overdrive) updateReverbOverdrive(target.index, { bypassed: !overdrive.bypassed })
+    return
+  }
+  if (target.type === 'reverb-resonator') {
+    const resonator = reverbs.value[target.index]?.resonator
+    if (resonator) updateReverbResonator(target.index, { bypassed: !resonator.bypassed })
+    return
+  }
+
+  if (target.type === 'filters') toggleFilterBypass(target.index)
+  else if (target.type === 'delays') toggleDelayBypass(target.index)
+  else if (target.type === 'overdrives') toggleOverdriveBypass(target.index)
+  else if (target.type === 'choruses') toggleChorusBypass(target.index)
+  else if (target.type === 'flangers') toggleFlangerBypass(target.index)
+  else if (target.type === 'tremolos') toggleTremoloBypass(target.index)
+  else if (target.type === 'eqs') toggleEqBypass(target.index)
+  else if (target.type === 'resonators') toggleResonatorBypass(target.index)
+  else if (target.type === 'reverbs') toggleReverbBypass(target.index)
+  else toggleDynamicsBypass(target.index)
 }
 
 function addOverdrive() {
@@ -1983,6 +2097,84 @@ function updateReverbSettings(index: number, settings: Partial<ReverbSettings>) 
   activeSynth.setReverbSettings(index, settings)
 }
 
+function reverbModuleOrder(reverb: ReverbSettings): ReverbModuleKind[] {
+  const modules: ReverbModuleKind[] = [
+    ...(reverb.filter ? ['filter'] as const : []),
+    ...(reverb.overdrive ? ['overdrive'] as const : []),
+    ...(reverb.resonator ? ['resonator'] as const : []),
+  ]
+  const ordered = (reverb.moduleOrder ?? []).filter((module, index, order) => modules.includes(module) && order.indexOf(module) === index)
+  return [...ordered, ...modules.filter((module) => !ordered.includes(module))]
+}
+
+function addReverbOverdrive(index: number) {
+  const moduleOrder = reverbModuleOrder(reverbs.value[index])
+  if (!moduleOrder.includes('overdrive')) moduleOrder.push('overdrive')
+  updateReverbSettings(index, { overdrive: { bypassed: true, gain: 0, feedback: 0 }, moduleOrder })
+  markSectionOpen(`reverb-${index}-overdrive-heading`)
+  lastAddedBypassTarget.value = { type: 'reverb-overdrive', index }
+}
+
+function updateReverbOverdrive(index: number, changes: Partial<NonNullable<ReverbSettings['overdrive']>>) {
+  const overdrive = reverbs.value[index].overdrive ?? { bypassed: false, gain: 0, feedback: 0 }
+  updateReverbSettings(index, {
+    overdrive: {
+      bypassed: changes.bypassed ?? overdrive.bypassed,
+      gain: Math.max(0, Math.min(1, changes.gain ?? overdrive.gain)),
+      feedback: Math.max(0, Math.min(0.6, changes.feedback ?? overdrive.feedback)),
+    },
+  })
+}
+
+function removeReverbOverdrive(index: number) {
+  updateReverbSettings(index, { overdrive: undefined, moduleOrder: reverbModuleOrder(reverbs.value[index]).filter((module) => module !== 'overdrive') })
+}
+
+function addReverbFilter(index: number) {
+  const moduleOrder = reverbModuleOrder(reverbs.value[index])
+  if (!moduleOrder.includes('filter')) moduleOrder.push('filter')
+  updateReverbSettings(index, { filter: { bypassed: true, type: 'lowpass', cutoff: 12000, resonance: 0, gain: 0 }, moduleOrder })
+  markSectionOpen(`reverb-${index}-filter-heading`)
+  lastAddedBypassTarget.value = { type: 'reverb-filter', index }
+}
+
+function addReverbResonator(index: number) {
+  const moduleOrder = reverbModuleOrder(reverbs.value[index])
+  if (!moduleOrder.includes('resonator')) moduleOrder.push('resonator')
+  updateReverbSettings(index, { resonator: { ...createResonatorSettings(), bypassed: true }, moduleOrder })
+  markSectionOpen(`reverb-${index}-resonator-heading`)
+  lastAddedBypassTarget.value = { type: 'reverb-resonator', index }
+}
+
+function updateReverbFilter(index: number, settings: Partial<FilterSettings>) {
+  const filter = reverbs.value[index].filter
+  if (!filter) return
+  updateReverbSettings(index, { filter: { ...filter, ...settings } })
+}
+
+function removeReverbFilter(index: number) {
+  updateReverbSettings(index, { filter: undefined, moduleOrder: reverbModuleOrder(reverbs.value[index]).filter((module) => module !== 'filter') })
+}
+
+function updateReverbResonator(index: number, settings: Partial<ResonatorSettings>) {
+  const resonator = reverbs.value[index].resonator
+  if (!resonator) return
+  updateReverbSettings(index, { resonator: { ...resonator, ...settings } })
+}
+
+function removeReverbResonator(index: number) {
+  updateReverbSettings(index, { resonator: undefined, moduleOrder: reverbModuleOrder(reverbs.value[index]).filter((module) => module !== 'resonator') })
+}
+
+function moveReverbModule(reverbIndex: number, module: ReverbModuleKind, direction: -1 | 1) {
+  const moduleOrder = reverbModuleOrder(reverbs.value[reverbIndex])
+  const index = moduleOrder.indexOf(module)
+  const destination = index + direction
+  if (index < 0 || destination < 0 || destination >= moduleOrder.length) return
+  ;[moduleOrder[index], moduleOrder[destination]] = [moduleOrder[destination], moduleOrder[index]]
+  updateReverbSettings(reverbIndex, { moduleOrder })
+}
+
 function toggleReverbBypass(index: number) {
   const bypassed = !reverbs.value[index].bypassed
   reverbs.value[index] = { ...reverbs.value[index], bypassed }
@@ -2222,11 +2414,24 @@ function closeModuleModulationDialog() {
   selectedModuleModulation.value = null
 }
 
-function addModuleModulation(type: 'lfo' | 'env' | 'overdrive') {
+function addModuleModulation(type: 'lfo' | 'env' | 'overdrive' | 'filter' | 'resonator') {
   const module = selectedModuleModulation.value
   if (!module) return
   if (type === 'overdrive') {
     if (module.type === 'delay') addDelayOverdrive(module.index)
+    else if (module.type === 'reverb') addReverbOverdrive(module.index)
+    closeModuleModulationDialog()
+    return
+  }
+  if (type === 'filter') {
+    if (module.type === 'delay') addDelayFilter(module.index)
+    else if (module.type === 'reverb') addReverbFilter(module.index)
+    closeModuleModulationDialog()
+    return
+  }
+  if (type === 'resonator') {
+    if (module.type === 'delay') addDelayResonator(module.index)
+    else if (module.type === 'reverb') addReverbResonator(module.index)
     closeModuleModulationDialog()
     return
   }
@@ -2677,6 +2882,14 @@ onUnmounted(() => {
                 @update:overdrive-feedback="updateDelayOverdrive(entry.index, { feedback: $event })"
                 @update:overdrive-bypassed="updateDelayOverdrive(entry.index, { bypassed: $event })"
                 @remove-overdrive="removeDelayOverdrive(entry.index)"
+                @update:filter="updateDelayFilter(entry.index, $event)"
+                @toggle-filter-bypass="updateDelayFilter(entry.index, { bypassed: !delays[entry.index].filter?.bypassed })"
+                @move-filter="moveDelayModule(entry.index, 'filter', $event)"
+                @remove-filter="removeDelayFilter(entry.index)"
+                @move-overdrive="moveDelayModule(entry.index, 'overdrive', $event)"
+                @update:resonator="updateDelayResonator(entry.index, $event)"
+                @move-resonator="moveDelayModule(entry.index, 'resonator', $event)"
+                @remove-resonator="removeDelayResonator(entry.index)"
                 @toggle-bypass="toggleDelayBypass(entry.index)"
                 @move-up="moveModule('delays', entry.index, -1)"
                 @move-down="moveModule('delays', entry.index, 1)"
@@ -2751,6 +2964,18 @@ onUnmounted(() => {
                 @update:damping="updateReverbSettings(entry.index, { damping: $event })"
                 @update:width="updateReverbSettings(entry.index, { width: $event })"
                 @update:mix="updateReverbSettings(entry.index, { mix: $event })"
+                @update:filter="updateReverbFilter(entry.index, $event)"
+                @toggle-filter-bypass="updateReverbFilter(entry.index, { bypassed: !reverbs[entry.index].filter?.bypassed })"
+                @move-filter="moveReverbModule(entry.index, 'filter', $event)"
+                @remove-filter="removeReverbFilter(entry.index)"
+                @update:overdrive-gain="updateReverbOverdrive(entry.index, { gain: $event })"
+                @update:overdrive-feedback="updateReverbOverdrive(entry.index, { feedback: $event })"
+                @update:overdrive-bypassed="updateReverbOverdrive(entry.index, { bypassed: $event })"
+                @move-overdrive="moveReverbModule(entry.index, 'overdrive', $event)"
+                @remove-overdrive="removeReverbOverdrive(entry.index)"
+                @update:resonator="updateReverbResonator(entry.index, $event)"
+                @move-resonator="moveReverbModule(entry.index, 'resonator', $event)"
+                @remove-resonator="removeReverbResonator(entry.index)"
                 @toggle-bypass="toggleReverbBypass(entry.index)"
                 @move-up="moveModule('reverbs', entry.index, -1)"
                 @move-down="moveModule('reverbs', entry.index, 1)"
@@ -2930,9 +3155,17 @@ onUnmounted(() => {
               <h3 id="add-module-envelope-heading">Envelope</h3>
               <button type="button" @click="addModuleModulation('env')">ENV</button>
             </section>
-            <section v-if="selectedModuleModulation?.type === 'delay'" class="add-module-category" aria-labelledby="add-delay-overdrive-heading">
-              <h3 id="add-delay-overdrive-heading">Overdrive</h3>
+            <section v-if="selectedModuleModulation?.type === 'delay' || selectedModuleModulation?.type === 'reverb'" class="add-module-category" aria-labelledby="add-effect-overdrive-heading">
+              <h3 id="add-effect-overdrive-heading">Overdrive</h3>
               <button type="button" @click="addModuleModulation('overdrive')">Overdrive</button>
+            </section>
+            <section v-if="selectedModuleModulation?.type === 'delay' || selectedModuleModulation?.type === 'reverb'" class="add-module-category" aria-labelledby="add-effect-filter-heading">
+              <h3 id="add-effect-filter-heading">Filter</h3>
+              <button type="button" @click="addModuleModulation('filter')">Filter</button>
+            </section>
+            <section v-if="selectedModuleModulation?.type === 'delay' || selectedModuleModulation?.type === 'reverb'" class="add-module-category" aria-labelledby="add-effect-resonator-heading">
+              <h3 id="add-effect-resonator-heading">Resonator</h3>
+              <button type="button" @click="addModuleModulation('resonator')">Resonator</button>
             </section>
           </div>
         </div>

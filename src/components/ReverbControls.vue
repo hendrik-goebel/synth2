@@ -1,8 +1,12 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import SectionFrame from './SectionFrame.vue'
-import type { HallType } from '../services/synthEngine'
+import DelayFilterControls from './DelayFilterControls.vue'
+import DelayOverdriveControls from './DelayOverdriveControls.vue'
+import ResonatorControls from './ResonatorControls.vue'
+import type { DelayOverdriveSettings, FilterSettings, HallType, ResonatorSettings, ReverbModuleKind } from '../services/synthEngine'
 
-defineProps<{
+const props = defineProps<{
   reverbIndex: number
   bypassed: boolean
   hallType: HallType
@@ -11,6 +15,10 @@ defineProps<{
   damping: number
   width: number
   mix: number
+  filter?: FilterSettings
+  overdrive?: DelayOverdriveSettings
+  resonator?: ResonatorSettings
+  moduleOrder?: ReverbModuleKind[]
   canMoveUp: boolean
   canMoveDown: boolean
 }>()
@@ -22,11 +30,37 @@ const emit = defineEmits<{
   'update:damping': [value: number]
   'update:width': [value: number]
   'update:mix': [value: number]
+  'update:filter': [settings: Partial<FilterSettings>]
+  'update:resonator': [settings: Partial<ResonatorSettings>]
+  'update:overdrive-gain': [value: number]
+  'update:overdrive-feedback': [value: number]
+  'update:overdrive-bypassed': [value: boolean]
+  'toggle-filter-bypass': []
+  'move-filter': [direction: -1 | 1]
+  'move-overdrive': [direction: -1 | 1]
+  'move-resonator': [direction: -1 | 1]
+  'remove-filter': []
+  'remove-overdrive': []
+  'remove-resonator': []
   'toggle-bypass': []
   'move-up': []
   'move-down': []
   remove: []
 }>()
+
+const reverbModules = computed<ReverbModuleKind[]>(() => {
+  const modules: ReverbModuleKind[] = [
+    ...(props.filter ? ['filter'] as const : []),
+    ...(props.overdrive ? ['overdrive'] as const : []),
+    ...(props.resonator ? ['resonator'] as const : []),
+  ]
+  const order = (props.moduleOrder ?? []).filter((module, index, values) => modules.includes(module) && values.indexOf(module) === index)
+  return [...order, ...modules.filter((module) => !order.includes(module))]
+})
+
+function moduleIndex(module: ReverbModuleKind): number {
+  return reverbModules.value.indexOf(module)
+}
 </script>
 
 <template>
@@ -80,6 +114,53 @@ const emit = defineEmits<{
         <input type="range" min="0" max="1" step="0.01" :value="mix" @input="emit('update:mix', Number(($event.target as HTMLInputElement).value))">
       </label>
     </div>
+    <template v-for="module in reverbModules" :key="module">
+      <DelayFilterControls
+        v-if="module === 'filter' && filter"
+        section-title="Reverb filter"
+        :id-prefix="`reverb-${reverbIndex}-filter`"
+        :filter="filter"
+        :can-move-up="moduleIndex('filter') > 0"
+        :can-move-down="moduleIndex('filter') < reverbModules.length - 1"
+        @update="emit('update:filter', $event)"
+        @toggle-bypass="emit('toggle-filter-bypass')"
+        @move-up="emit('move-filter', -1)"
+        @move-down="emit('move-filter', 1)"
+        @remove="emit('remove-filter')"
+      />
+      <DelayOverdriveControls
+        v-else-if="module === 'overdrive' && overdrive"
+        section-title="Reverb overdrive"
+        :id-prefix="`reverb-${reverbIndex}-overdrive`"
+        v-bind="overdrive"
+        :can-move-up="moduleIndex('overdrive') > 0"
+        :can-move-down="moduleIndex('overdrive') < reverbModules.length - 1"
+        @update:gain="emit('update:overdrive-gain', $event)"
+        @update:feedback="emit('update:overdrive-feedback', $event)"
+        @toggle-bypass="emit('update:overdrive-bypassed', !overdrive.bypassed)"
+        @move-up="emit('move-overdrive', -1)"
+        @move-down="emit('move-overdrive', 1)"
+        @remove="emit('remove-overdrive')"
+      />
+      <ResonatorControls
+        v-else-if="module === 'resonator' && resonator"
+        section-title="Reverb resonator"
+        :id-prefix="`reverb-${reverbIndex}-resonator`"
+        v-bind="resonator"
+        :can-move-up="moduleIndex('resonator') > 0"
+        :can-move-down="moduleIndex('resonator') < reverbModules.length - 1"
+        @update:frequency="emit('update:resonator', { frequency: $event })"
+        @update:decay="emit('update:resonator', { decay: $event })"
+        @update:feedback="emit('update:resonator', { feedback: $event })"
+        @update:damping="emit('update:resonator', { damping: $event })"
+        @update:drive="emit('update:resonator', { drive: $event })"
+        @update:mix="emit('update:resonator', { mix: $event })"
+        @toggle-bypass="emit('update:resonator', { bypassed: !resonator.bypassed })"
+        @move-up="emit('move-resonator', -1)"
+        @move-down="emit('move-resonator', 1)"
+        @remove="emit('remove-resonator')"
+      />
+    </template>
     <slot name="modulation" />
   </SectionFrame>
 </template>

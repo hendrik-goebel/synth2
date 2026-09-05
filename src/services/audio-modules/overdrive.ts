@@ -7,7 +7,7 @@ export type OverdriveModule = {
 }
 
 export function createOverdriveSettings(): OverdriveSettings {
-  return { bypassed: false, drive: 0.35, tone: 0.55, feedback: 0, mix: 1 }
+  return { bypassed: false, drive: 0, tone: 0.55, feedback: 0, mix: 1 }
 }
 
 export function createWarmOverdriveCurve(drive: number): Float32Array<ArrayBuffer> {

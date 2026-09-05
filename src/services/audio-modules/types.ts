@@ -24,14 +24,16 @@ export type OutputSettings = { volume: number; pan: number }
 export type FilterType = 'lowpass' | 'highpass' | 'bandpass'
 export type FilterSettings = { bypassed: boolean; type: FilterType; cutoff: number; resonance: number; gain: number }
 export type DelayOverdriveSettings = { bypassed: boolean; gain: number; feedback: number }
-export type DelaySettings = { bypassed: boolean; time: number; noteTime: number; repetitions: number; mix: number; overdrive?: DelayOverdriveSettings }
+export type ResonatorSettings = { bypassed: boolean; frequency: number; decay: number; feedback: number; damping: number; drive: number; mix: number }
+export type DelayModuleKind = 'filter' | 'overdrive' | 'resonator'
+export type DelaySettings = { bypassed: boolean; time: number; noteTime: number; repetitions: number; mix: number; overdrive?: DelayOverdriveSettings; filter?: FilterSettings; resonator?: ResonatorSettings; moduleOrder?: DelayModuleKind[] }
 export type OverdriveSettings = { bypassed: boolean; drive: number; tone: number; feedback: number; mix: number }
 export type ChorusSettings = { bypassed: boolean; waveform: Waveform; rate: number; depth: number; delay: number; mix: number }
 export type FlangerSettings = { bypassed: boolean; waveform: Waveform; rate: number; depth: number; delay: number; feedback: number; mix: number }
 export type TremoloSettings = { bypassed: boolean; waveform: Waveform; rate: number; depth: number; mix: number }
 export type HallType = 'small-hall' | 'wooden-hall' | 'concert-hall' | 'opera-house' | 'cathedral' | 'arena'
-export type ReverbSettings = { bypassed: boolean; hallType: HallType; decay: number; preDelay: number; damping: number; width: number; mix: number }
-export type ResonatorSettings = { bypassed: boolean; frequency: number; decay: number; feedback: number; damping: number; drive: number; mix: number }
+export type ReverbModuleKind = 'filter' | 'overdrive' | 'resonator'
+export type ReverbSettings = { bypassed: boolean; hallType: HallType; decay: number; preDelay: number; damping: number; width: number; mix: number; filter?: FilterSettings; overdrive?: DelayOverdriveSettings; resonator?: ResonatorSettings; moduleOrder?: ReverbModuleKind[] }
 
 export type CompressorSettings = {
   type: 'compressor'

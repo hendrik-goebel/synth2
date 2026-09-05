@@ -345,7 +345,7 @@ export class SynthEngine {
     if (!delay) throw new RangeError(`Unknown delay index: ${index}`)
     delay.settings = { ...delay.settings, ...changes }
     applyDelaySettings(this.audioContext, delay)
-    if (Object.hasOwn(changes, 'overdrive')) this.routeOutput()
+    if (Object.hasOwn(changes, 'overdrive') || Object.hasOwn(changes, 'filter') || Object.hasOwn(changes, 'resonator') || Object.hasOwn(changes, 'moduleOrder')) this.routeOutput()
   }
 
   removeDelay(index: number): void {
@@ -660,6 +660,7 @@ export class SynthEngine {
     if (!reverb) throw new RangeError(`Unknown reverb index: ${index}`)
     reverb.settings = { ...reverb.settings, ...changes }
     applyReverbSettings(this.audioContext, reverb, changes.hallType !== undefined || changes.decay !== undefined)
+    if (Object.hasOwn(changes, 'filter') || Object.hasOwn(changes, 'overdrive') || Object.hasOwn(changes, 'resonator') || Object.hasOwn(changes, 'moduleOrder')) this.routeOutput()
   }
 
   removeReverb(index: number): void {

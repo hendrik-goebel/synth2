@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import SectionFrame from './SectionFrame.vue'
 
-defineProps<{
-  resonatorIndex: number
+const props = defineProps<{
+  resonatorIndex?: number
+  sectionTitle?: string
+  idPrefix?: string
   bypassed: boolean
   frequency: number
   decay: number
@@ -27,6 +30,9 @@ const emit = defineEmits<{
   remove: []
 }>()
 
+const title = computed(() => props.sectionTitle ?? `Resonator ${(props.resonatorIndex ?? 0) + 1}`)
+const resolvedIdPrefix = computed(() => props.idPrefix ?? `resonator-${props.resonatorIndex ?? 0}`)
+
 function logarithmicPosition(value: number): number {
   return Math.log(value / 40) / Math.log(12000 / 40)
 }
@@ -47,9 +53,9 @@ function updateFrequency(event: Event) {
 
 <template>
   <SectionFrame
-    :title="`Resonator ${resonatorIndex + 1}`"
-    :heading-id="`resonator-${resonatorIndex}-heading`"
-    :content-id="`resonator-${resonatorIndex}-content`"
+    :title="title"
+    :heading-id="`${resolvedIdPrefix}-heading`"
+    :content-id="`${resolvedIdPrefix}-content`"
     :bypassed="bypassed"
     :can-move-up="canMoveUp"
     :can-move-down="canMoveDown"

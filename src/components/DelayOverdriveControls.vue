@@ -5,16 +5,21 @@ const MIN_GAIN = 0.001
 const MAX_GAIN = 1
 
 const props = defineProps<{
-  delayIndex: number
+  sectionTitle: string
+  idPrefix: string
   bypassed: boolean
   gain: number
   feedback: number
+  canMoveUp: boolean
+  canMoveDown: boolean
 }>()
 
 const emit = defineEmits<{
   'update:gain': [value: number]
   'update:feedback': [value: number]
   'toggle-bypass': []
+  'move-up': []
+  'move-down': []
   remove: []
 }>()
 
@@ -35,11 +40,15 @@ function updateGain(event: Event) {
 
 <template>
   <SectionFrame
-    title="Delay overdrive"
-    :heading-id="`delay-${delayIndex}-overdrive-heading`"
-    :content-id="`delay-${delayIndex}-overdrive-content`"
+    :title="sectionTitle"
+    :heading-id="`${idPrefix}-heading`"
+    :content-id="`${idPrefix}-content`"
     :bypassed="bypassed"
+    :can-move-up="canMoveUp"
+    :can-move-down="canMoveDown"
     @toggle-bypass="emit('toggle-bypass')"
+    @move-up="emit('move-up')"
+    @move-down="emit('move-down')"
     @remove="emit('remove')"
   >
     <div class="modulation-controls">

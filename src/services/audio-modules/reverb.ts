@@ -1,9 +1,12 @@
-import type { HallType, ReverbSettings } from './types'
+import type { HallType, ReverbModuleKind, ReverbSettings } from './types'
+import { createWarmOverdriveCurve } from './overdrive'
+import { applyResonatorSettings, createResonatorModule, createResonatorSettings, destroyResonatorModule, routeResonatorModule, type ResonatorModule } from './resonator'
 
 export type ReverbModule = {
   input: GainNode; preDelay: DelayNode; convolver: ConvolverNode; tone: BiquadFilterNode
   splitter: ChannelSplitterNode; left: GainNode; right: GainNode; leftCross: GainNode; rightCross: GainNode
-  merger: ChannelMergerNode; wet: GainNode; dry: GainNode; output: GainNode; settings: ReverbSettings
+  merger: ChannelMergerNode; filter: BiquadFilterNode; overdriveGain: GainNode; overdrive: WaveShaperNode
+  overdriveFeedbackDelay: DelayNode; overdriveFeedback: GainNode; resonator: ResonatorModule; wet: GainNode; dry: GainNode; output: GainNode; settings: ReverbSettings
 }
 
 export function createReverbSettings(): ReverbSettings {
@@ -15,7 +18,10 @@ export function createReverbModule(audioContext: AudioContext, settings: ReverbS
     input: audioContext.createGain(), preDelay: audioContext.createDelay(0.25), convolver: audioContext.createConvolver(),
     tone: audioContext.createBiquadFilter(), splitter: audioContext.createChannelSplitter(2), left: audioContext.createGain(),
     right: audioContext.createGain(), leftCross: audioContext.createGain(), rightCross: audioContext.createGain(),
-    merger: audioContext.createChannelMerger(2), wet: audioContext.createGain(), dry: audioContext.createGain(),
+    merger: audioContext.createChannelMerger(2), filter: audioContext.createBiquadFilter(), overdriveGain: audioContext.createGain(),
+    overdrive: audioContext.createWaveShaper(), overdriveFeedbackDelay: audioContext.createDelay(0.05), overdriveFeedback: audioContext.createGain(),
+    resonator: createResonatorModule(audioContext, settings.resonator ?? { ...createResonatorSettings(), bypassed: true }),
+    wet: audioContext.createGain(), dry: audioContext.createGain(),
     output: audioContext.createGain(), settings: { ...settings },
   }
   module.input.connect(module.preDelay).connect(module.convolver).connect(module.tone).connect(module.splitter)
@@ -23,13 +29,13 @@ export function createReverbModule(audioContext: AudioContext, settings: ReverbS
   module.splitter.connect(module.right, 1).connect(module.merger, 0, 1)
   module.splitter.connect(module.leftCross, 0).connect(module.merger, 0, 1)
   module.splitter.connect(module.rightCross, 1).connect(module.merger, 0, 0)
-  module.merger.connect(module.wet).connect(module.output)
+  module.wet.connect(module.output)
   module.input.connect(module.dry).connect(module.output)
   return module
 }
 
 export function applyReverbSettings(audioContext: AudioContext, reverb: ReverbModule, replaceImpulse: boolean): void {
-  const { preDelay, convolver, tone, left, right, leftCross, rightCross, wet, dry, output, settings } = reverb
+  const { preDelay, convolver, tone, left, right, leftCross, rightCross, filter, overdriveGain, overdrive, overdriveFeedbackDelay, overdriveFeedback, wet, dry, output, settings } = reverb
   const now = audioContext.currentTime
   preDelay.delayTime.setTargetAtTime(settings.preDelay, now, 0.02)
   tone.type = 'lowpass'
@@ -39,6 +45,19 @@ export function applyReverbSettings(audioContext: AudioContext, reverb: ReverbMo
   const crossGain = (1 - settings.width) / 2
   left.gain.setTargetAtTime(directGain, now, 0.02); right.gain.setTargetAtTime(directGain, now, 0.02)
   leftCross.gain.setTargetAtTime(crossGain, now, 0.02); rightCross.gain.setTargetAtTime(crossGain, now, 0.02)
+  const filterSettings = settings.filter
+  filter.type = filterSettings?.type ?? 'lowpass'
+  filter.frequency.setTargetAtTime(filterSettings?.cutoff ?? 20000, now, 0.02)
+  filter.Q.setTargetAtTime(filterSettings?.resonance ?? 0, now, 0.02)
+  filter.gain.setTargetAtTime(filterSettings?.gain ?? 0, now, 0.02)
+  const overdriveSettings = settings.overdrive
+  overdriveGain.gain.setTargetAtTime(1 + (overdriveSettings?.gain ?? 0) * 18, now, 0.02)
+  overdrive.oversample = '4x'
+  overdrive.curve = overdriveSettings && overdriveSettings.gain > 0 ? createWarmOverdriveCurve(overdriveSettings.gain) : null
+  overdriveFeedbackDelay.delayTime.setTargetAtTime(0.012, now, 0.02)
+  overdriveFeedback.gain.setTargetAtTime(Math.min(0.6, overdriveSettings?.feedback ?? 0), now, 0.03)
+  reverb.resonator.settings = { ...(settings.resonator ?? reverb.resonator.settings), bypassed: settings.resonator?.bypassed ?? true }
+  applyResonatorSettings(audioContext, reverb.resonator)
   wet.gain.setTargetAtTime(settings.mix, now, 0.02)
   dry.gain.setTargetAtTime(1 - settings.mix, now, 0.02)
   output.gain.setTargetAtTime(1 / Math.max(1, (1 - settings.mix) + settings.mix * 1.4), now, 0.02)
@@ -47,12 +66,44 @@ export function applyReverbSettings(audioContext: AudioContext, reverb: ReverbMo
 
 export function routeReverbModule(input: AudioNode, reverb: ReverbModule): AudioNode {
   reverb.output.disconnect()
-  return reverb.settings.bypassed ? input : (input.connect(reverb.input), reverb.output)
+  reverb.merger.disconnect()
+  reverb.filter.disconnect()
+  reverb.overdriveGain.disconnect()
+  reverb.overdrive.disconnect()
+  reverb.overdriveFeedbackDelay.disconnect()
+  reverb.overdriveFeedback.disconnect()
+  reverb.resonator.output.disconnect()
+  if (reverb.settings.bypassed) return input
+  input.connect(reverb.input)
+  const available = new Set<ReverbModuleKind>()
+  if (reverb.settings.filter) available.add('filter')
+  if (reverb.settings.overdrive) available.add('overdrive')
+  if (reverb.settings.resonator) available.add('resonator')
+  const configuredOrder = reverb.settings.moduleOrder?.filter((module, index, modules) => available.has(module) && modules.indexOf(module) === index) ?? []
+  const order = [...configuredOrder, ...(['filter', 'overdrive', 'resonator'] as ReverbModuleKind[]).filter((module) => available.has(module) && !configuredOrder.includes(module))]
+  let wetInput: AudioNode = reverb.merger
+  for (const module of order) {
+    if (module === 'filter') {
+      if (reverb.settings.filter && !reverb.settings.filter.bypassed) wetInput = wetInput.connect(reverb.filter)
+    } else if (module === 'overdrive') {
+      const overdrive = reverb.settings.overdrive
+      if (overdrive && !overdrive.bypassed && (overdrive.gain > 0 || overdrive.feedback > 0)) {
+        wetInput = wetInput.connect(reverb.overdriveGain).connect(reverb.overdrive)
+        reverb.overdrive.connect(reverb.overdriveFeedbackDelay).connect(reverb.overdriveFeedback).connect(reverb.overdriveGain)
+      }
+    } else if (reverb.settings.resonator && !reverb.settings.resonator.bypassed) {
+      wetInput = routeResonatorModule(wetInput, reverb.resonator)
+    }
+  }
+  wetInput.connect(reverb.wet)
+  return reverb.output
 }
 
 export function destroyReverbModule(module: ReverbModule): void {
   module.input.disconnect(); module.preDelay.disconnect(); module.convolver.disconnect(); module.tone.disconnect(); module.splitter.disconnect()
   module.left.disconnect(); module.right.disconnect(); module.leftCross.disconnect(); module.rightCross.disconnect(); module.merger.disconnect()
+  module.filter.disconnect(); module.overdriveGain.disconnect(); module.overdrive.disconnect(); module.overdriveFeedbackDelay.disconnect(); module.overdriveFeedback.disconnect()
+  destroyResonatorModule(module.resonator)
   module.wet.disconnect(); module.dry.disconnect(); module.output.disconnect()
 }
 
