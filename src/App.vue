@@ -323,7 +323,15 @@ function handleChannelKey(event: KeyboardEvent) {
 function handleKeydown(event: KeyboardEvent) {
   handleFirstInteraction()
   handleChannelKey(event)
-  if (event.repeat || event.key.toLowerCase() !== 'b' || event.metaKey || event.ctrlKey || event.altKey || event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLTextAreaElement) return
+  if (event.repeat || event.metaKey || event.ctrlKey || event.altKey || event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLTextAreaElement) return
+
+  if (event.key.toLowerCase() === 'v') {
+    event.preventDefault()
+    randomizeChannels()
+    return
+  }
+
+  if (event.key.toLowerCase() !== 'b') return
 
   event.preventDefault()
   toggleLastAddedModuleBypass()
@@ -2484,7 +2492,8 @@ onUnmounted(() => {
           <button
             type="button"
             class="randomize-button"
-            :title="isMasterChannel ? 'Randomize instruments on channels 1–4' : `Randomize instrument and parameters on MIDI channel ${selectedChannel}`"
+            :title="isMasterChannel ? 'Randomize instruments on channels 1–4 (V)' : `Randomize instrument and parameters on MIDI channel ${selectedChannel} (V)`"
+            aria-keyshortcuts="v"
             @click="randomizeChannels"
           >RAND</button>
           <output class="voice-count" title="Active voices">{{ activeVoices }}</output>
