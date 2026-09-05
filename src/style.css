@@ -294,7 +294,9 @@ select { width: 100%; min-height: 30px; padding: 5px 28px 5px 8px; }
 .midi-assignment-parameters { color: #91ecd8; overflow-wrap: anywhere; }
 .midi-assignment-parameters span + span::before { color: #81999c; content: ", "; }
 .midi-assignment-actions { display: flex; gap: 4px; }
-.midi-add-assignment, .midi-remove-assignment { min-width: 26px; min-height: 26px; padding: 0; font-size: 1rem; line-height: 1; }
+.midi-add-assignment, .midi-reverse-assignment, .midi-remove-assignment { min-width: 26px; min-height: 26px; padding: 0; font-size: 1rem; line-height: 1; }
+.midi-reverse-assignment { font-size: .66rem; }
+.midi-reverse-assignment[aria-pressed="true"] { color: #09241f; background: linear-gradient(145deg, #9af5df, #55c7af); border-color: #a6f9e5; }
 .midi-remove-assignment { color: #ffd9d7; border-color: #8d5558; background: linear-gradient(145deg, #57353a, #352126); }
 .field { display: grid; gap: 5px; }
 .midi-status { margin-top: -2px; }

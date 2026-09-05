@@ -107,7 +107,7 @@ const midiStatus = ref('MIDI not connected.')
 const midiLearnTargetId = ref('')
 const midiLearnArmed = ref(false)
 const midiLearnStatus = ref('Select a parameter, then click Learn.')
-type MidiMapping = { channel: number; controller: number; targetId: string; targetChannel: number }
+type MidiMapping = { channel: number; controller: number; targetId: string; targetChannel: number; reversed?: boolean }
 type MidiMappingGroup = Pick<MidiMapping, 'channel' | 'controller'> & { mappings: MidiMapping[] }
 type MidiParameterTarget = {
   id: string
@@ -448,7 +448,7 @@ function handleMidiControlChange({ channel, controller, value }: MidiControlChan
     midiMappings.value = midiMappings.value.filter((mapping) => (
       mapping.targetId !== midiLearnTargetId.value || mapping.targetChannel !== selectedChannel.value
     ))
-    midiMappings.value.push({ channel, controller, targetId: midiLearnTargetId.value, targetChannel: selectedChannel.value })
+    midiMappings.value.push({ channel, controller, targetId: midiLearnTargetId.value, targetChannel: selectedChannel.value, reversed: false })
     midiLearnArmed.value = false
     midiLearnStatus.value = `Learned CC ${controller} on channel ${channel}.`
     return
@@ -457,7 +457,7 @@ function handleMidiControlChange({ channel, controller, value }: MidiControlChan
     const target = midiParameterTargets.value.find((item) => item.id === mapping.targetId)
     if (!target) return
 
-    const mappedValue = midiParameterValue(target, value)
+    const mappedValue = midiParameterValue(target, mapping.reversed ? 127 - value : value)
     if (mapping.targetChannel === 0 || mapping.targetChannel === selectedChannel.value) {
       target.apply(mappedValue)
       return
@@ -505,6 +505,7 @@ function addMidiParameter(mapping: Pick<MidiMapping, 'channel' | 'controller'>) 
       controller: mapping.controller,
       targetId: midiLearnTargetId.value,
       targetChannel: selectedChannel.value,
+      reversed: false,
     },
   ]
   midiLearnStatus.value = `Assigned CC ${mapping.controller} on channel ${mapping.channel}.`
@@ -534,6 +535,40 @@ function removeMidiParameter(mapping: Pick<MidiMapping, 'channel' | 'controller'
   midiLearnStatus.value = `Removed CC ${mapping.controller} on channel ${mapping.channel}.`
 }
 
+function isMidiParameterReversed(mapping: Pick<MidiMapping, 'channel' | 'controller'>): boolean {
+  return midiMappings.value.some((item) => (
+    item.channel === mapping.channel
+    && item.controller === mapping.controller
+    && item.targetId === midiLearnTargetId.value
+    && item.targetChannel === selectedChannel.value
+    && item.reversed === true
+  ))
+}
+
+function toggleMidiParameterReversed(mapping: Pick<MidiMapping, 'channel' | 'controller'>) {
+  if (!midiLearnTargetId.value) {
+    midiLearnStatus.value = 'Select a parameter before reversing an assignment.'
+    return
+  }
+
+  const index = midiMappings.value.findIndex((item) => (
+    item.channel === mapping.channel
+    && item.controller === mapping.controller
+    && item.targetId === midiLearnTargetId.value
+    && item.targetChannel === selectedChannel.value
+  ))
+  if (index === -1) {
+    midiLearnStatus.value = 'This controller is not assigned to the selected parameter.'
+    return
+  }
+
+  const reversed = !midiMappings.value[index].reversed
+  midiMappings.value = midiMappings.value.map((item, itemIndex) => (
+    itemIndex === index ? { ...item, reversed } : item
+  ))
+  midiLearnStatus.value = reversed ? 'Assignment reversed.' : 'Assignment restored.'
+}
+
 function clearAllMidiMappings() {
   midiMappings.value = []
   midiLearnStatus.value = 'All MIDI assignments cleared.'
@@ -555,6 +590,7 @@ function isMidiMapping(value: unknown): value is MidiMapping {
     && Number.isInteger(mapping.targetChannel)
     && mapping.targetChannel >= 0
     && mapping.targetChannel <= 16
+    && (mapping.reversed === undefined || typeof mapping.reversed === 'boolean')
 }
 
 function loadMidiMappings() {
@@ -2989,6 +3025,17 @@ onUnmounted(() => {
                   @click="addMidiParameter(group)"
                 >
                   +
+                </button>
+                <button
+                  type="button"
+                  class="midi-reverse-assignment"
+                  :disabled="!hasMidiParameter(group)"
+                  :aria-pressed="isMidiParameterReversed(group)"
+                  :aria-label="`Reverse the selected parameter for CC ${group.controller}`"
+                  title="Reverse the selected parameter"
+                  @click="toggleMidiParameterReversed(group)"
+                >
+                  R
                 </button>
                 <button
                   type="button"
