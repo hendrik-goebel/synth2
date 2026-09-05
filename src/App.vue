@@ -2521,7 +2521,7 @@ onUnmounted(() => {
           >
             {{ index + 1 }}
           </button>
-          <button v-if="channels.length < 16" type="button" class="add-channel-button" @click="addChannel">Channel</button>
+          <button v-if="channels.length < 16" type="button" class="add-channel-button" @click="addChannel">+</button>
         </div>
       </section>
 
