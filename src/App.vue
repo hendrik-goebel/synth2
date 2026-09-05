@@ -1162,7 +1162,7 @@ function isSeedChannel(value: unknown): value is SeedChannel {
   return typeof value.selectedInstrumentId === 'string'
     && typeof value.bpm === 'number'
     && isRecord(value.output)
-    && (value.noise === null || isRecord(value.noise))
+    && (value.noise === undefined || value.noise === null || isRecord(value.noise))
     && (value.noises === undefined || isObjectArray(value.noises, MAX_SEED_MODULES))
     && (value.amplitudeModulation === null || isRecord(value.amplitudeModulation))
     && typeof value.isAmplitudeModulationBypassed === 'boolean'

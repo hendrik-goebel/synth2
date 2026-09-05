@@ -1,4 +1,5 @@
 const SEED_PREFIX = 'osc1.'
+const SEED_TOKEN_PATTERN = /osc1\.[A-Za-z0-9_-]+/
 
 export function encodeSeed(value: unknown): string {
   const bytes = new TextEncoder().encode(JSON.stringify(value))
@@ -12,11 +13,12 @@ export function encodeSeed(value: unknown): string {
 }
 
 export function decodeSeed(seed: string): unknown {
-  if (!seed.startsWith(SEED_PREFIX)) {
+  const token = seed.replace(/\s+/g, '').match(SEED_TOKEN_PATTERN)?.[0]
+  if (!token) {
     throw new Error('This seed is not recognized.')
   }
 
-  const encoded = seed.slice(SEED_PREFIX.length).replace(/-/g, '+').replace(/_/g, '/')
+  const encoded = token.slice(SEED_PREFIX.length).replace(/-/g, '+').replace(/_/g, '/')
   const padding = '='.repeat((4 - encoded.length % 4) % 4)
   const binary = atob(encoded + padding)
   const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0))
