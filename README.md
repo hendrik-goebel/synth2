@@ -3,6 +3,13 @@
 A browser-based synthesizer built with Vue 3, TypeScript, Vite, the Web MIDI API,
 and the Web Audio API.
 
+## Audio module organization
+
+`src/services/synthEngine.ts` coordinates voices, modulation, and the ordered
+audio graph. Individual Web Audio module definitions, graph wiring, setting
+application, and cleanup live in `src/services/audio-modules/`; the engine
+continues to re-export its established settings factories and types.
+
 ## External MIDI controllers
 
 Use a Web MIDI-compatible browser in a secure context, click **Connect**, choose
