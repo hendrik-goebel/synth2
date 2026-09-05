@@ -2155,7 +2155,7 @@ onUnmounted(() => {
         <div class="brand-lockup">
           <span class="brand-mark" aria-hidden="true"></span>
           <div>
-            <p class="eyebrow">Cacophonic MIDI instrument</p>
+            <p class="eyebrow">Synthetic MIDI instrument</p>
             <h1>Mr. Synth</h1>
             <p class="brand-description">The synth which does, what a synth should do</p>
           </div>
