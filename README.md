@@ -17,6 +17,13 @@ The MIDI panel has separate **Control input** and **Note input** selectors. The
 IAC driver is preferred for notes and the Akai MIDImix for controls when both
 devices are available.
 
+## Module modulation
+
+Each modulatable processing card has a **+ Mod** button. Choose **LFO** or
+**ENV** in the dialog to add modulation scoped to that specific module
+instance. Its controls and targets stay with that module when other instances
+are added, removed, or reindexed.
+
 ## Resonator
 
 Add a **Resonator** from the Time-based section of **Add Module**. Its warm,

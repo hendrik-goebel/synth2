@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { instrumentCategories, instrumentPresets, type InstrumentPreset } from './instruments'
 import { MidiService, type MidiControlChangeEvent } from './services/midiService'
 import { decodeSeed, encodeSeed } from './services/seedService'
-import { createChorusSettings, createDelaySettings, createEnvelopeSettings, createEqBandSettings, createFilterSettings, createFlangerSettings, createMultibandEqSettings, createNoiseSettings, createOutputSettings, createOverdriveSettings, createResonatorSettings, createReverbSettings, createCompressorSettings, createGateSettings, createLimiterSettings, createOscillatorSettings, createSingleBandEqSettings, createTremoloSettings, type AmplitudeModulationSettings, type ChorusSettings, type DelaySettings, type DynamicsSettings, type DynamicsSettingsChanges, type EqBandSettings, type EqEnvelopeSettings, type EqLfoSettings, type EqModulationTarget, type EqParameter, type EqSettings, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type FilterSettings, type FlangerSettings, type FlatAudioModule, type LfoSettings, type NoiseSettings, type OscillatorSettings, type OutputSettings, type OverdriveSettings, type ResonatorSettings, type ReverbSettings, type TremoloSettings, type Waveform, SynthEngine } from './services/synthEngine'
+import { createChorusSettings, createDelaySettings, createEnvelopeSettings, createEqBandSettings, createFilterSettings, createFlangerSettings, createMultibandEqSettings, createNoiseSettings, createOutputSettings, createOverdriveSettings, createResonatorSettings, createReverbSettings, createCompressorSettings, createGateSettings, createLimiterSettings, createOscillatorSettings, createSingleBandEqSettings, createTremoloSettings, type AmplitudeModulationSettings, type ChorusSettings, type DelaySettings, type DynamicsSettings, type DynamicsSettingsChanges, type EqBandSettings, type EqEnvelopeSettings, type EqLfoSettings, type EqModulationTarget, type EqParameter, type EqSettings, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type EnvelopeSource, type EnvelopeSourceType, type FilterSettings, type FlangerSettings, type FlatAudioModule, type LfoSettings, type NoiseSettings, type OscillatorSettings, type OutputSettings, type OverdriveSettings, type ResonatorSettings, type ReverbSettings, type TremoloSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
 import NoiseControls from './components/NoiseControls.vue'
 import FilterControls from './components/FilterControls.vue'
@@ -31,6 +31,7 @@ type ModuleKind = EffectGroup | 'amplitudeModulation'
 type ModuleOrderEntry = { type: ModuleKind; index: number }
 type SoundSourceType = 'oscillator' | 'noise'
 type SoundSourceOrderEntry = { type: SoundSourceType; index: number }
+type ModuleModulationTarget = EnvelopeSource | { type: 'eq'; index: number }
 type SynthSetup = Omit<InstrumentPreset, 'id' | 'name' | 'category' | 'effectOrder'> & {
   noises?: NoiseSettings[]
   soundSourceOrder?: SoundSourceOrderEntry[]
@@ -174,7 +175,9 @@ const dragOverModuleKey = ref<string | null>(null)
 const addModuleDialog = ref<HTMLDialogElement | null>(null)
 const addSoundSourceDialog = ref<HTMLDialogElement | null>(null)
 const addSoundSourceModulationDialog = ref<HTMLDialogElement | null>(null)
+const addModuleModulationDialog = ref<HTMLDialogElement | null>(null)
 const selectedSoundSource = ref<SoundSourceOrderEntry | null>(null)
+const selectedModuleModulation = ref<ModuleModulationTarget | null>(null)
 const seedInput = ref('')
 const seedStatus = ref('')
 let firstInteractionHandled = false
@@ -1422,7 +1425,7 @@ function addOscillator() {
 
 function removeOscillator(index: number) {
   removeLfosForModule('oscillator', index)
-  removeEnvelopesForSoundSource('oscillator', index)
+  removeEnvelopesForModule('oscillator', index)
   activeSynth.removeOscillator(index)
   oscillators.value.splice(index, 1)
   removeSoundSourceOrderEntry('oscillator', index)
@@ -1439,7 +1442,7 @@ function addNoise() {
 
 function removeNoise(index: number) {
   removeLfosForModule('noise', index)
-  removeEnvelopesForSoundSource('noise', index)
+  removeEnvelopesForModule('noise', index)
   activeSynth.removeNoise(index)
   noises.value.splice(index, 1)
   removeSoundSourceOrderEntry('noise', index)
@@ -1455,6 +1458,7 @@ function addFilter() {
 
 function removeFilter(index: number) {
   removeLfosForModule('filter', index)
+  removeEnvelopesForModule('filter', index)
   activeSynth.removeFilter(index)
   filters.value.splice(index, 1)
   removeModuleOrderEntry('filters', index)
@@ -1479,6 +1483,7 @@ function addDelay() {
 
 function removeDelay(index: number) {
   removeLfosForModule('delay', index)
+  removeEnvelopesForModule('delay', index)
   activeSynth.removeDelay(index)
   delays.value.splice(index, 1)
   removeModuleOrderEntry('delays', index)
@@ -1540,6 +1545,7 @@ function addOverdrive() {
 
 function removeOverdrive(index: number) {
   removeLfosForModule('overdrive', index)
+  removeEnvelopesForModule('overdrive', index)
   activeSynth.removeOverdrive(index)
   overdrives.value.splice(index, 1)
   removeModuleOrderEntry('overdrives', index)
@@ -1566,6 +1572,7 @@ function addChorus() {
 
 function removeChorus(index: number) {
   removeLfosForModule('chorus', index)
+  removeEnvelopesForModule('chorus', index)
   activeSynth.removeChorus(index)
   choruses.value.splice(index, 1)
   removeModuleOrderEntry('choruses', index)
@@ -1592,6 +1599,7 @@ function addFlanger() {
 
 function removeFlanger(index: number) {
   removeLfosForModule('flanger', index)
+  removeEnvelopesForModule('flanger', index)
   activeSynth.removeFlanger(index)
   flangers.value.splice(index, 1)
   removeModuleOrderEntry('flangers', index)
@@ -1618,6 +1626,7 @@ function addTremolo() {
 
 function removeTremolo(index: number) {
   removeLfosForModule('tremolo', index)
+  removeEnvelopesForModule('tremolo', index)
   activeSynth.removeTremolo(index)
   tremolos.value.splice(index, 1)
   removeModuleOrderEntry('tremolos', index)
@@ -1751,7 +1760,7 @@ function addEqEnvelope(eqIndex: number) {
   const target = eqModulationTargetOptions(eqIndex)[0]?.value
   const eq = eqs.value[eqIndex]
   if (!eq || !target) return
-  const settings: EqEnvelopeSettings = { ...createEnvelopeSettings(), destination: target, bypassed: false }
+  const settings: EqEnvelopeSettings = { ...createEnvelopeSettings(), destination: target, bypassed: true }
   activeSynth.addEqEnvelope(eqIndex, settings)
   eqs.value[eqIndex] = { ...eq, envelopes: [...eq.envelopes, settings] }
 }
@@ -1787,7 +1796,7 @@ function addEqLfo(eqIndex: number) {
   const target = eqModulationTargetOptions(eqIndex)[0]?.value
   const eq = eqs.value[eqIndex]
   if (!eq || !target) return
-  const settings: EqLfoSettings = { waveform: 'sine', rate: 5, depth: 0.25, target, bypassed: false }
+  const settings: EqLfoSettings = { waveform: 'sine', rate: 5, depth: 0.25, target, bypassed: true }
   activeSynth.addEqLfo(eqIndex, settings)
   eqs.value[eqIndex] = { ...eq, lfos: [...eq.lfos, settings] }
 }
@@ -1837,6 +1846,7 @@ function addResonator() {
 
 function removeResonator(index: number) {
   removeLfosForModule('resonator', index)
+  removeEnvelopesForModule('resonator', index)
   activeSynth.removeResonator(index)
   resonators.value.splice(index, 1)
   removeModuleOrderEntry('resonators', index)
@@ -1855,6 +1865,7 @@ function toggleResonatorBypass(index: number) {
 
 function removeReverb(index: number) {
   removeLfosForModule('reverb', index)
+  removeEnvelopesForModule('reverb', index)
   activeSynth.removeReverb(index)
   reverbs.value.splice(index, 1)
   removeModuleOrderEntry('reverbs', index)
@@ -1929,8 +1940,8 @@ function toggleNoiseBypass(index: number) {
   updateNoiseSettings(index, { bypassed: !settings.bypassed })
 }
 
-function addEnvelope(destination: EnvelopeDestination, source?: SoundSourceOrderEntry) {
-  const settings = { ...createEnvelopeSettings(), destination, source, bypassed: false }
+function addEnvelope(destination: EnvelopeDestination, source?: EnvelopeSource) {
+  const settings = { ...createEnvelopeSettings(), destination, source, bypassed: true }
   markEnvelopeOpen(envelopes.value.length)
   activeSynth.addEnvelope(settings)
   envelopes.value.push(settings)
@@ -1976,7 +1987,7 @@ function lfosForModule(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'ov
 
 function addLfo(module: 'oscillator' | 'noise' | 'filter' | 'delay' | 'overdrive' | 'chorus' | 'flanger' | 'tremolo' | 'resonator' | 'reverb' | 'output', index: number) {
   const target = lfoTargetOptions(module, index)[0].value
-  const settings: LfoControlModule = { waveform: 'sine', rate: 5, depth: 0.25, target, bypassed: false }
+  const settings: LfoControlModule = { waveform: 'sine', rate: 5, depth: 0.25, target, bypassed: true }
   const idPrefix = module === 'output' ? 'output' : `${module}-${index}`
   markSectionOpen(`${idPrefix}-lfo-${lfos.value.length}-heading`)
   activeSynth.addLfo(settings)
@@ -2017,7 +2028,7 @@ function removeSoundSourceOrderEntry(type: SoundSourceType, index: number) {
     .map((entry) => entry.type === type && entry.index > index ? { ...entry, index: entry.index - 1 } : entry)
 }
 
-function removeEnvelopesForSoundSource(type: SoundSourceType, index: number) {
+function removeEnvelopesForModule(type: EnvelopeSourceType, index: number) {
   for (let envelopeIndex = envelopes.value.length - 1; envelopeIndex >= 0; envelopeIndex -= 1) {
     const source = envelopes.value[envelopeIndex].source
     if (source?.type === type && source.index === index) removeEnvelope(envelopeIndex)
@@ -2029,7 +2040,7 @@ function removeEnvelopesForSoundSource(type: SoundSourceType, index: number) {
   })
 }
 
-function envelopesFor(destinations: readonly { value: EnvelopeDestination }[], source?: SoundSourceOrderEntry) {
+function envelopesFor(destinations: readonly { value: EnvelopeDestination }[], source?: EnvelopeSource) {
   return envelopes.value.flatMap((envelope, index) => {
     if (!destinations.some((destination) => destination.value === envelope.destination)) return []
     if (!source) return envelope.source === undefined ? [{ ...envelope, index }] : []
@@ -2092,6 +2103,34 @@ function addSoundSourceModulation(type: 'lfo' | 'env') {
   if (type === 'lfo') addLfo(source.type, source.index)
   else addEnvelope(source.type === 'oscillator' ? 'oscillatorLevel' : 'noiseLevel', source)
   closeSoundSourceModulationDialog()
+}
+
+function openModuleModulationDialog(module: ModuleModulationTarget) {
+  selectedModuleModulation.value = module
+  addModuleModulationDialog.value?.showModal()
+}
+
+function closeModuleModulationDialog() {
+  addModuleModulationDialog.value?.close()
+  selectedModuleModulation.value = null
+}
+
+function addModuleModulation(type: 'lfo' | 'env') {
+  const module = selectedModuleModulation.value
+  if (!module) return
+  if (module.type === 'eq') {
+    if (type === 'lfo') addEqLfo(module.index)
+    else addEqEnvelope(module.index)
+  } else if (type === 'lfo') {
+    addLfo(module.type, module.index)
+  } else {
+    const destinations: Record<EnvelopeSourceType, EnvelopeDestination> = {
+      oscillator: 'oscillatorLevel', noise: 'noiseLevel', filter: 'filterCutoff', delay: 'delayTime', overdrive: 'overdriveDrive',
+      chorus: 'chorusRate', flanger: 'flangerRate', tremolo: 'tremoloRate', resonator: 'resonatorFrequency', reverb: 'reverbDecay',
+    }
+    addEnvelope(destinations[module.type], module)
+  }
+  closeModuleModulationDialog()
 }
 
 onMounted(() => {
@@ -2336,9 +2375,10 @@ onUnmounted(() => {
                 @update="updateLfo($event.index, $event.settings)"
                 @toggle-bypass="toggleLfoBypass"
                 @remove="removeLfo"
-                @add="addLfo('filter', entry.index)"
+                :show-add-button="false"
                   />
-                  <EnvelopeControls :envelopes="envelopesFor(filterEnvelopeDestinations)" :destination-options="filterEnvelopeDestinations" :id-prefix="`filter-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('filterCutoff')" />
+                  <EnvelopeControls :envelopes="envelopesFor(filterEnvelopeDestinations, { type: 'filter', index: entry.index })" :destination-options="filterEnvelopeDestinations" :id-prefix="`filter-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" :show-add-button="false" />
+                  <button type="button" class="add-env-button" @click="openModuleModulationDialog({ type: 'filter', index: entry.index })">+ Mod</button>
                 </template>
               </FilterControls>
             </template>
@@ -2366,7 +2406,7 @@ onUnmounted(() => {
                 @update="updateEqEnvelopeFromControls(entry.index, $event.index, $event.settings)"
                 @toggle-bypass="toggleEqEnvelopeBypass(entry.index, $event)"
                 @remove="removeEqEnvelope(entry.index, $event)"
-                @add="addEqEnvelope(entry.index)"
+                :show-add-button="false"
                   />
                   <LfoControls
                 :lfos="eqLfos(entry.index)"
@@ -2375,8 +2415,9 @@ onUnmounted(() => {
                 @update="updateEqLfoFromControls(entry.index, $event.index, $event.settings)"
                 @toggle-bypass="toggleEqLfoBypass(entry.index, $event)"
                 @remove="removeEqLfo(entry.index, $event)"
-                @add="addEqLfo(entry.index)"
+                :show-add-button="false"
                   />
+                  <button type="button" class="add-env-button" @click="openModuleModulationDialog({ type: 'eq', index: entry.index })">+ Mod</button>
                 </template>
               </EqControls>
             </template>
@@ -2404,9 +2445,10 @@ onUnmounted(() => {
                 @update="updateLfo($event.index, $event.settings)"
                 @toggle-bypass="toggleLfoBypass"
                 @remove="removeLfo"
-                @add="addLfo('overdrive', entry.index)"
+                :show-add-button="false"
                   />
-                  <EnvelopeControls :envelopes="envelopesFor(overdriveEnvelopeDestinations)" :destination-options="overdriveEnvelopeDestinations" :id-prefix="`overdrive-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('overdriveDrive')" />
+                  <EnvelopeControls :envelopes="envelopesFor(overdriveEnvelopeDestinations, { type: 'overdrive', index: entry.index })" :destination-options="overdriveEnvelopeDestinations" :id-prefix="`overdrive-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" :show-add-button="false" />
+                  <button type="button" class="add-env-button" @click="openModuleModulationDialog({ type: 'overdrive', index: entry.index })">+ Mod</button>
                 </template>
               </OverdriveControls>
             </template>
@@ -2435,9 +2477,10 @@ onUnmounted(() => {
                 @update="updateLfo($event.index, $event.settings)"
                 @toggle-bypass="toggleLfoBypass"
                 @remove="removeLfo"
-                @add="addLfo('chorus', entry.index)"
+                :show-add-button="false"
                   />
-                  <EnvelopeControls :envelopes="envelopesFor(chorusEnvelopeDestinations)" :destination-options="chorusEnvelopeDestinations" :id-prefix="`chorus-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('chorusRate')" />
+                  <EnvelopeControls :envelopes="envelopesFor(chorusEnvelopeDestinations, { type: 'chorus', index: entry.index })" :destination-options="chorusEnvelopeDestinations" :id-prefix="`chorus-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" :show-add-button="false" />
+                  <button type="button" class="add-env-button" @click="openModuleModulationDialog({ type: 'chorus', index: entry.index })">+ Mod</button>
                 </template>
               </ChorusControls>
             </template>
@@ -2467,9 +2510,10 @@ onUnmounted(() => {
                 @update="updateLfo($event.index, $event.settings)"
                 @toggle-bypass="toggleLfoBypass"
                 @remove="removeLfo"
-                @add="addLfo('flanger', entry.index)"
+                :show-add-button="false"
                   />
-                  <EnvelopeControls :envelopes="envelopesFor(flangerEnvelopeDestinations)" :destination-options="flangerEnvelopeDestinations" :id-prefix="`flanger-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('flangerRate')" />
+                  <EnvelopeControls :envelopes="envelopesFor(flangerEnvelopeDestinations, { type: 'flanger', index: entry.index })" :destination-options="flangerEnvelopeDestinations" :id-prefix="`flanger-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" :show-add-button="false" />
+                  <button type="button" class="add-env-button" @click="openModuleModulationDialog({ type: 'flanger', index: entry.index })">+ Mod</button>
                 </template>
               </FlangerControls>
             </template>
@@ -2497,9 +2541,10 @@ onUnmounted(() => {
                 @update="updateLfo($event.index, $event.settings)"
                 @toggle-bypass="toggleLfoBypass"
                 @remove="removeLfo"
-                @add="addLfo('tremolo', entry.index)"
+                :show-add-button="false"
                   />
-                  <EnvelopeControls :envelopes="envelopesFor(tremoloEnvelopeDestinations)" :destination-options="tremoloEnvelopeDestinations" :id-prefix="`tremolo-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('tremoloRate')" />
+                  <EnvelopeControls :envelopes="envelopesFor(tremoloEnvelopeDestinations, { type: 'tremolo', index: entry.index })" :destination-options="tremoloEnvelopeDestinations" :id-prefix="`tremolo-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" :show-add-button="false" />
+                  <button type="button" class="add-env-button" @click="openModuleModulationDialog({ type: 'tremolo', index: entry.index })">+ Mod</button>
                 </template>
               </TremoloControls>
             </template>
@@ -2528,17 +2573,18 @@ onUnmounted(() => {
                 @update="updateLfo($event.index, $event.settings)"
                 @toggle-bypass="toggleLfoBypass"
                 @remove="removeLfo"
-                @add="addLfo('delay', entry.index)"
+                :show-add-button="false"
                   />
                   <EnvelopeControls
-                :envelopes="envelopesFor(delayEnvelopeDestinations)"
+                :envelopes="envelopesFor(delayEnvelopeDestinations, { type: 'delay', index: entry.index })"
                 :destination-options="delayEnvelopeDestinations"
                 :id-prefix="`delay-${entry.index}`"
                 @update="updateEnvelopeSettings($event.index, $event.settings)"
                 @toggle-bypass="toggleEnvelopeBypass"
                 @remove="removeEnvelope"
-                @add="addEnvelope('delayTime')"
+                :show-add-button="false"
                   />
+                  <button type="button" class="add-env-button" @click="openModuleModulationDialog({ type: 'delay', index: entry.index })">+ Mod</button>
                 </template>
               </DelayControls>
             </template>
@@ -2568,9 +2614,10 @@ onUnmounted(() => {
                     @update="updateLfo($event.index, $event.settings)"
                     @toggle-bypass="toggleLfoBypass"
                     @remove="removeLfo"
-                    @add="addLfo('resonator', entry.index)"
+                    :show-add-button="false"
                   />
-                  <EnvelopeControls :envelopes="envelopesFor(resonatorEnvelopeDestinations)" :destination-options="resonatorEnvelopeDestinations" :id-prefix="`resonator-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('resonatorFrequency')" />
+                  <EnvelopeControls :envelopes="envelopesFor(resonatorEnvelopeDestinations, { type: 'resonator', index: entry.index })" :destination-options="resonatorEnvelopeDestinations" :id-prefix="`resonator-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" :show-add-button="false" />
+                  <button type="button" class="add-env-button" @click="openModuleModulationDialog({ type: 'resonator', index: entry.index })">+ Mod</button>
                 </template>
               </ResonatorControls>
             </template>
@@ -2600,9 +2647,10 @@ onUnmounted(() => {
                 @update="updateLfo($event.index, $event.settings)"
                 @toggle-bypass="toggleLfoBypass"
                 @remove="removeLfo"
-                @add="addLfo('reverb', entry.index)"
+                :show-add-button="false"
                   />
-                  <EnvelopeControls :envelopes="envelopesFor(reverbEnvelopeDestinations)" :destination-options="reverbEnvelopeDestinations" :id-prefix="`reverb-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" @add="addEnvelope('reverbDecay')" />
+                  <EnvelopeControls :envelopes="envelopesFor(reverbEnvelopeDestinations, { type: 'reverb', index: entry.index })" :destination-options="reverbEnvelopeDestinations" :id-prefix="`reverb-${entry.index}`" @update="updateEnvelopeSettings($event.index, $event.settings)" @toggle-bypass="toggleEnvelopeBypass" @remove="removeEnvelope" :show-add-button="false" />
+                  <button type="button" class="add-env-button" @click="openModuleModulationDialog({ type: 'reverb', index: entry.index })">+ Mod</button>
                 </template>
               </ReverbControls>
             </template>
@@ -2745,6 +2793,25 @@ onUnmounted(() => {
             <section class="add-module-category" aria-labelledby="add-source-envelope-heading">
               <h3 id="add-source-envelope-heading">Envelope</h3>
               <button type="button" @click="addSoundSourceModulation('env')">ENV</button>
+            </section>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog ref="addModuleModulationDialog" class="add-module-dialog" aria-label="Add module modulation" @click="($event.target as HTMLElement).closest('.add-module-dialog-content') || closeModuleModulationDialog()">
+        <div class="add-module-dialog-content">
+          <div class="add-module-dialog-heading">
+            <h2>Add modulation</h2>
+            <button type="button" class="add-module-dialog-close" aria-label="Close dialog" @click="closeModuleModulationDialog">✕</button>
+          </div>
+          <div class="add-module-categories">
+            <section class="add-module-category" aria-labelledby="add-module-lfo-heading">
+              <h3 id="add-module-lfo-heading">LFO</h3>
+              <button type="button" @click="addModuleModulation('lfo')">LFO</button>
+            </section>
+            <section class="add-module-category" aria-labelledby="add-module-envelope-heading">
+              <h3 id="add-module-envelope-heading">Envelope</h3>
+              <button type="button" @click="addModuleModulation('env')">ENV</button>
             </section>
           </div>
         </div>

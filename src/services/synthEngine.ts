@@ -353,6 +353,7 @@ export type LfoSettings = {
   rate: number
   depth: number
   target: LfoTarget
+  bypassed?: boolean
 }
 
 type LfoModule = {
@@ -401,6 +402,9 @@ export type EnvelopeDestination =
   | 'reverbWidth'
   | EqModulationTarget
 
+export type EnvelopeSourceType = 'oscillator' | 'noise' | 'filter' | 'delay' | 'overdrive' | 'chorus' | 'flanger' | 'tremolo' | 'resonator' | 'reverb'
+export type EnvelopeSource = { type: EnvelopeSourceType; index: number }
+
 export type EnvelopeSettings = {
   attack: number
   decay: number
@@ -410,7 +414,8 @@ export type EnvelopeSettings = {
   attackCurve: EnvelopeCurve
   releaseCurve: EnvelopeCurve
   destination: EnvelopeDestination
-  source?: { type: 'oscillator' | 'noise'; index: number }
+  /** Limits this envelope to one source or processing-module instance. */
+  source?: EnvelopeSource
 }
 
 export type EqEnvelopeSettings = EnvelopeSettings & { destination: EqModulationTarget; bypassed: boolean }
@@ -1344,7 +1349,7 @@ export class SynthEngine {
   }
 
   addLfo(settings: LfoSettings): number {
-    const lfo = this.createLfoModule(settings)
+    const lfo = this.createLfoModule(settings, settings.bypassed ?? false)
     this.lfos.push(lfo)
     this.refreshLfoConnections()
     return this.lfos.length - 1
@@ -1380,8 +1385,11 @@ export class SynthEngine {
     envelope.settings = this.normalizeEnvelopeSettings(changes, envelope.settings)
   }
 
-  addEnvelope(settings: EnvelopeSettings = createEnvelopeSettings()): number {
-    this.envelopeSettings.push({ settings: this.normalizeEnvelopeSettings(settings, createEnvelopeSettings()), bypassed: false })
+  addEnvelope(settings: EnvelopeSettings & { bypassed?: boolean } = createEnvelopeSettings()): number {
+    this.envelopeSettings.push({
+      settings: this.normalizeEnvelopeSettings(settings, createEnvelopeSettings()),
+      bypassed: settings.bypassed ?? false,
+    })
     return this.envelopeSettings.length - 1
   }
 
@@ -1574,40 +1582,40 @@ export class SynthEngine {
   }
 
   private applyEffectEnvelopes(now: number, velocity: number): void {
-    const cutoffEnvelope = this.activeEnvelopeSettings('filterCutoff')
-    const resonanceEnvelope = this.activeEnvelopeSettings('filterResonance')
-    this.filters.forEach((filter) => {
+    this.filters.forEach((filter, index) => {
+      const cutoffEnvelope = this.activeEnvelopeSettings('filterCutoff', { type: 'filter', index })
+      const resonanceEnvelope = this.activeEnvelopeSettings('filterResonance', { type: 'filter', index })
       if (cutoffEnvelope) this.applyPositiveEnvelopeOnNoteOn(filter.node.frequency, now, cutoffEnvelope, 20, filter.settings.cutoff * this.envelopePeakGain(velocity, cutoffEnvelope.velocity))
       if (resonanceEnvelope) this.applyPositiveEnvelopeOnNoteOn(filter.node.Q, now, resonanceEnvelope, 0, filter.settings.resonance * this.envelopePeakGain(velocity, resonanceEnvelope.velocity))
     })
 
-    const timeEnvelope = this.activeEnvelopeSettings('delayTime')
-    const feedbackEnvelope = this.activeEnvelopeSettings('delayFeedback')
-    const mixEnvelope = this.activeEnvelopeSettings('delayMix')
-    this.delays.forEach((delay) => {
+    this.delays.forEach((delay, index) => {
+      const timeEnvelope = this.activeEnvelopeSettings('delayTime', { type: 'delay', index })
+      const feedbackEnvelope = this.activeEnvelopeSettings('delayFeedback', { type: 'delay', index })
+      const mixEnvelope = this.activeEnvelopeSettings('delayMix', { type: 'delay', index })
       if (timeEnvelope) this.applyPositiveEnvelopeOnNoteOn(delay.node.delayTime, now, timeEnvelope, 0.01, delay.settings.time * this.envelopePeakGain(velocity, timeEnvelope.velocity))
       if (feedbackEnvelope) this.applyPositiveEnvelopeOnNoteOn(delay.feedback.gain, now, feedbackEnvelope, 0, Math.min(0.98, delay.settings.feedback + delay.settings.resonance * 0.3) * this.envelopePeakGain(velocity, feedbackEnvelope.velocity))
       if (mixEnvelope) this.applyPositiveEnvelopeOnNoteOn(delay.wet.gain, now, mixEnvelope, 0, delay.settings.mix * this.envelopePeakGain(velocity, mixEnvelope.velocity))
     })
 
-    const driveEnvelope = this.activeEnvelopeSettings('overdriveDrive')
-    const toneEnvelope = this.activeEnvelopeSettings('overdriveTone')
-    const overdriveFeedbackEnvelope = this.activeEnvelopeSettings('overdriveFeedback')
-    const overdriveMixEnvelope = this.activeEnvelopeSettings('overdriveMix')
-    this.overdrives.forEach((overdrive) => {
+    this.overdrives.forEach((overdrive, index) => {
+      const driveEnvelope = this.activeEnvelopeSettings('overdriveDrive', { type: 'overdrive', index })
+      const toneEnvelope = this.activeEnvelopeSettings('overdriveTone', { type: 'overdrive', index })
+      const overdriveFeedbackEnvelope = this.activeEnvelopeSettings('overdriveFeedback', { type: 'overdrive', index })
+      const overdriveMixEnvelope = this.activeEnvelopeSettings('overdriveMix', { type: 'overdrive', index })
       if (driveEnvelope) this.applyPositiveEnvelopeOnNoteOn(overdrive.driveGain.gain, now, driveEnvelope, 1, 1 + overdrive.settings.drive * 18 * this.envelopePeakGain(velocity, driveEnvelope.velocity))
       if (toneEnvelope) this.applyPositiveEnvelopeOnNoteOn(overdrive.tone.frequency, now, toneEnvelope, 1800, 1800 + overdrive.settings.tone * 10200 * this.envelopePeakGain(velocity, toneEnvelope.velocity))
       if (overdriveFeedbackEnvelope) this.applyPositiveEnvelopeOnNoteOn(overdrive.feedbackGain.gain, now, overdriveFeedbackEnvelope, 0, Math.min(0.6, overdrive.settings.feedback) * this.envelopePeakGain(velocity, overdriveFeedbackEnvelope.velocity))
       if (overdriveMixEnvelope) this.applyPositiveEnvelopeOnNoteOn(overdrive.wet.gain, now, overdriveMixEnvelope, 0, overdrive.settings.mix * this.envelopePeakGain(velocity, overdriveMixEnvelope.velocity))
     })
 
-    const resonatorFrequencyEnvelope = this.activeEnvelopeSettings('resonatorFrequency')
-    const resonatorDecayEnvelope = this.activeEnvelopeSettings('resonatorDecay')
-    const resonatorFeedbackEnvelope = this.activeEnvelopeSettings('resonatorFeedback')
-    const resonatorDampingEnvelope = this.activeEnvelopeSettings('resonatorDamping')
-    const resonatorDriveEnvelope = this.activeEnvelopeSettings('resonatorDrive')
-    const resonatorMixEnvelope = this.activeEnvelopeSettings('resonatorMix')
-    this.resonators.forEach((resonator) => {
+    this.resonators.forEach((resonator, index) => {
+      const resonatorFrequencyEnvelope = this.activeEnvelopeSettings('resonatorFrequency', { type: 'resonator', index })
+      const resonatorDecayEnvelope = this.activeEnvelopeSettings('resonatorDecay', { type: 'resonator', index })
+      const resonatorFeedbackEnvelope = this.activeEnvelopeSettings('resonatorFeedback', { type: 'resonator', index })
+      const resonatorDampingEnvelope = this.activeEnvelopeSettings('resonatorDamping', { type: 'resonator', index })
+      const resonatorDriveEnvelope = this.activeEnvelopeSettings('resonatorDrive', { type: 'resonator', index })
+      const resonatorMixEnvelope = this.activeEnvelopeSettings('resonatorMix', { type: 'resonator', index })
       if (resonatorFrequencyEnvelope) this.applyPositiveEnvelopeOnNoteOn(resonator.filter.frequency, now, resonatorFrequencyEnvelope, 40, resonator.settings.frequency * this.envelopePeakGain(velocity, resonatorFrequencyEnvelope.velocity))
       if (resonatorDecayEnvelope) this.applyPositiveEnvelopeOnNoteOn(resonator.filter.Q, now, resonatorDecayEnvelope, 1, 1 + resonator.settings.decay * 38 * this.envelopePeakGain(velocity, resonatorDecayEnvelope.velocity))
       if (resonatorFeedbackEnvelope) this.applyPositiveEnvelopeOnNoteOn(resonator.feedbackGain.gain, now, resonatorFeedbackEnvelope, 0, resonator.settings.feedback * this.envelopePeakGain(velocity, resonatorFeedbackEnvelope.velocity))
@@ -1616,12 +1624,12 @@ export class SynthEngine {
       if (resonatorMixEnvelope) this.applyPositiveEnvelopeOnNoteOn(resonator.wet.gain, now, resonatorMixEnvelope, 0, resonator.settings.mix * this.envelopePeakGain(velocity, resonatorMixEnvelope.velocity))
     })
 
-    const reverbDecayEnvelope = this.activeEnvelopeSettings('reverbDecay')
-    const reverbMixEnvelope = this.activeEnvelopeSettings('reverbMix')
-    const reverbPreDelayEnvelope = this.activeEnvelopeSettings('reverbPreDelay')
-    const reverbDampingEnvelope = this.activeEnvelopeSettings('reverbDamping')
-    const reverbWidthEnvelope = this.activeEnvelopeSettings('reverbWidth')
-    this.reverbs.forEach((reverb) => {
+    this.reverbs.forEach((reverb, index) => {
+      const reverbDecayEnvelope = this.activeEnvelopeSettings('reverbDecay', { type: 'reverb', index })
+      const reverbMixEnvelope = this.activeEnvelopeSettings('reverbMix', { type: 'reverb', index })
+      const reverbPreDelayEnvelope = this.activeEnvelopeSettings('reverbPreDelay', { type: 'reverb', index })
+      const reverbDampingEnvelope = this.activeEnvelopeSettings('reverbDamping', { type: 'reverb', index })
+      const reverbWidthEnvelope = this.activeEnvelopeSettings('reverbWidth', { type: 'reverb', index })
       if (reverbDecayEnvelope) {
         const peakGain = this.envelopePeakGain(velocity, reverbDecayEnvelope.velocity)
         reverb.convolver.buffer = this.createHallImpulse({ ...reverb.settings, decay: 0.6 + (reverb.settings.decay - 0.6) * peakGain })
@@ -1638,23 +1646,23 @@ export class SynthEngine {
       }
     })
 
-    const chorusRateEnvelope = this.activeEnvelopeSettings('chorusRate')
-    const chorusDepthEnvelope = this.activeEnvelopeSettings('chorusDepth')
-    const chorusDelayEnvelope = this.activeEnvelopeSettings('chorusDelay')
-    const chorusMixEnvelope = this.activeEnvelopeSettings('chorusMix')
-    this.choruses.forEach((chorus) => {
+    this.choruses.forEach((chorus, index) => {
+      const chorusRateEnvelope = this.activeEnvelopeSettings('chorusRate', { type: 'chorus', index })
+      const chorusDepthEnvelope = this.activeEnvelopeSettings('chorusDepth', { type: 'chorus', index })
+      const chorusDelayEnvelope = this.activeEnvelopeSettings('chorusDelay', { type: 'chorus', index })
+      const chorusMixEnvelope = this.activeEnvelopeSettings('chorusMix', { type: 'chorus', index })
       if (chorusRateEnvelope) this.applyPositiveEnvelopeOnNoteOn(chorus.lfo.frequency, now, chorusRateEnvelope, 0.01, chorus.settings.rate * this.envelopePeakGain(velocity, chorusRateEnvelope.velocity))
       if (chorusDepthEnvelope) this.applyPositiveEnvelopeOnNoteOn(chorus.lfoGain.gain, now, chorusDepthEnvelope, 0, chorus.settings.depth * 0.005 * this.envelopePeakGain(velocity, chorusDepthEnvelope.velocity))
       if (chorusDelayEnvelope) this.applyPositiveEnvelopeOnNoteOn(chorus.delay.delayTime, now, chorusDelayEnvelope, 0, chorus.settings.delay * this.envelopePeakGain(velocity, chorusDelayEnvelope.velocity))
       if (chorusMixEnvelope) this.applyPositiveEnvelopeOnNoteOn(chorus.wet.gain, now, chorusMixEnvelope, 0, chorus.settings.mix * this.envelopePeakGain(velocity, chorusMixEnvelope.velocity))
     })
 
-    const flangerRateEnvelope = this.activeEnvelopeSettings('flangerRate')
-    const flangerDepthEnvelope = this.activeEnvelopeSettings('flangerDepth')
-    const flangerDelayEnvelope = this.activeEnvelopeSettings('flangerDelay')
-    const flangerFeedbackEnvelope = this.activeEnvelopeSettings('flangerFeedback')
-    const flangerMixEnvelope = this.activeEnvelopeSettings('flangerMix')
-    this.flangers.forEach((flanger) => {
+    this.flangers.forEach((flanger, index) => {
+      const flangerRateEnvelope = this.activeEnvelopeSettings('flangerRate', { type: 'flanger', index })
+      const flangerDepthEnvelope = this.activeEnvelopeSettings('flangerDepth', { type: 'flanger', index })
+      const flangerDelayEnvelope = this.activeEnvelopeSettings('flangerDelay', { type: 'flanger', index })
+      const flangerFeedbackEnvelope = this.activeEnvelopeSettings('flangerFeedback', { type: 'flanger', index })
+      const flangerMixEnvelope = this.activeEnvelopeSettings('flangerMix', { type: 'flanger', index })
       if (flangerRateEnvelope) this.applyPositiveEnvelopeOnNoteOn(flanger.lfo.frequency, now, flangerRateEnvelope, 0.01, flanger.settings.rate * this.envelopePeakGain(velocity, flangerRateEnvelope.velocity))
       if (flangerDepthEnvelope) this.applyPositiveEnvelopeOnNoteOn(flanger.lfoGain.gain, now, flangerDepthEnvelope, 0, flanger.settings.depth * 0.002 * this.envelopePeakGain(velocity, flangerDepthEnvelope.velocity))
       if (flangerDelayEnvelope) this.applyPositiveEnvelopeOnNoteOn(flanger.delay.delayTime, now, flangerDelayEnvelope, 0, flanger.settings.delay * this.envelopePeakGain(velocity, flangerDelayEnvelope.velocity))
@@ -1662,10 +1670,10 @@ export class SynthEngine {
       if (flangerMixEnvelope) this.applyPositiveEnvelopeOnNoteOn(flanger.wet.gain, now, flangerMixEnvelope, 0, flanger.settings.mix * this.envelopePeakGain(velocity, flangerMixEnvelope.velocity))
     })
 
-    const tremoloRateEnvelope = this.activeEnvelopeSettings('tremoloRate')
-    const tremoloDepthEnvelope = this.activeEnvelopeSettings('tremoloDepth')
-    const tremoloMixEnvelope = this.activeEnvelopeSettings('tremoloMix')
-    this.tremolos.forEach((tremolo) => {
+    this.tremolos.forEach((tremolo, index) => {
+      const tremoloRateEnvelope = this.activeEnvelopeSettings('tremoloRate', { type: 'tremolo', index })
+      const tremoloDepthEnvelope = this.activeEnvelopeSettings('tremoloDepth', { type: 'tremolo', index })
+      const tremoloMixEnvelope = this.activeEnvelopeSettings('tremoloMix', { type: 'tremolo', index })
       if (tremoloRateEnvelope) this.applyPositiveEnvelopeOnNoteOn(tremolo.lfo.frequency, now, tremoloRateEnvelope, 0.01, tremolo.settings.rate * this.envelopePeakGain(velocity, tremoloRateEnvelope.velocity))
       if (tremoloDepthEnvelope) this.applyPositiveEnvelopeOnNoteOn(tremolo.lfoDepthGain.gain, now, tremoloDepthEnvelope, 0, tremolo.settings.depth / 2 * this.envelopePeakGain(velocity, tremoloDepthEnvelope.velocity))
       if (tremoloMixEnvelope) this.applyPositiveEnvelopeOnNoteOn(tremolo.wet.gain, now, tremoloMixEnvelope, 0, tremolo.settings.mix * this.envelopePeakGain(velocity, tremoloMixEnvelope.velocity))
@@ -2527,11 +2535,12 @@ export class SynthEngine {
   }
 
   private activeEnvelopeSettings(destination?: EnvelopeDestination, source?: EnvelopeSettings['source']): EnvelopeSettings | undefined {
-    return this.envelopeSettings.find((envelope) => {
-      if (envelope.bypassed || (destination && envelope.settings.destination !== destination)) return false
-      if (!source) return envelope.settings.source === undefined
-      return envelope.settings.source === undefined
-        || (envelope.settings.source.type === source.type && envelope.settings.source.index === source.index)
-    })?.settings
+    const matching = this.envelopeSettings.filter((envelope) => (
+      !envelope.bypassed && (!destination || envelope.settings.destination === destination)
+    ))
+    if (!source) return matching.find((envelope) => envelope.settings.source === undefined)?.settings
+    return matching.find((envelope) => (
+      envelope.settings.source?.type === source.type && envelope.settings.source.index === source.index
+    ))?.settings ?? matching.find((envelope) => envelope.settings.source === undefined)?.settings
   }
 }
