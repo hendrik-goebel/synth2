@@ -25,6 +25,7 @@ const emit = defineEmits<{
   'update:fmAmount': [value: number]
   'update:fmSource': [value: Waveform]
   'toggle-bypass': []
+  modulate: []
   remove: []
 }>()
 
@@ -123,5 +124,7 @@ const emit = defineEmits<{
       </select>
       </label>
     </div>
+    <slot />
+    <button type="button" class="add-env-button" @click="emit('modulate')">+ Mod</button>
   </SectionFrame>
 </template>

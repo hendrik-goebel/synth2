@@ -11,6 +11,7 @@ type Voice = {
   panner: StereoPannerNode
   velocity: number
   oscillatorIndex?: number
+  noiseIndex?: number
   layerIndex?: number
   baseDetune?: number
   stopping: boolean
@@ -409,6 +410,7 @@ export type EnvelopeSettings = {
   attackCurve: EnvelopeCurve
   releaseCurve: EnvelopeCurve
   destination: EnvelopeDestination
+  source?: { type: 'oscillator' | 'noise'; index: number }
 }
 
 export type EqEnvelopeSettings = EnvelopeSettings & { destination: EqModulationTarget; bypassed: boolean }
@@ -526,7 +528,7 @@ export class SynthEngine {
   private readonly heldNoteCounts = new Map<number, number>()
   private settings: OscillatorSettings[]
   private outputSettings: OutputSettings
-  private noiseSettings?: NoiseSettings
+  private noiseSettings: NoiseSettings[] = []
   private filters: { node: BiquadFilterNode; gainNode: GainNode; settings: FilterSettings }[] = []
   private dynamics: DynamicsModule[] = []
   private delays: DelayModule[] = []
@@ -653,33 +655,37 @@ export class SynthEngine {
     if (!this.hasAudibleSources()) this.stopAllNotes()
   }
 
-  addNoise(settings: NoiseSettings = createNoiseSettings()): void {
-    if (this.noiseSettings) throw new Error('Noise is already enabled')
-    this.noiseSettings = { ...settings }
-    this.activeVoices.forEach((active) => active.voices.push(this.createNoiseVoice(active.velocity)))
+  addNoise(settings: NoiseSettings = createNoiseSettings()): number {
+    const noiseIndex = this.noiseSettings.push({ ...settings }) - 1
+    this.activeVoices.forEach((active) => active.voices.push(this.createNoiseVoice(active.velocity, noiseIndex)))
     this.refreshLfoConnections()
+    return noiseIndex
   }
 
-  removeNoise(): void {
-    if (!this.noiseSettings) throw new Error('Noise is not enabled')
+  removeNoise(noiseIndex: number): void {
+    if (noiseIndex < 0 || noiseIndex >= this.noiseSettings.length) throw new RangeError(`Unknown noise index: ${noiseIndex}`)
     this.activeVoices.forEach((active) => {
-      active.voices.filter((voice) => voice.kind === 'noise').forEach((voice) => this.stopVoice(voice))
-      active.voices = active.voices.filter((voice) => voice.kind !== 'noise')
+      active.voices.filter((voice) => voice.noiseIndex === noiseIndex).forEach((voice) => this.stopVoice(voice))
+      active.voices = active.voices.filter((voice) => voice.noiseIndex !== noiseIndex)
+      active.voices.forEach((voice) => {
+        if (voice.noiseIndex !== undefined && voice.noiseIndex > noiseIndex) voice.noiseIndex -= 1
+      })
     })
-    this.noiseSettings = undefined
+    this.noiseSettings.splice(noiseIndex, 1)
   }
 
-  setNoiseSettings(changes: Partial<NoiseSettings>): void {
-    if (!this.noiseSettings) throw new Error('Noise is not enabled')
-    this.noiseSettings = { ...this.noiseSettings, ...changes }
+  setNoiseSettings(noiseIndex: number, changes: Partial<NoiseSettings>): void {
+    const settings = this.noiseSettings[noiseIndex]
+    if (!settings) throw new RangeError(`Unknown noise index: ${noiseIndex}`)
+    this.noiseSettings[noiseIndex] = { ...settings, ...changes }
     const now = this.audioContext.currentTime
-    this.activeVoices.forEach(({ voices }) => voices.filter((voice) => voice.kind === 'noise').forEach((voice) => {
+    this.activeVoices.forEach(({ voices }) => voices.filter((voice) => voice.noiseIndex === noiseIndex).forEach((voice) => {
       if (changes.color !== undefined) this.replaceNoiseSource(voice)
       if (changes.level !== undefined || changes.bypassed !== undefined) {
         voice.gainNode.gain.setTargetAtTime(this.sourceGain(voice), now, 0.01)
         this.setAmplitudeModulationDepth(voice, now)
       }
-      if (changes.stereoSpread !== undefined) voice.panner.pan.setTargetAtTime(this.noiseSettings!.stereoSpread, now, 0.01)
+      if (changes.stereoSpread !== undefined) voice.panner.pan.setTargetAtTime(this.noiseSettings[noiseIndex].stereoSpread, now, 0.01)
     }))
     if (!this.hasAudibleSources()) this.stopAllNotes()
   }
@@ -1492,7 +1498,7 @@ export class SynthEngine {
     }
     if (module === 'noise') {
       return this.activeVoices.flatMap((active) => active.voices)
-        .filter((voice) => voice.kind === 'noise')
+        .filter((voice) => voice.noiseIndex === index)
         .flatMap((voice) => parameter === 'level' ? [voice.gainNode.gain] : parameter === 'stereoSpread' ? [voice.panner.pan] : [])
     }
     if (module === 'filter') {
@@ -1538,7 +1544,7 @@ export class SynthEngine {
 
   private createVoices(note: number, velocity: number, glideFromNote?: number): Voice[] {
     const oscillators = this.settings.flatMap((_, index) => this.createVoicesForOscillator(note, velocity, index, glideFromNote))
-    return this.noiseSettings ? [...oscillators, this.createNoiseVoice(velocity)] : oscillators
+    return [...oscillators, ...this.noiseSettings.map((_, index) => this.createNoiseVoice(velocity, index))]
   }
 
   private applyFilterSettings(index: number): void {
@@ -2185,23 +2191,23 @@ export class SynthEngine {
     parameter.linearRampToValueAtTime(to, now + glideMs / 1000)
   }
 
-  private createNoiseVoice(velocity: number): Voice {
-    const source = this.createNoiseSource()
-    const voice = this.createVoice(source, 'noise', velocity)
+  private createNoiseVoice(velocity: number, noiseIndex: number): Voice {
+    const source = this.createNoiseSource(noiseIndex)
+    const voice = this.createVoice(source, 'noise', velocity, undefined, undefined, noiseIndex)
     this.applyNoiseLevelEnvelopeOnNoteOn(voice, this.audioContext.currentTime)
     source.start()
     return voice
   }
 
-  private createVoice(source: AudioScheduledSourceNode, kind: Voice['kind'], velocity: number, oscillatorIndex?: number, layerIndex?: number): Voice {
+  private createVoice(source: AudioScheduledSourceNode, kind: Voice['kind'], velocity: number, oscillatorIndex?: number, layerIndex?: number, noiseIndex?: number): Voice {
     const normalizedVelocity = Math.max(0, Math.min(velocity, 127)) / 127
     const gainNode = this.audioContext.createGain()
     const envelopeGain = this.audioContext.createGain()
     const panner = this.audioContext.createStereoPanner()
-    const voice: Voice = { source, kind, oscillator: source instanceof OscillatorNode ? source : undefined, gainNode, envelopeGain, panner, velocity: normalizedVelocity, oscillatorIndex, layerIndex, stopping: false }
+    const voice: Voice = { source, kind, oscillator: source instanceof OscillatorNode ? source : undefined, gainNode, envelopeGain, panner, velocity: normalizedVelocity, oscillatorIndex, noiseIndex, layerIndex, stopping: false }
     const now = this.audioContext.currentTime
     gainNode.gain.setValueAtTime(this.sourceGain(voice), now)
-    const envelope = kind === 'oscillator' ? this.activeEnvelopeSettings('oscillatorLevel') : undefined
+    const envelope = kind === 'oscillator' ? this.activeEnvelopeSettings('oscillatorLevel', { type: 'oscillator', index: oscillatorIndex! }) : undefined
     if (envelope) {
       const peakGain = this.envelopePeakGain(voice.velocity, envelope.velocity)
       envelopeGain.gain.setValueAtTime(0, now)
@@ -2218,21 +2224,21 @@ export class SynthEngine {
     } else {
       envelopeGain.gain.setValueAtTime(1, now)
     }
-    panner.pan.setValueAtTime(kind === 'noise' ? this.noiseSettings!.stereoSpread : this.layerPan(layerIndex!, this.settings[oscillatorIndex!].stereoSpread), now)
+    panner.pan.setValueAtTime(kind === 'noise' ? this.noiseSettings[noiseIndex!].stereoSpread : this.layerPan(layerIndex!, this.settings[oscillatorIndex!].stereoSpread), now)
     source.connect(gainNode).connect(envelopeGain).connect(panner).connect(this.mixBus)
     if (this.amplitudeModulation) this.createAmplitudeModulation(voice)
     return voice
   }
 
-  private createNoiseSource(): AudioBufferSourceNode {
+  private createNoiseSource(noiseIndex: number): AudioBufferSourceNode {
     const buffer = this.audioContext.createBuffer(1, Math.floor(this.audioContext.sampleRate * NOISE_BUFFER_DURATION), this.audioContext.sampleRate)
     const samples = buffer.getChannelData(0)
     let brown = 0
     let pink = [0, 0, 0, 0, 0, 0, 0]
     for (let index = 0; index < samples.length; index += 1) {
       const white = Math.random() * 2 - 1
-      if (this.noiseSettings!.color === 'white') samples[index] = white
-      else if (this.noiseSettings!.color === 'pink') {
+      if (this.noiseSettings[noiseIndex].color === 'white') samples[index] = white
+      else if (this.noiseSettings[noiseIndex].color === 'pink') {
         pink[0] = 0.99886 * pink[0] + white * 0.0555179
         pink[1] = 0.99332 * pink[1] + white * 0.0750759
         pink[2] = 0.96900 * pink[2] + white * 0.1538520
@@ -2254,7 +2260,7 @@ export class SynthEngine {
 
   private replaceNoiseSource(voice: Voice): void {
     const oldSource = voice.source
-    const source = this.createNoiseSource()
+    const source = this.createNoiseSource(voice.noiseIndex!)
     source.connect(voice.gainNode)
     source.start()
     voice.source = source
@@ -2266,7 +2272,12 @@ export class SynthEngine {
     if (voice.stopping) return
     voice.stopping = true
     const now = this.audioContext.currentTime
-    const volumeEnvelope = this.activeEnvelopeSettings(voice.kind === 'oscillator' ? 'oscillatorLevel' : 'noiseLevel')
+    const volumeEnvelope = this.activeEnvelopeSettings(
+      voice.kind === 'oscillator' ? 'oscillatorLevel' : 'noiseLevel',
+      voice.kind === 'oscillator'
+        ? { type: 'oscillator', index: voice.oscillatorIndex! }
+        : { type: 'noise', index: voice.noiseIndex! },
+    )
     const holdEnd = now + (volumeEnvelope?.hold ?? 0) / 1000
     const releaseMs = volumeEnvelope?.release ?? ENVELOPE_BYPASS_RELEASE_MS
     const stopAt = holdEnd + releaseMs / 1000
@@ -2329,14 +2340,17 @@ export class SynthEngine {
   }
 
   private sourceGain(voice: Voice): number {
-    if (voice.kind === 'noise') return this.noiseSettings!.bypassed ? 0 : voice.velocity * MAX_GAIN * this.noiseSettings!.level
+    if (voice.kind === 'noise') {
+      const settings = this.noiseSettings[voice.noiseIndex!]
+      return settings.bypassed ? 0 : voice.velocity * MAX_GAIN * settings.level
+    }
     const settings = this.settings[voice.oscillatorIndex!]
     return settings.bypassed ? 0 : voice.velocity * MAX_GAIN * settings.level / UNISON_LAYER_COUNT
   }
 
   private hasAudibleSources(): boolean {
     const oscillatorAudible = this.settings.some((settings) => !settings.bypassed && settings.level > 0)
-    const noiseAudible = !!this.noiseSettings && !this.noiseSettings.bypassed && this.noiseSettings.level > 0
+    const noiseAudible = this.noiseSettings.some((settings) => !settings.bypassed && settings.level > 0)
     return oscillatorAudible || noiseAudible
   }
 
@@ -2393,7 +2407,7 @@ export class SynthEngine {
   }
 
   private applyPitchEnvelopeOnNoteOn(voice: Voice, now: number): void {
-    const envelope = this.activeEnvelopeSettings('oscillatorPitch')
+    const envelope = this.activeEnvelopeSettings('oscillatorPitch', { type: 'oscillator', index: voice.oscillatorIndex! })
     if (!envelope || !voice.oscillator || voice.baseDetune === undefined) {
       return
     }
@@ -2447,7 +2461,7 @@ export class SynthEngine {
   }
 
   private applyNoiseLevelEnvelopeOnNoteOn(voice: Voice, now: number): void {
-    const envelope = this.activeEnvelopeSettings('noiseLevel')
+    const envelope = this.activeEnvelopeSettings('noiseLevel', { type: 'noise', index: voice.noiseIndex! })
     if (!envelope || voice.kind !== 'noise') {
       return
     }
@@ -2502,6 +2516,7 @@ export class SynthEngine {
       attackCurve: this.clampEnvelopeCurve(changes.attackCurve, fallback.attackCurve),
       releaseCurve: this.clampEnvelopeCurve(changes.releaseCurve, fallback.releaseCurve),
       destination: this.clampEnvelopeDestination(changes.destination, fallback.destination),
+      source: changes.source ?? fallback.source,
     }
   }
 
@@ -2511,7 +2526,12 @@ export class SynthEngine {
     return { ...this.normalizeEnvelopeSettings(changes, fallback), destination, bypassed: changes.bypassed ?? fallback.bypassed }
   }
 
-  private activeEnvelopeSettings(destination?: EnvelopeDestination): EnvelopeSettings | undefined {
-    return this.envelopeSettings.find((envelope) => !envelope.bypassed && (!destination || envelope.settings.destination === destination))?.settings
+  private activeEnvelopeSettings(destination?: EnvelopeDestination, source?: EnvelopeSettings['source']): EnvelopeSettings | undefined {
+    return this.envelopeSettings.find((envelope) => {
+      if (envelope.bypassed || (destination && envelope.settings.destination !== destination)) return false
+      if (!source) return envelope.settings.source === undefined
+      return envelope.settings.source === undefined
+        || (envelope.settings.source.type === source.type && envelope.settings.source.index === source.index)
+    })?.settings
   }
 }

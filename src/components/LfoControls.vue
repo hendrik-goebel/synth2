@@ -11,6 +11,7 @@ defineProps<{
   lfos: LfoModule[]
   targetOptions: { value: LfoTarget; label: string }[]
   idPrefix: string
+  showAddButton?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -55,6 +56,6 @@ function updateRate(lfoIndex: number, event: Event) {
         <label class="control"><span>Target</span><select :value="lfo.target" @change="emit('update', { index: lfo.index, settings: { target: ($event.target as HTMLSelectElement).value as LfoTarget } })"><option v-for="option in targetOptions" :key="option.value" :value="option.value">{{ option.label }}</option></select></label>
       </div>
     </SectionFrame>
-    <button type="button" class="add-env-button" @click="emit('add')">Add LFO</button>
+    <button v-if="showAddButton !== false" type="button" class="add-env-button" @click="emit('add')">LFO</button>
   </div>
 </template>

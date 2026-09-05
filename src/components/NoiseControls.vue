@@ -3,6 +3,7 @@ import SectionFrame from './SectionFrame.vue'
 import type { NoiseColor } from '../services/synthEngine'
 
 defineProps<{
+  noiseIndex: number
   bypassed: boolean
   color: NoiseColor
   level: number
@@ -14,12 +15,20 @@ const emit = defineEmits<{
   'update:level': [value: number]
   'update:stereoSpread': [value: number]
   'toggle-bypass': []
+  modulate: []
   remove: []
 }>()
 </script>
 
 <template>
-  <SectionFrame title="Noise" heading-id="noise-heading" content-id="noise-content" :bypassed="bypassed" @toggle-bypass="emit('toggle-bypass')" @remove="emit('remove')">
+  <SectionFrame
+    :title="`Noise ${noiseIndex + 1}`"
+    :heading-id="`noise-${noiseIndex}-heading`"
+    :content-id="`noise-${noiseIndex}-content`"
+    :bypassed="bypassed"
+    @toggle-bypass="emit('toggle-bypass')"
+    @remove="emit('remove')"
+  >
     <div class="modulation-controls">
       <label class="control">
         <span>Color</span>
@@ -41,5 +50,6 @@ const emit = defineEmits<{
       </label>
     </div>
     <slot />
+    <button type="button" class="add-env-button" @click="emit('modulate')">+ Mod</button>
   </SectionFrame>
 </template>

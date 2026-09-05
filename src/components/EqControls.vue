@@ -117,7 +117,7 @@ function supportsGain(type: EqBandType): boolean {
         </div>
       </section>
     </div>
-    <button v-if="kind === 'multiband'" type="button" class="add-eq-button" @click="emit('add-band')">Add band</button>
+    <button v-if="kind === 'multiband'" type="button" class="add-eq-button" @click="emit('add-band')">Band</button>
     <slot name="modulation" />
   </SectionFrame>
 </template>

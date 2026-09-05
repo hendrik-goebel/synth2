@@ -8,6 +8,7 @@ defineProps<{
   envelopes: (EnvelopeModule & { index: number })[]
   destinationOptions: { value: EnvelopeDestination; label: string }[]
   idPrefix: string
+  showAddButton?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -42,6 +43,6 @@ const emit = defineEmits<{
         <label class="control"><span>Target</span><select :value="envelope.destination" @change="emit('update', { index: envelope.index, settings: { destination: ($event.target as HTMLSelectElement).value as EnvelopeDestination } })"><option v-for="option in destinationOptions" :key="option.value" :value="option.value">{{ option.label }}</option></select></label>
       </div>
     </SectionFrame>
-    <button type="button" class="add-env-button" @click="emit('add')">Add ENV</button>
+    <button v-if="showAddButton !== false" type="button" class="add-env-button" @click="emit('add')">ENV</button>
   </div>
 </template>

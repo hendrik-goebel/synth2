@@ -29,18 +29,27 @@ type LfoControlModule = LfoSettings & { bypassed: boolean }
 type ModuleKind = EffectGroup | 'amplitudeModulation'
 /** A single instance of a module type, identified by its position within that type's own settings array. */
 type ModuleOrderEntry = { type: ModuleKind; index: number }
-type SynthSetup = Omit<InstrumentPreset, 'id' | 'name' | 'category' | 'effectOrder'> & { moduleOrder: ModuleOrderEntry[] }
-type SeedChannel = Omit<SynthSetup, 'eqs' | 'choruses' | 'flangers' | 'tremolos' | 'resonators' | 'moduleOrder'> & {
+type SoundSourceType = 'oscillator' | 'noise'
+type SoundSourceOrderEntry = { type: SoundSourceType; index: number }
+type SynthSetup = Omit<InstrumentPreset, 'id' | 'name' | 'category' | 'effectOrder'> & {
+  noises?: NoiseSettings[]
+  soundSourceOrder?: SoundSourceOrderEntry[]
+  moduleOrder: ModuleOrderEntry[]
+}
+type SeedChannel = Omit<SynthSetup, 'eqs' | 'choruses' | 'flangers' | 'tremolos' | 'resonators' | 'moduleOrder' | 'noise'> & {
   eqs?: EqSettings[]
   choruses?: ChorusSettings[]
   flangers?: FlangerSettings[]
   tremolos?: TremoloSettings[]
   resonators?: ResonatorSettings[]
+  noises?: NoiseSettings[]
+  soundSourceOrder?: SoundSourceOrderEntry[]
+  noise?: NoiseSettings | null
   selectedInstrumentId: string
   moduleOrder?: ModuleOrderEntry[]
   effectOrder?: EffectGroup[]
 }
-type SeedMasterChannel = Omit<SeedChannel, 'oscillators'> & { oscillators?: OscillatorSettings[] }
+type SeedMasterChannel = Omit<SeedChannel, 'oscillators' | 'noises' | 'soundSourceOrder'> & { oscillators?: OscillatorSettings[] }
 type SeedState = {
   version: 1
   selectedChannel: number
@@ -55,8 +64,9 @@ const MAX_SEED_MODULATORS = 32
 type ChannelState = {
   synth: SynthEngine
   oscillators: OscillatorSettings[]
+  noises: NoiseSettings[]
+  soundSourceOrder: SoundSourceOrderEntry[]
   output: OutputSettings
-  noise: NoiseSettings | null
   filters: FilterSettings[]
   delays: DelaySettings[]
   overdrives: OverdriveSettings[]
@@ -110,8 +120,9 @@ let midiMappingsLoaded = false
 const audioStatus = ref('Audio locked. Interact with the synth to enable audio.')
 const activeVoices = ref(0)
 const oscillators = ref<OscillatorSettings[]>([initialOscillatorSettings])
+const noises = ref<NoiseSettings[]>([])
+const soundSourceOrder = ref<SoundSourceOrderEntry[]>([{ type: 'oscillator', index: 0 }])
 const output = ref<OutputSettings>(initialOutputSettings)
-const noise = ref<NoiseSettings | null>(null)
 const filters = ref<FilterSettings[]>([createFilterSettings()])
 const delays = ref<DelaySettings[]>([])
 const overdrives = ref<OverdriveSettings[]>([])
@@ -133,8 +144,9 @@ const channels = shallowRef<ChannelState[]>([])
 const masterChannel: ChannelState = {
   synth: masterSynth,
   oscillators: [],
+  noises: [],
+  soundSourceOrder: [],
   output: masterOutputSettings,
-  noise: null,
   filters: [],
   delays: [],
   overdrives: [],
@@ -160,6 +172,9 @@ const areConnectionsCollapsed = ref(true)
 const draggedModuleKey = ref<string | null>(null)
 const dragOverModuleKey = ref<string | null>(null)
 const addModuleDialog = ref<HTMLDialogElement | null>(null)
+const addSoundSourceDialog = ref<HTMLDialogElement | null>(null)
+const addSoundSourceModulationDialog = ref<HTMLDialogElement | null>(null)
+const selectedSoundSource = ref<SoundSourceOrderEntry | null>(null)
 const seedInput = ref('')
 const seedStatus = ref('')
 let firstInteractionHandled = false
@@ -171,8 +186,9 @@ function saveActiveChannel() {
   if (!channel) return
   channel.synth = activeSynth
   channel.oscillators = oscillators.value
+  channel.noises = noises.value
+  channel.soundSourceOrder = soundSourceOrder.value
   channel.output = output.value
-  channel.noise = noise.value
   channel.filters = filters.value
   channel.delays = delays.value
   channel.overdrives = overdrives.value
@@ -204,8 +220,9 @@ function loadChannelState(channel: ChannelState) {
   clearMarkedOpenSections()
   activeSynth = channel.synth
   oscillators.value = channel.oscillators
+  noises.value = channel.noises
+  soundSourceOrder.value = channel.soundSourceOrder
   output.value = channel.output
-  noise.value = channel.noise
   filters.value = channel.filters
   delays.value = channel.delays
   overdrives.value = channel.overdrives
@@ -234,8 +251,9 @@ function addChannel() {
   const channel: ChannelState = {
     synth: createChannelSynth(oscillatorSettings, outputSettings),
     oscillators: [oscillatorSettings],
+    noises: [],
+    soundSourceOrder: [{ type: 'oscillator', index: 0 }],
     output: outputSettings,
-    noise: null,
     filters: [createFilterSettings()],
     delays: [],
     overdrives: [],
@@ -314,8 +332,9 @@ function releaseControlFocus(event: Event) {
 channels.value.push({
   synth: activeSynth,
   oscillators: oscillators.value,
+  noises: noises.value,
+  soundSourceOrder: soundSourceOrder.value,
   output: output.value,
-  noise: noise.value,
   filters: filters.value,
   delays: delays.value,
   overdrives: overdrives.value,
@@ -350,10 +369,10 @@ const midiParameterTargets = computed<MidiParameterTarget[]>(() => {
     add(`oscillator:${index}:stereoSpread`, `Oscillator ${index + 1} / Stereo spread`, -1, 1, (value) => updateOscillatorSettings(index, { stereoSpread: value }))
     add(`oscillator:${index}:fmAmount`, `Oscillator ${index + 1} / FM amount`, 0, 1, (value) => updateOscillatorSettings(index, { fmAmount: value }))
   })
-  if (noise.value) {
-    add('noise:level', 'Noise / Level', 0, 1, (value) => updateNoiseSettings({ level: value }))
-    add('noise:stereoSpread', 'Noise / Stereo spread', -1, 1, (value) => updateNoiseSettings({ stereoSpread: value }))
-  }
+  noises.value.forEach((_, index) => {
+    add(`noise:${index}:level`, `Noise ${index + 1} / Level`, 0, 1, (value) => updateNoiseSettings(index, { level: value }))
+    add(`noise:${index}:stereoSpread`, `Noise ${index + 1} / Stereo spread`, -1, 1, (value) => updateNoiseSettings(index, { stereoSpread: value }))
+  })
   filters.value.forEach((_, index) => {
     add(`filter:${index}:cutoff`, `Filter ${index + 1} / Cutoff`, 20, 20000, (value) => updateFilterSettings(index, { cutoff: Math.round(value) }), 'logarithmic')
     add(`filter:${index}:resonance`, `Filter ${index + 1} / Resonance`, 0, 3, (value) => updateFilterSettings(index, { resonance: value }))
@@ -700,6 +719,26 @@ function isModuleOrder(value: unknown): value is ModuleOrderEntry[] {
   return Array.isArray(value) && value.length <= MAX_SEED_MODULES * (effectGroups.length + 1) && value.every(isModuleOrderEntry)
 }
 
+function isSoundSourceOrder(value: unknown, oscillatorCount: number, noiseCount: number): value is SoundSourceOrderEntry[] {
+  if (!Array.isArray(value) || value.length !== oscillatorCount + noiseCount) return false
+  const seen = new Set<string>()
+  return value.every((entry) => {
+    if (!isRecord(entry) || (entry.type !== 'oscillator' && entry.type !== 'noise') || typeof entry.index !== 'number' || !Number.isInteger(entry.index)) return false
+    const valid = entry.index >= 0 && entry.index < (entry.type === 'oscillator' ? oscillatorCount : noiseCount)
+    const key = `${entry.type}:${entry.index}`
+    if (!valid || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+function soundSourceOrderFor(oscillatorCount: number, noiseCount: number): SoundSourceOrderEntry[] {
+  return [
+    ...Array.from({ length: oscillatorCount }, (_, index) => ({ type: 'oscillator' as const, index })),
+    ...Array.from({ length: noiseCount }, (_, index) => ({ type: 'noise' as const, index })),
+  ]
+}
+
 /** Checks that a module order contains exactly one entry per existing module instance, with no duplicates or gaps. */
 function moduleOrderCoversCounts(order: ModuleOrderEntry[], counts: Record<EffectGroup, number>, hasAmplitudeModulation: boolean): boolean {
   const seen = new Set<string>()
@@ -734,7 +773,7 @@ function createSynthFromSetup(setup: SynthSetup): SynthEngine {
     else synth.removeFilter(0)
     additionalOscillators.forEach((settings) => synth.addOscillator(settings))
     setup.filters.slice(1).forEach((settings) => synth.addFilter(settings))
-    if (setup.noise) synth.addNoise(setup.noise)
+    ;(setup.noises ?? (setup.noise ? [setup.noise] : [])).forEach((settings) => synth.addNoise(settings))
     setup.overdrives.forEach((settings) => synth.addOverdrive(settings))
     setup.choruses.forEach((settings) => synth.addChorus(settings))
     setup.flangers.forEach((settings) => synth.addFlanger(settings))
@@ -813,8 +852,9 @@ function createMasterFromSeed(seedMaster: SeedMasterChannel): ChannelState {
   return {
     synth,
     oscillators: [],
+    noises: [],
+    soundSourceOrder: [],
     output: { ...seedMaster.output },
-    noise: null,
     filters: seedMaster.filters.map((settings) => ({ ...settings })),
     delays: seedMaster.delays.map((settings) => ({ ...settings })),
     overdrives: seedMaster.overdrives.map((settings) => ({ ...settings })),
@@ -882,8 +922,12 @@ function applyInstrumentPreset(instrumentId: string) {
   previousSynth.stopAllNotes()
   activeSynth = synth
   oscillators.value = preset.oscillators.map((settings) => ({ ...settings }))
+  noises.value = preset.noise ? [{ ...preset.noise }] : []
+  soundSourceOrder.value = [
+    ...oscillators.value.map((_, index) => ({ type: 'oscillator' as const, index })),
+    ...noises.value.map((_, index) => ({ type: 'noise' as const, index })),
+  ]
   output.value = { ...preset.output }
-  noise.value = preset.noise ? { ...preset.noise } : null
   filters.value = preset.filters.map((settings) => ({ ...settings }))
   delays.value = preset.delays.map((settings) => ({ ...settings }))
   overdrives.value = preset.overdrives.map((settings) => ({ ...settings }))
@@ -915,8 +959,9 @@ function applyInstrumentPreset(instrumentId: string) {
 function createSeedChannel(channel: ChannelState): SeedChannel {
   return {
     oscillators: channel.oscillators,
+    noises: channel.noises,
+    soundSourceOrder: channel.soundSourceOrder,
     output: channel.output,
-    noise: channel.noise,
     filters: channel.filters,
     delays: channel.delays,
     overdrives: channel.overdrives,
@@ -1115,9 +1160,11 @@ function isSeedChannel(value: unknown): value is SeedChannel {
     && typeof value.bpm === 'number'
     && isRecord(value.output)
     && (value.noise === null || isRecord(value.noise))
+    && (value.noises === undefined || isObjectArray(value.noises, MAX_SEED_MODULES))
     && (value.amplitudeModulation === null || isRecord(value.amplitudeModulation))
     && typeof value.isAmplitudeModulationBypassed === 'boolean'
     && isObjectArray(value.oscillators, MAX_SEED_MODULES, 1)
+    && (value.soundSourceOrder === undefined || isSoundSourceOrder(value.soundSourceOrder, value.oscillators.length, value.noises?.length ?? (value.noise ? 1 : 0)))
     && hasValidSeedModules(value, 0)
 }
 
@@ -1149,8 +1196,12 @@ function createChannelFromSeed(seedChannel: SeedChannel): ChannelState {
   const resonators = normalizeResonators(seedChannel.resonators)
   const counts = moduleCounts({ ...seedChannel, eqs, choruses, flangers, tremolos, resonators })
   const resolvedModuleOrder = resolveModuleOrder(seedChannel.moduleOrder, seedChannel.effectOrder ?? effectGroups, counts, false)
+  const sourceNoises = seedChannel.noises ?? (seedChannel.noise ? [seedChannel.noise] : [])
+  const sourceOrder = seedChannel.soundSourceOrder ?? soundSourceOrderFor(seedChannel.oscillators.length, sourceNoises.length)
   const synth = createSynthFromSetup({
     ...seedChannel,
+    noises: sourceNoises,
+    noise: seedChannel.noise ?? null,
     eqs,
     choruses,
     flangers,
@@ -1164,8 +1215,9 @@ function createChannelFromSeed(seedChannel: SeedChannel): ChannelState {
   return {
     synth,
     oscillators: seedChannel.oscillators.map((settings) => ({ ...settings })),
+    noises: sourceNoises.map((settings) => ({ ...settings })),
+    soundSourceOrder: sourceOrder.map((entry) => ({ ...entry })),
     output: { ...seedChannel.output },
-    noise: seedChannel.noise ? { ...seedChannel.noise } : null,
     filters: seedChannel.filters.map((settings) => ({ ...settings })),
     delays: seedChannel.delays.map((settings) => ({ ...settings })),
     overdrives: seedChannel.overdrives.map((settings) => ({ ...settings })),
@@ -1360,28 +1412,37 @@ function bypassNewModule<T extends { bypassed: boolean }>(settings: T): T {
 }
 
 function addOscillator() {
-  const settings = createRandomOscillatorSettings()
-  markSectionOpen(`oscillator-${oscillators.value.length}-heading`)
+  const settings = { ...createRandomOscillatorSettings(), bypassed: true }
+  const index = oscillators.value.length
+  markSectionOpen(`oscillator-${index}-heading`)
   oscillators.value.push(settings)
+  soundSourceOrder.value.push({ type: 'oscillator', index })
   activeSynth.addOscillator(settings)
 }
 
 function removeOscillator(index: number) {
   removeLfosForModule('oscillator', index)
+  removeEnvelopesForSoundSource('oscillator', index)
   activeSynth.removeOscillator(index)
   oscillators.value.splice(index, 1)
+  removeSoundSourceOrderEntry('oscillator', index)
 }
 
 function addNoise() {
-  const settings = createNoiseSettings()
-  noise.value = settings
+  const settings = { ...createNoiseSettings(), bypassed: true }
+  const index = noises.value.length
+  markSectionOpen(`noise-${index}-heading`)
+  noises.value.push(settings)
+  soundSourceOrder.value.push({ type: 'noise', index })
   activeSynth.addNoise(settings)
 }
 
-function removeNoise() {
-  removeLfosForModule('noise', 0)
-  activeSynth.removeNoise()
-  noise.value = null
+function removeNoise(index: number) {
+  removeLfosForModule('noise', index)
+  removeEnvelopesForSoundSource('noise', index)
+  activeSynth.removeNoise(index)
+  noises.value.splice(index, 1)
+  removeSoundSourceOrderEntry('noise', index)
 }
 
 function addFilter() {
@@ -1851,13 +1912,10 @@ function toggleDynamicsBypass(index: number) {
   activeSynth.setDynamicsBypassed(index, bypassed)
 }
 
-function updateNoiseSettings(settings: Partial<NoiseSettings>) {
-  if (!noise.value) {
-    return
-  }
-
-  noise.value = { ...noise.value, ...settings }
-  activeSynth.setNoiseSettings(settings)
+function updateNoiseSettings(index: number, settings: Partial<NoiseSettings>) {
+  if (!noises.value[index]) return
+  noises.value[index] = { ...noises.value[index], ...settings }
+  activeSynth.setNoiseSettings(index, settings)
 }
 
 function updateOutputSettings(settings: Partial<OutputSettings>) {
@@ -1865,16 +1923,14 @@ function updateOutputSettings(settings: Partial<OutputSettings>) {
   activeSynth.setOutputSettings(settings)
 }
 
-function toggleNoiseBypass() {
-  if (!noise.value) {
-    return
-  }
-
-  updateNoiseSettings({ bypassed: !noise.value.bypassed })
+function toggleNoiseBypass(index: number) {
+  const settings = noises.value[index]
+  if (!settings) return
+  updateNoiseSettings(index, { bypassed: !settings.bypassed })
 }
 
-function addEnvelope(destination: EnvelopeDestination) {
-  const settings = { ...createEnvelopeSettings(), destination, bypassed: false }
+function addEnvelope(destination: EnvelopeDestination, source?: SoundSourceOrderEntry) {
+  const settings = { ...createEnvelopeSettings(), destination, source, bypassed: false }
   markEnvelopeOpen(envelopes.value.length)
   activeSynth.addEnvelope(settings)
   envelopes.value.push(settings)
@@ -1948,14 +2004,40 @@ function removeLfosForModule(module: string, index: number) {
   for (let lfoIndex = lfos.value.length - 1; lfoIndex >= 0; lfoIndex -= 1) {
     if (lfos.value[lfoIndex].target.startsWith(exactPrefix)) removeLfo(lfoIndex)
   }
+
   lfos.value.forEach((lfo, lfoIndex) => {
     const [targetModule, rawIndex, parameter] = lfo.target.split(':')
     if (targetModule === module && Number(rawIndex) > index) updateLfo(lfoIndex, { target: `${module}:${Number(rawIndex) - 1}:${parameter}` as LfoSettings['target'] })
   })
 }
 
-function envelopesFor(destinations: readonly { value: EnvelopeDestination }[]) {
-  return envelopes.value.flatMap((envelope, index) => destinations.some((destination) => destination.value === envelope.destination) ? [{ ...envelope, index }] : [])
+function removeSoundSourceOrderEntry(type: SoundSourceType, index: number) {
+  soundSourceOrder.value = soundSourceOrder.value
+    .filter((entry) => !(entry.type === type && entry.index === index))
+    .map((entry) => entry.type === type && entry.index > index ? { ...entry, index: entry.index - 1 } : entry)
+}
+
+function removeEnvelopesForSoundSource(type: SoundSourceType, index: number) {
+  for (let envelopeIndex = envelopes.value.length - 1; envelopeIndex >= 0; envelopeIndex -= 1) {
+    const source = envelopes.value[envelopeIndex].source
+    if (source?.type === type && source.index === index) removeEnvelope(envelopeIndex)
+  }
+  envelopes.value.forEach((envelope, envelopeIndex) => {
+    const source = envelope.source
+    if (source?.type !== type || source.index <= index) return
+    updateEnvelopeSettings(envelopeIndex, { source: { ...source, index: source.index - 1 } })
+  })
+}
+
+function envelopesFor(destinations: readonly { value: EnvelopeDestination }[], source?: SoundSourceOrderEntry) {
+  return envelopes.value.flatMap((envelope, index) => {
+    if (!destinations.some((destination) => destination.value === envelope.destination)) return []
+    if (!source) return envelope.source === undefined ? [{ ...envelope, index }] : []
+    const belongsToSource = envelope.source
+      ? envelope.source.type === source.type && envelope.source.index === source.index
+      : source.index === 0
+    return belongsToSource ? [{ ...envelope, index }] : []
+  })
 }
 
 function toggleOscillatorBypass(index: number) {
@@ -1979,6 +2061,37 @@ function closeAddModuleDialog() {
 function addModuleFromDialog(action: () => void) {
   action()
   closeAddModuleDialog()
+}
+
+function openAddSoundSourceDialog() {
+  addSoundSourceDialog.value?.showModal()
+}
+
+function closeAddSoundSourceDialog() {
+  addSoundSourceDialog.value?.close()
+}
+
+function addSoundSourceFromDialog(action: () => void) {
+  action()
+  closeAddSoundSourceDialog()
+}
+
+function openSoundSourceModulationDialog(source: SoundSourceOrderEntry) {
+  selectedSoundSource.value = source
+  addSoundSourceModulationDialog.value?.showModal()
+}
+
+function closeSoundSourceModulationDialog() {
+  addSoundSourceModulationDialog.value?.close()
+  selectedSoundSource.value = null
+}
+
+function addSoundSourceModulation(type: 'lfo' | 'env') {
+  const source = selectedSoundSource.value
+  if (!source) return
+  if (type === 'lfo') addLfo(source.type, source.index)
+  else addEnvelope(source.type === 'oscillator' ? 'oscillatorLevel' : 'noiseLevel', source)
+  closeSoundSourceModulationDialog()
 }
 
 onMounted(() => {
@@ -2025,7 +2138,7 @@ onUnmounted(() => {
       </header>
 
       <div class="setup-grid">
-        <section class="channel-bar ambient amb-surface amb-chamfer amb-elevation-1 amb-rounded-lg" aria-label="Synth channels">
+        <section class="channel-bar ambient amb-surface amb-chamfer amb-rounded-lg" aria-label="Synth channels">
         <div>
           <p class="eyebrow">Channel</p>
           <strong class="channel-number">{{ isMasterChannel ? 'MASTER' : `MIDI ${selectedChannel}` }}</strong>
@@ -2049,11 +2162,11 @@ onUnmounted(() => {
           >
             {{ index + 1 }}
           </button>
-          <button v-if="channels.length < 16" type="button" class="add-channel-button" @click="addChannel">Add Channel</button>
+          <button v-if="channels.length < 16" type="button" class="add-channel-button" @click="addChannel">Channel</button>
         </div>
       </section>
 
-      <label v-if="!isMasterChannel" class="instrument-selector ambient amb-surface amb-chamfer amb-elevation-1 amb-rounded-lg">
+      <label v-if="!isMasterChannel" class="instrument-selector ambient amb-surface amb-chamfer amb-rounded-lg">
         <span>Instrument</span>
         <select :value="selectedInstrumentId" @change="applyInstrumentPreset(($event.target as HTMLSelectElement).value)">
           <option value="" disabled>Select instrument</option>
@@ -2080,94 +2193,91 @@ onUnmounted(() => {
       </div>
 
       <div class="synth-workspace">
-        <section v-if="!isMasterChannel" class="synth-section oscillators-section ambient amb-surface amb-chamfer amb-elevation-1 amb-rounded-lg" aria-labelledby="oscillators-heading">
-        <h2 id="oscillators-heading">
+        <section v-if="!isMasterChannel" class="synth-section oscillators-section ambient amb-surface amb-chamfer amb-rounded-lg" aria-labelledby="sound-sources-heading">
+        <h2 id="sound-sources-heading">
           <button
             type="button"
             class="oscillators-toggle"
             :aria-expanded="!areOscillatorsCollapsed"
-            aria-controls="oscillators-content"
+            aria-controls="sound-sources-content"
             @click="areOscillatorsCollapsed = !areOscillatorsCollapsed"
           >
-            Oscillators
+            Sound sources
           </button>
         </h2>
-        <div v-show="!areOscillatorsCollapsed" id="oscillators-content" class="oscillators-content">
-          <template v-for="(oscillator, index) in oscillators" :key="index">
-          <OscillatorControls
-            :oscillator-index="index"
-            v-bind="oscillator"
-            @update:detune="updateOscillatorSettings(index, { detune: $event })"
-            @update:glide="updateOscillatorSettings(index, { glide: $event })"
-            @update:level="updateOscillatorSettings(index, { level: $event })"
-            @update:waveform="updateOscillatorSettings(index, { waveform: $event })"
-            @update:unison-detune="updateOscillatorSettings(index, { unisonDetune: $event })"
-            @update:stereo-spread="updateOscillatorSettings(index, { stereoSpread: $event })"
-            @update:fm-amount="updateOscillatorSettings(index, { fmAmount: $event })"
-            @update:fm-source="updateOscillatorSettings(index, { fmSource: $event })"
-            @toggle-bypass="toggleOscillatorBypass(index)"
-            @remove="removeOscillator(index)"
-          />
+        <div v-show="!areOscillatorsCollapsed" id="sound-sources-content" class="oscillators-content">
+          <template v-for="source in soundSourceOrder" :key="`${source.type}:${source.index}`">
+            <OscillatorControls
+              v-if="source.type === 'oscillator' && oscillators[source.index]"
+              :oscillator-index="source.index"
+              v-bind="oscillators[source.index]"
+              @update:detune="updateOscillatorSettings(source.index, { detune: $event })"
+              @update:glide="updateOscillatorSettings(source.index, { glide: $event })"
+              @update:level="updateOscillatorSettings(source.index, { level: $event })"
+              @update:waveform="updateOscillatorSettings(source.index, { waveform: $event })"
+              @update:unison-detune="updateOscillatorSettings(source.index, { unisonDetune: $event })"
+              @update:stereo-spread="updateOscillatorSettings(source.index, { stereoSpread: $event })"
+              @update:fm-amount="updateOscillatorSettings(source.index, { fmAmount: $event })"
+              @update:fm-source="updateOscillatorSettings(source.index, { fmSource: $event })"
+              @toggle-bypass="toggleOscillatorBypass(source.index)"
+              @modulate="openSoundSourceModulationDialog(source)"
+              @remove="removeOscillator(source.index)"
+            >
+              <LfoControls
+                :lfos="lfosForModule('oscillator', source.index)"
+                :target-options="lfoTargetOptions('oscillator', source.index)"
+                :id-prefix="`oscillator-${source.index}`"
+                :show-add-button="false"
+                @update="updateLfo($event.index, $event.settings)"
+                @toggle-bypass="toggleLfoBypass"
+                @remove="removeLfo"
+              />
+              <EnvelopeControls
+                :envelopes="envelopesFor(oscillatorEnvelopeDestinations, source)"
+                :destination-options="oscillatorEnvelopeDestinations"
+                id-prefix="oscillator"
+                :show-add-button="false"
+                @update="updateEnvelopeSettings($event.index, $event.settings)"
+                @toggle-bypass="toggleEnvelopeBypass"
+                @remove="removeEnvelope"
+              />
+            </OscillatorControls>
+            <NoiseControls
+              v-else-if="noises[source.index]"
+              :noise-index="source.index"
+              v-bind="noises[source.index]"
+              @update:color="updateNoiseSettings(source.index, { color: $event })"
+              @update:level="updateNoiseSettings(source.index, { level: $event })"
+              @update:stereo-spread="updateNoiseSettings(source.index, { stereoSpread: $event })"
+              @toggle-bypass="toggleNoiseBypass(source.index)"
+              @modulate="openSoundSourceModulationDialog(source)"
+              @remove="removeNoise(source.index)"
+            >
+            <LfoControls
+              :lfos="lfosForModule('noise', source.index)"
+              :target-options="lfoTargetOptions('noise', source.index)"
+              :id-prefix="`noise-${source.index}`"
+              :show-add-button="false"
+              @update="updateLfo($event.index, $event.settings)"
+              @toggle-bypass="toggleLfoBypass"
+              @remove="removeLfo"
+            />
+              <EnvelopeControls
+                :envelopes="envelopesFor(noiseEnvelopeDestinations, source)"
+                :destination-options="noiseEnvelopeDestinations"
+                id-prefix="noise"
+                :show-add-button="false"
+                @update="updateEnvelopeSettings($event.index, $event.settings)"
+                @toggle-bypass="toggleEnvelopeBypass"
+                @remove="removeEnvelope"
+              />
+            </NoiseControls>
           </template>
-          <div class="module-actions">
-            <button type="button" class="add-oscillator-button" @click="addOscillator">Add OSC</button>
-            <button v-if="!noise" type="button" class="add-oscillator-button" @click="addNoise">Add Noise</button>
-          </div>
-          <LfoControls
-            v-for="(_oscillator, index) in oscillators"
-            :key="`oscillator-lfo-${index}`"
-            :lfos="lfosForModule('oscillator', index)"
-            :target-options="lfoTargetOptions('oscillator', index)"
-            :id-prefix="`oscillator-${index}`"
-            @update="updateLfo($event.index, $event.settings)"
-            @toggle-bypass="toggleLfoBypass"
-            @remove="removeLfo"
-            @add="addLfo('oscillator', index)"
-          />
-          <EnvelopeControls
-            :envelopes="envelopesFor(oscillatorEnvelopeDestinations)"
-            :destination-options="oscillatorEnvelopeDestinations"
-            id-prefix="oscillator"
-            @update="updateEnvelopeSettings($event.index, $event.settings)"
-            @toggle-bypass="toggleEnvelopeBypass"
-            @remove="removeEnvelope"
-            @add="addEnvelope('oscillatorLevel')"
-          />
+          <button type="button" class="add-module-button" @click="openAddSoundSourceDialog">+ Sound Source</button>
         </div>
       </section>
 
-      <template v-if="!isMasterChannel && noise">
-        <NoiseControls
-          class="synth-section"
-          v-bind="noise"
-          @update:color="updateNoiseSettings({ color: $event })"
-          @update:level="updateNoiseSettings({ level: $event })"
-          @update:stereo-spread="updateNoiseSettings({ stereoSpread: $event })"
-          @toggle-bypass="toggleNoiseBypass"
-          @remove="removeNoise"
-        >
-          <LfoControls
-            :lfos="lfosForModule('noise', 0)"
-            :target-options="lfoTargetOptions('noise', 0)"
-            id-prefix="noise"
-            @update="updateLfo($event.index, $event.settings)"
-            @toggle-bypass="toggleLfoBypass"
-            @remove="removeLfo"
-            @add="addLfo('noise', 0)"
-          />
-          <EnvelopeControls
-            :envelopes="envelopesFor(noiseEnvelopeDestinations)"
-            :destination-options="noiseEnvelopeDestinations"
-            id-prefix="noise"
-            @update="updateEnvelopeSettings($event.index, $event.settings)"
-            @toggle-bypass="toggleEnvelopeBypass"
-            @remove="removeEnvelope"
-            @add="addEnvelope('noiseLevel')"
-          />
-        </NoiseControls>
-      </template>
-
-      <section class="synth-section module-chain-section ambient amb-surface amb-chamfer amb-elevation-1 amb-rounded-lg" aria-labelledby="modules-heading">
+      <section class="synth-section module-chain-section ambient amb-surface amb-chamfer amb-rounded-lg" aria-labelledby="modules-heading">
         <h2 id="modules-heading">
           <button
             type="button"
@@ -2550,7 +2660,7 @@ onUnmounted(() => {
 
           </div>
         </div>
-        <button type="button" class="add-module-button" @click="openAddModuleDialog">+ Add Module</button>
+        <button type="button" class="add-module-button" @click="openAddModuleDialog">+ Module</button>
         </div>
       </section>
       </div>
@@ -2563,46 +2673,84 @@ onUnmounted(() => {
           <div class="add-module-categories">
             <section class="add-module-category" aria-labelledby="add-module-filters-heading">
               <h3 id="add-module-filters-heading">Filters</h3>
-              <button type="button" @click="addModuleFromDialog(addFilter)">Add Filter</button>
+              <button type="button" @click="addModuleFromDialog(addFilter)">Filter</button>
             </section>
 
             <section class="add-module-category" aria-labelledby="add-module-eq-heading">
               <h3 id="add-module-eq-heading">EQ</h3>
-              <button type="button" @click="addModuleFromDialog(addSingleBandEq)">Add EQ</button>
-              <button type="button" @click="addModuleFromDialog(addMultibandEq)">Add Parametric EQ</button>
+              <button type="button" @click="addModuleFromDialog(addSingleBandEq)">EQ</button>
+              <button type="button" @click="addModuleFromDialog(addMultibandEq)">Parametric EQ</button>
             </section>
 
             <section class="add-module-category" aria-labelledby="add-module-overdrive-heading">
               <h3 id="add-module-overdrive-heading">Overdrive</h3>
-              <button type="button" @click="addModuleFromDialog(addOverdrive)">Add Overdrive</button>
+              <button type="button" @click="addModuleFromDialog(addOverdrive)">Overdrive</button>
             </section>
 
             <section class="add-module-category" aria-labelledby="add-module-modulation-fx-heading">
               <h3 id="add-module-modulation-fx-heading">Modulation FX</h3>
-              <button type="button" @click="addModuleFromDialog(addChorus)">Add Chorus</button>
-              <button type="button" @click="addModuleFromDialog(addFlanger)">Add Flanger</button>
-              <button type="button" @click="addModuleFromDialog(addTremolo)">Add Tremolo</button>
+              <button type="button" @click="addModuleFromDialog(addChorus)">Chorus</button>
+              <button type="button" @click="addModuleFromDialog(addFlanger)">Flanger</button>
+              <button type="button" @click="addModuleFromDialog(addTremolo)">Tremolo</button>
             </section>
 
             <section class="add-module-category" aria-labelledby="add-module-time-heading">
               <h3 id="add-module-time-heading">Time-based</h3>
-              <button type="button" @click="addModuleFromDialog(addDelay)">Add Delay</button>
-              <button type="button" @click="addModuleFromDialog(addResonator)">Add Resonator</button>
-              <button type="button" @click="addModuleFromDialog(addReverb)">Add Reverb</button>
+              <button type="button" @click="addModuleFromDialog(addDelay)">Delay</button>
+              <button type="button" @click="addModuleFromDialog(addResonator)">Resonator</button>
+              <button type="button" @click="addModuleFromDialog(addReverb)">Reverb</button>
             </section>
 
             <section class="add-module-category" aria-labelledby="add-module-dynamics-heading">
               <h3 id="add-module-dynamics-heading">Dynamics</h3>
-              <button type="button" @click="addModuleFromDialog(addCompressor)">Add Compressor</button>
-              <button type="button" @click="addModuleFromDialog(addGate)">Add Gate</button>
-              <button type="button" @click="addModuleFromDialog(addLimiter)">Add Limiter</button>
+              <button type="button" @click="addModuleFromDialog(addCompressor)">Compressor</button>
+              <button type="button" @click="addModuleFromDialog(addGate)">Gate</button>
+              <button type="button" @click="addModuleFromDialog(addLimiter)">Limiter</button>
             </section>
 
           </div>
         </div>
       </dialog>
 
-      <section class="connection-panel ambient amb-surface amb-chamfer amb-elevation-1 amb-rounded-lg" aria-labelledby="connections-heading">
+      <dialog ref="addSoundSourceDialog" class="add-module-dialog" aria-label="Add sound source" @click="($event.target as HTMLElement).closest('.add-module-dialog-content') || closeAddSoundSourceDialog()">
+        <div class="add-module-dialog-content">
+          <div class="add-module-dialog-heading">
+            <h2>Add sound source</h2>
+            <button type="button" class="add-module-dialog-close" aria-label="Close dialog" @click="closeAddSoundSourceDialog">✕</button>
+          </div>
+          <div class="add-module-categories">
+            <section class="add-module-category" aria-labelledby="add-oscillator-heading">
+              <h3 id="add-oscillator-heading">Oscillator</h3>
+              <button type="button" @click="addSoundSourceFromDialog(addOscillator)">OSC</button>
+            </section>
+            <section class="add-module-category" aria-labelledby="add-noise-heading">
+              <h3 id="add-noise-heading">Noise</h3>
+              <button type="button" @click="addSoundSourceFromDialog(addNoise)">Noise</button>
+            </section>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog ref="addSoundSourceModulationDialog" class="add-module-dialog" aria-label="Add sound source modulation" @click="($event.target as HTMLElement).closest('.add-module-dialog-content') || closeSoundSourceModulationDialog()">
+        <div class="add-module-dialog-content">
+          <div class="add-module-dialog-heading">
+            <h2>Add modulation</h2>
+            <button type="button" class="add-module-dialog-close" aria-label="Close dialog" @click="closeSoundSourceModulationDialog">✕</button>
+          </div>
+          <div class="add-module-categories">
+            <section class="add-module-category" aria-labelledby="add-source-lfo-heading">
+              <h3 id="add-source-lfo-heading">LFO</h3>
+              <button type="button" @click="addSoundSourceModulation('lfo')">LFO</button>
+            </section>
+            <section class="add-module-category" aria-labelledby="add-source-envelope-heading">
+              <h3 id="add-source-envelope-heading">Envelope</h3>
+              <button type="button" @click="addSoundSourceModulation('env')">ENV</button>
+            </section>
+          </div>
+        </div>
+      </dialog>
+
+      <section class="connection-panel ambient amb-surface amb-chamfer amb-rounded-lg" aria-labelledby="connections-heading">
         <h2 id="connections-heading">
           <button
             type="button"
