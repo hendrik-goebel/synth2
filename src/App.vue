@@ -1056,6 +1056,19 @@ function applyInstrumentPreset(instrumentId: string) {
   activeVoices.value = channels.value.reduce((count, channel) => count + channel.synth.getActiveVoiceCount(), 0)
 }
 
+function exportInstrumentConfig() {
+  const instrument = instrumentPresets.find(({ id }) => id === selectedInstrumentId.value)
+  if (!instrument) return
+
+  const config = new Blob([`${JSON.stringify(instrument, null, 2)}\n`], { type: 'application/json' })
+  const url = URL.createObjectURL(config)
+  const download = document.createElement('a')
+  download.href = url
+  download.download = `${instrument.id}.json`
+  download.click()
+  URL.revokeObjectURL(url)
+}
+
 function createSeedChannel(channel: ChannelState): SeedChannel {
   return {
     oscillators: channel.oscillators,
@@ -3336,6 +3349,13 @@ onUnmounted(() => {
           </div>
           <span class="seed-status" aria-live="polite">{{ seedStatus }}</span>
         </div>
+        <button
+          type="button"
+          class="instrument-export-button seed-export-button"
+          :disabled="!selectedInstrumentId || selectedInstrumentId === 'empty'"
+          title="Download the selected instrument configuration as JSON"
+          @click="exportInstrumentConfig"
+        >Export</button>
       </section>
         </div>
       </section>

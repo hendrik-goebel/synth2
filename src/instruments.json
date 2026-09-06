@@ -1,0 +1,6426 @@
+[
+    {
+        "id": "subway-pressure",
+        "name": "Subway Pressure",
+        "category": "Bass",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.72,
+                "waveform": "sawtooth",
+                "unisonDetune": 7,
+                "stereoSpread": 0,
+                "fmAmount": 0.12,
+                "fmSource": "sine"
+            },
+            {
+                "bypassed": false,
+                "detune": -12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.35,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.78,
+            "pan": 0
+        },
+        "noise": null,
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 620,
+                "resonance": 0.32,
+                "gain": 0
+            }
+        ],
+        "delays": [],
+        "overdrives": [
+            {
+                "bypassed": false,
+                "drive": 0.16,
+                "tone": 0.42,
+                "feedback": 0,
+                "mix": 0.38
+            }
+        ],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [],
+        "bpm": 120,
+        "resonators": [],
+        "reverbs": [],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 3,
+                "decay": 70,
+                "hold": 0,
+                "release": 75,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 2,
+                "decay": 95,
+                "hold": 0,
+                "release": 65,
+                "velocity": 0.58,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "filterCutoff",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "filter:0:cutoff",
+                "rate": 0.18,
+                "depth": 0.13,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -28,
+                "knee": 24,
+                "ratio": 6,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "carbon-pulse",
+        "name": "Carbon Pulse",
+        "category": "Bass",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.72,
+                "waveform": "square",
+                "unisonDetune": 9,
+                "stereoSpread": 0,
+                "fmAmount": 0.145,
+                "fmSource": "sine"
+            },
+            {
+                "bypassed": false,
+                "detune": -12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.35,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.78,
+            "pan": 0
+        },
+        "noise": null,
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 870,
+                "resonance": 0.36,
+                "gain": 0
+            }
+        ],
+        "delays": [],
+        "overdrives": [
+            {
+                "bypassed": false,
+                "drive": 0.2,
+                "tone": 0.42,
+                "feedback": 0,
+                "mix": 0.38
+            }
+        ],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [],
+        "bpm": 120,
+        "resonators": [],
+        "reverbs": [],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 3,
+                "decay": 70,
+                "hold": 0,
+                "release": 75,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 2,
+                "decay": 95,
+                "hold": 0,
+                "release": 65,
+                "velocity": 0.58,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "filterCutoff",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "filter:0:cutoff",
+                "rate": 0.22999999999999998,
+                "depth": 0.13,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -28,
+                "knee": 24,
+                "ratio": 6,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "iron-current",
+        "name": "Iron Current",
+        "category": "Bass",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.72,
+                "waveform": "sawtooth",
+                "unisonDetune": 11,
+                "stereoSpread": 0,
+                "fmAmount": 0.16999999999999998,
+                "fmSource": "sine"
+            },
+            {
+                "bypassed": false,
+                "detune": -12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.35,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.78,
+            "pan": 0
+        },
+        "noise": null,
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 1120,
+                "resonance": 0.4,
+                "gain": 0
+            }
+        ],
+        "delays": [],
+        "overdrives": [
+            {
+                "bypassed": false,
+                "drive": 0.24,
+                "tone": 0.42,
+                "feedback": 0,
+                "mix": 0.38
+            }
+        ],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [],
+        "bpm": 120,
+        "resonators": [],
+        "reverbs": [],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 3,
+                "decay": 70,
+                "hold": 0,
+                "release": 75,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 2,
+                "decay": 95,
+                "hold": 0,
+                "release": 65,
+                "velocity": 0.58,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "filterCutoff",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "filter:0:cutoff",
+                "rate": 0.28,
+                "depth": 0.13,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -28,
+                "knee": 24,
+                "ratio": 6,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "night-engine",
+        "name": "Night Engine",
+        "category": "Bass",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.72,
+                "waveform": "square",
+                "unisonDetune": 13,
+                "stereoSpread": 0,
+                "fmAmount": 0.195,
+                "fmSource": "sine"
+            },
+            {
+                "bypassed": false,
+                "detune": -12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.35,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.78,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "brown",
+            "level": 0.05,
+            "stereoSpread": 0
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 1370,
+                "resonance": 0.44,
+                "gain": 0
+            }
+        ],
+        "delays": [],
+        "overdrives": [
+            {
+                "bypassed": false,
+                "drive": 0.28,
+                "tone": 0.42,
+                "feedback": 0,
+                "mix": 0.38
+            }
+        ],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [],
+        "bpm": 120,
+        "resonators": [],
+        "reverbs": [],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 3,
+                "decay": 70,
+                "hold": 0,
+                "release": 75,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 2,
+                "decay": 95,
+                "hold": 0,
+                "release": 65,
+                "velocity": 0.58,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "filterCutoff",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "filter:0:cutoff",
+                "rate": 0.33,
+                "depth": 0.13,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -28,
+                "knee": 24,
+                "ratio": 6,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "low-orbit",
+        "name": "Low Orbit",
+        "category": "Bass",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.72,
+                "waveform": "sawtooth",
+                "unisonDetune": 15,
+                "stereoSpread": 0,
+                "fmAmount": 0.22,
+                "fmSource": "sine"
+            },
+            {
+                "bypassed": false,
+                "detune": -12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.35,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.78,
+            "pan": 0
+        },
+        "noise": null,
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 1620,
+                "resonance": 0.48,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 16,
+                "repetitions": 4,
+                "mix": 0.12,
+                "filter": {
+                    "bypassed": false,
+                    "type": "lowpass",
+                    "cutoff": 2600,
+                    "resonance": 0,
+                    "gain": 0
+                },
+                "moduleOrder": [
+                    "filter"
+                ]
+            }
+        ],
+        "overdrives": [
+            {
+                "bypassed": false,
+                "drive": 0.32,
+                "tone": 0.42,
+                "feedback": 0,
+                "mix": 0.38
+            }
+        ],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [],
+        "bpm": 120,
+        "resonators": [],
+        "reverbs": [],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 3,
+                "decay": 70,
+                "hold": 0,
+                "release": 75,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 2,
+                "decay": 95,
+                "hold": 0,
+                "release": 65,
+                "velocity": 0.58,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "filterCutoff",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "filter:0:cutoff",
+                "rate": 0.38,
+                "depth": 0.13,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -28,
+                "knee": 24,
+                "ratio": 6,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "laser-silk",
+        "name": "Laser Silk",
+        "category": "Lead",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 55,
+                "level": 0.62,
+                "waveform": "sawtooth",
+                "unisonDetune": 14,
+                "stereoSpread": 0.45,
+                "fmAmount": 0.1,
+                "fmSource": "triangle"
+            },
+            {
+                "bypassed": false,
+                "detune": -7,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.27,
+                "waveform": "triangle",
+                "unisonDetune": 0,
+                "stereoSpread": 0.35,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.7,
+            "pan": 0
+        },
+        "noise": null,
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 3000,
+                "resonance": 0.22,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 16,
+                "repetitions": 4,
+                "mix": 0.2
+            }
+        ],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [
+            {
+                "bypassed": false,
+                "waveform": "sine",
+                "rate": 0.18,
+                "depth": 0.3,
+                "delay": 0.0025,
+                "feedback": 0.22,
+                "mix": 0.18
+            }
+        ],
+        "tremolos": [],
+        "bpm": 126,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "small-hall",
+                "decay": 2.2,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.16
+            }
+        ],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 5,
+                "decay": 45,
+                "hold": 0,
+                "release": 160,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 80,
+                "decay": 180,
+                "hold": 0,
+                "release": 220,
+                "velocity": 0.35,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "flangerMix",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "oscillator:0:detune",
+                "rate": 4.8,
+                "depth": 0.07,
+                "waveform": "sine",
+                "bypassed": false
+            },
+            {
+                "target": "flanger:0:depth",
+                "rate": 0.35,
+                "depth": 0.18,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -22,
+                "knee": 24,
+                "ratio": 3.5,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "glass-comet",
+        "name": "Glass Comet",
+        "category": "Lead",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 73,
+                "level": 0.62,
+                "waveform": "sawtooth",
+                "unisonDetune": 17,
+                "stereoSpread": 0.45,
+                "fmAmount": 0.2,
+                "fmSource": "triangle"
+            },
+            {
+                "bypassed": false,
+                "detune": 7,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.27,
+                "waveform": "square",
+                "unisonDetune": 0,
+                "stereoSpread": 0.35,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.7,
+            "pan": 0
+        },
+        "noise": null,
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 3520,
+                "resonance": 0.22,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 8,
+                "repetitions": 5,
+                "mix": 0.2
+            }
+        ],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [
+            {
+                "bypassed": false,
+                "waveform": "sine",
+                "rate": 0.22999999999999998,
+                "depth": 0.3,
+                "delay": 0.0025,
+                "feedback": 0.22,
+                "mix": 0.18
+            }
+        ],
+        "tremolos": [],
+        "bpm": 126,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "small-hall",
+                "decay": 2.2,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.16
+            }
+        ],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 5,
+                "decay": 45,
+                "hold": 0,
+                "release": 160,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 80,
+                "decay": 180,
+                "hold": 0,
+                "release": 220,
+                "velocity": 0.35,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "flangerMix",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "oscillator:0:detune",
+                "rate": 5.3,
+                "depth": 0.07,
+                "waveform": "sine",
+                "bypassed": false
+            },
+            {
+                "target": "flanger:0:depth",
+                "rate": 0.35,
+                "depth": 0.18,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -22,
+                "knee": 24,
+                "ratio": 3.5,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "chrome-voice",
+        "name": "Chrome Voice",
+        "category": "Lead",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 91,
+                "level": 0.62,
+                "waveform": "sawtooth",
+                "unisonDetune": 20,
+                "stereoSpread": 0.45,
+                "fmAmount": 0.1,
+                "fmSource": "triangle"
+            },
+            {
+                "bypassed": false,
+                "detune": -7,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.27,
+                "waveform": "triangle",
+                "unisonDetune": 0,
+                "stereoSpread": 0.35,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.7,
+            "pan": 0
+        },
+        "noise": null,
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 4040,
+                "resonance": 0.22,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 16,
+                "repetitions": 6,
+                "mix": 0.2
+            }
+        ],
+        "overdrives": [
+            {
+                "bypassed": false,
+                "drive": 0.25,
+                "tone": 0.66,
+                "feedback": 0.06,
+                "mix": 0.28
+            }
+        ],
+        "choruses": [],
+        "flangers": [
+            {
+                "bypassed": false,
+                "waveform": "sine",
+                "rate": 0.28,
+                "depth": 0.3,
+                "delay": 0.0025,
+                "feedback": 0.22,
+                "mix": 0.18
+            }
+        ],
+        "tremolos": [],
+        "bpm": 126,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "small-hall",
+                "decay": 2.2,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.16
+            }
+        ],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 5,
+                "decay": 45,
+                "hold": 0,
+                "release": 160,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 80,
+                "decay": 180,
+                "hold": 0,
+                "release": 220,
+                "velocity": 0.35,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "flangerMix",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "oscillator:0:detune",
+                "rate": 5.8,
+                "depth": 0.07,
+                "waveform": "sine",
+                "bypassed": false
+            },
+            {
+                "target": "flanger:0:depth",
+                "rate": 0.35,
+                "depth": 0.18,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -22,
+                "knee": 24,
+                "ratio": 3.5,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "solar-needle",
+        "name": "Solar Needle",
+        "category": "Lead",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 109,
+                "level": 0.62,
+                "waveform": "sawtooth",
+                "unisonDetune": 23,
+                "stereoSpread": 0.45,
+                "fmAmount": 0.2,
+                "fmSource": "triangle"
+            },
+            {
+                "bypassed": false,
+                "detune": 7,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.27,
+                "waveform": "square",
+                "unisonDetune": 0,
+                "stereoSpread": 0.35,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.7,
+            "pan": 0
+        },
+        "noise": null,
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 4560,
+                "resonance": 0.22,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 8,
+                "repetitions": 7,
+                "mix": 0.2
+            }
+        ],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [
+            {
+                "bypassed": false,
+                "waveform": "sine",
+                "rate": 0.33,
+                "depth": 0.3,
+                "delay": 0.0025,
+                "feedback": 0.22,
+                "mix": 0.18
+            }
+        ],
+        "tremolos": [],
+        "bpm": 126,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "small-hall",
+                "decay": 2.2,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.16
+            }
+        ],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 5,
+                "decay": 45,
+                "hold": 0,
+                "release": 160,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 80,
+                "decay": 180,
+                "hold": 0,
+                "release": 220,
+                "velocity": 0.35,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "flangerMix",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "oscillator:0:detune",
+                "rate": 6.3,
+                "depth": 0.07,
+                "waveform": "sine",
+                "bypassed": false
+            },
+            {
+                "target": "flanger:0:depth",
+                "rate": 0.35,
+                "depth": 0.18,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -22,
+                "knee": 24,
+                "ratio": 3.5,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "violet-signal",
+        "name": "Violet Signal",
+        "category": "Lead",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 127,
+                "level": 0.62,
+                "waveform": "sawtooth",
+                "unisonDetune": 26,
+                "stereoSpread": 0.45,
+                "fmAmount": 0.1,
+                "fmSource": "triangle"
+            },
+            {
+                "bypassed": false,
+                "detune": -7,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.27,
+                "waveform": "triangle",
+                "unisonDetune": 0,
+                "stereoSpread": 0.35,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.7,
+            "pan": 0
+        },
+        "noise": null,
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 5080,
+                "resonance": 0.22,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 16,
+                "repetitions": 8,
+                "mix": 0.2
+            }
+        ],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [
+            {
+                "bypassed": false,
+                "waveform": "sine",
+                "rate": 0.38,
+                "depth": 0.3,
+                "delay": 0.0025,
+                "feedback": 0.22,
+                "mix": 0.18
+            }
+        ],
+        "tremolos": [],
+        "bpm": 126,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "small-hall",
+                "decay": 2.2,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.16
+            }
+        ],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 5,
+                "decay": 45,
+                "hold": 0,
+                "release": 160,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 80,
+                "decay": 180,
+                "hold": 0,
+                "release": 220,
+                "velocity": 0.35,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "flangerMix",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "oscillator:0:detune",
+                "rate": 6.8,
+                "depth": 0.07,
+                "waveform": "sine",
+                "bypassed": false
+            },
+            {
+                "target": "flanger:0:depth",
+                "rate": 0.35,
+                "depth": 0.18,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -22,
+                "knee": 24,
+                "ratio": 3.5,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "tidal-bloom",
+        "name": "Tidal Bloom",
+        "category": "Pad",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.5,
+                "waveform": "triangle",
+                "unisonDetune": 25,
+                "stereoSpread": 0.9,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            },
+            {
+                "bypassed": false,
+                "detune": 12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.26,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0.65,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.65,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "white",
+            "level": 0.035,
+            "stereoSpread": 0.85
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 1700,
+                "resonance": 0.16,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 4,
+                "repetitions": 3,
+                "mix": 0.16
+            }
+        ],
+        "overdrives": [],
+        "choruses": [
+            {
+                "bypassed": false,
+                "waveform": "sine",
+                "rate": 0.22,
+                "depth": 0.46,
+                "delay": 0.02,
+                "mix": 0.4
+            }
+        ],
+        "flangers": [],
+        "tremolos": [],
+        "bpm": 108,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "opera-house",
+                "decay": 5,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.36,
+                "filter": {
+                    "bypassed": false,
+                    "type": "lowpass",
+                    "cutoff": 7200,
+                    "resonance": 0,
+                    "gain": 0
+                },
+                "moduleOrder": [
+                    "filter"
+                ]
+            }
+        ],
+        "amplitudeModulation": {
+            "waveform": "sine",
+            "rate": 0.16,
+            "depth": 0.09
+        },
+        "envelopes": [
+            {
+                "attack": 240,
+                "decay": 160,
+                "hold": 0,
+                "release": 500,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 360,
+                "decay": 260,
+                "hold": 0,
+                "release": 420,
+                "velocity": 0.48,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "filterCutoff",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "filter:0:cutoff",
+                "rate": 0.08,
+                "depth": 0.2,
+                "waveform": "triangle",
+                "bypassed": false
+            },
+            {
+                "target": "chorus:0:depth",
+                "rate": 0.12,
+                "depth": 0.13,
+                "waveform": "sine",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -26,
+                "knee": 24,
+                "ratio": 2.2,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "polar-veil",
+        "name": "Polar Veil",
+        "category": "Pad",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.5,
+                "waveform": "sawtooth",
+                "unisonDetune": 29,
+                "stereoSpread": 0.9,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            },
+            {
+                "bypassed": false,
+                "detune": 12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.26,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0.65,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.65,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "pink",
+            "level": 0.045000000000000005,
+            "stereoSpread": 0.85
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 1980,
+                "resonance": 0.16,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 4,
+                "repetitions": 3,
+                "mix": 0.16
+            }
+        ],
+        "overdrives": [],
+        "choruses": [
+            {
+                "bypassed": false,
+                "waveform": "sine",
+                "rate": 0.22,
+                "depth": 0.46,
+                "delay": 0.02,
+                "mix": 0.4
+            }
+        ],
+        "flangers": [],
+        "tremolos": [],
+        "bpm": 108,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "cathedral",
+                "decay": 5.45,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.36,
+                "filter": {
+                    "bypassed": false,
+                    "type": "lowpass",
+                    "cutoff": 7200,
+                    "resonance": 0,
+                    "gain": 0
+                },
+                "moduleOrder": [
+                    "filter"
+                ]
+            }
+        ],
+        "amplitudeModulation": {
+            "waveform": "sine",
+            "rate": 0.195,
+            "depth": 0.09
+        },
+        "envelopes": [
+            {
+                "attack": 275,
+                "decay": 160,
+                "hold": 0,
+                "release": 500,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 360,
+                "decay": 260,
+                "hold": 0,
+                "release": 420,
+                "velocity": 0.48,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "filterCutoff",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "filter:0:cutoff",
+                "rate": 0.115,
+                "depth": 0.2,
+                "waveform": "triangle",
+                "bypassed": false
+            },
+            {
+                "target": "chorus:0:depth",
+                "rate": 0.12,
+                "depth": 0.13,
+                "waveform": "sine",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -26,
+                "knee": 24,
+                "ratio": 2.2,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "halo-garden",
+        "name": "Halo Garden",
+        "category": "Pad",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.5,
+                "waveform": "triangle",
+                "unisonDetune": 33,
+                "stereoSpread": 0.9,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            },
+            {
+                "bypassed": false,
+                "detune": 12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.26,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0.65,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.65,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "white",
+            "level": 0.05500000000000001,
+            "stereoSpread": 0.85
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 2260,
+                "resonance": 0.16,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 4,
+                "repetitions": 3,
+                "mix": 0.16
+            }
+        ],
+        "overdrives": [],
+        "choruses": [
+            {
+                "bypassed": false,
+                "waveform": "sine",
+                "rate": 0.22,
+                "depth": 0.46,
+                "delay": 0.02,
+                "mix": 0.4
+            }
+        ],
+        "flangers": [],
+        "tremolos": [],
+        "bpm": 108,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "opera-house",
+                "decay": 5.9,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.36,
+                "filter": {
+                    "bypassed": false,
+                    "type": "lowpass",
+                    "cutoff": 7200,
+                    "resonance": 0,
+                    "gain": 0
+                },
+                "moduleOrder": [
+                    "filter"
+                ]
+            }
+        ],
+        "amplitudeModulation": {
+            "waveform": "sine",
+            "rate": 0.23,
+            "depth": 0.09
+        },
+        "envelopes": [
+            {
+                "attack": 310,
+                "decay": 160,
+                "hold": 0,
+                "release": 500,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 360,
+                "decay": 260,
+                "hold": 0,
+                "release": 420,
+                "velocity": 0.48,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "filterCutoff",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "filter:0:cutoff",
+                "rate": 0.15000000000000002,
+                "depth": 0.2,
+                "waveform": "triangle",
+                "bypassed": false
+            },
+            {
+                "target": "chorus:0:depth",
+                "rate": 0.12,
+                "depth": 0.13,
+                "waveform": "sine",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -26,
+                "knee": 24,
+                "ratio": 2.2,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "afterglow-field",
+        "name": "Afterglow Field",
+        "category": "Pad",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.5,
+                "waveform": "sawtooth",
+                "unisonDetune": 37,
+                "stereoSpread": 0.9,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            },
+            {
+                "bypassed": false,
+                "detune": 12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.26,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0.65,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.65,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "pink",
+            "level": 0.065,
+            "stereoSpread": 0.85
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 2540,
+                "resonance": 0.16,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 4,
+                "repetitions": 3,
+                "mix": 0.16
+            }
+        ],
+        "overdrives": [],
+        "choruses": [
+            {
+                "bypassed": false,
+                "waveform": "sine",
+                "rate": 0.22,
+                "depth": 0.46,
+                "delay": 0.02,
+                "mix": 0.4
+            }
+        ],
+        "flangers": [],
+        "tremolos": [],
+        "bpm": 108,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "cathedral",
+                "decay": 6.35,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.36,
+                "filter": {
+                    "bypassed": false,
+                    "type": "lowpass",
+                    "cutoff": 7200,
+                    "resonance": 0,
+                    "gain": 0
+                },
+                "moduleOrder": [
+                    "filter"
+                ]
+            }
+        ],
+        "amplitudeModulation": {
+            "waveform": "sine",
+            "rate": 0.265,
+            "depth": 0.09
+        },
+        "envelopes": [
+            {
+                "attack": 345,
+                "decay": 160,
+                "hold": 0,
+                "release": 500,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 360,
+                "decay": 260,
+                "hold": 0,
+                "release": 420,
+                "velocity": 0.48,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "filterCutoff",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "filter:0:cutoff",
+                "rate": 0.185,
+                "depth": 0.2,
+                "waveform": "triangle",
+                "bypassed": false
+            },
+            {
+                "target": "chorus:0:depth",
+                "rate": 0.12,
+                "depth": 0.13,
+                "waveform": "sine",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -26,
+                "knee": 24,
+                "ratio": 2.2,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "cloud-memory",
+        "name": "Cloud Memory",
+        "category": "Pad",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.5,
+                "waveform": "triangle",
+                "unisonDetune": 41,
+                "stereoSpread": 0.9,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            },
+            {
+                "bypassed": false,
+                "detune": 12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.26,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0.65,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.65,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "white",
+            "level": 0.07500000000000001,
+            "stereoSpread": 0.85
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 2820,
+                "resonance": 0.16,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 4,
+                "repetitions": 3,
+                "mix": 0.16
+            }
+        ],
+        "overdrives": [],
+        "choruses": [
+            {
+                "bypassed": false,
+                "waveform": "sine",
+                "rate": 0.22,
+                "depth": 0.46,
+                "delay": 0.02,
+                "mix": 0.4
+            }
+        ],
+        "flangers": [],
+        "tremolos": [],
+        "bpm": 108,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "opera-house",
+                "decay": 6.8,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.36,
+                "filter": {
+                    "bypassed": false,
+                    "type": "lowpass",
+                    "cutoff": 7200,
+                    "resonance": 0,
+                    "gain": 0
+                },
+                "moduleOrder": [
+                    "filter"
+                ]
+            }
+        ],
+        "amplitudeModulation": {
+            "waveform": "sine",
+            "rate": 0.30000000000000004,
+            "depth": 0.09
+        },
+        "envelopes": [
+            {
+                "attack": 380,
+                "decay": 160,
+                "hold": 0,
+                "release": 500,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 360,
+                "decay": 260,
+                "hold": 0,
+                "release": 420,
+                "velocity": 0.48,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "filterCutoff",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "filter:0:cutoff",
+                "rate": 0.22000000000000003,
+                "depth": 0.2,
+                "waveform": "triangle",
+                "bypassed": false
+            },
+            {
+                "target": "chorus:0:depth",
+                "rate": 0.12,
+                "depth": 0.13,
+                "waveform": "sine",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -26,
+                "knee": 24,
+                "ratio": 2.2,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "opal-keys",
+        "name": "Opal Keys",
+        "category": "Keys",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.68,
+                "waveform": "triangle",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0.2,
+                "fmSource": "sine"
+            },
+            {
+                "bypassed": false,
+                "detune": 12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.22,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0.24,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.74,
+            "pan": 0
+        },
+        "noise": null,
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 2800,
+                "resonance": 0.1,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 16,
+                "repetitions": 3,
+                "mix": 0.1
+            }
+        ],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [
+            {
+                "bypassed": false,
+                "waveform": "sine",
+                "rate": 3.5,
+                "depth": 0.1,
+                "mix": 0.4
+            }
+        ],
+        "bpm": 116,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "wooden-hall",
+                "decay": 2.1,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.17
+            }
+        ],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 2,
+                "decay": 85,
+                "hold": 0,
+                "release": 145,
+                "velocity": 0.7,
+                "attackCurve": "exponential",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 110,
+                "decay": 140,
+                "hold": 0,
+                "release": 160,
+                "velocity": 0.4,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "tremoloDepth",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "oscillator:0:fmAmount",
+                "rate": 0.4,
+                "depth": 0.12,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -23,
+                "knee": 24,
+                "ratio": 3,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [
+            {
+                "kind": "single",
+                "bypassed": false,
+                "bands": [
+                    {
+                        "bypassed": false,
+                        "type": "peaking",
+                        "frequency": 2400,
+                        "gain": 1.5,
+                        "q": 0.8
+                    }
+                ],
+                "lfos": [
+                    {
+                        "target": "eq:0:0:gain",
+                        "rate": 0.2,
+                        "depth": 0.15,
+                        "waveform": "sine",
+                        "bypassed": false
+                    }
+                ],
+                "envelopes": []
+            }
+        ],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "static-piano",
+        "name": "Static Piano",
+        "category": "Keys",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.68,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0.24000000000000002,
+                "fmSource": "square"
+            },
+            {
+                "bypassed": false,
+                "detune": 12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.22,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0.24,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.74,
+            "pan": 0
+        },
+        "noise": null,
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 3280,
+                "resonance": 0.1,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 16,
+                "repetitions": 3,
+                "mix": 0.12000000000000001
+            }
+        ],
+        "overdrives": [],
+        "choruses": [
+            {
+                "bypassed": false,
+                "waveform": "sine",
+                "rate": 0.45,
+                "depth": 0.3,
+                "delay": 0.015,
+                "mix": 0.28
+            }
+        ],
+        "flangers": [],
+        "tremolos": [
+            {
+                "bypassed": false,
+                "waveform": "sine",
+                "rate": 4,
+                "depth": 0.1,
+                "mix": 0.4
+            }
+        ],
+        "bpm": 116,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "wooden-hall",
+                "decay": 2.1,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.17
+            }
+        ],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 2,
+                "decay": 85,
+                "hold": 0,
+                "release": 145,
+                "velocity": 0.7,
+                "attackCurve": "exponential",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 110,
+                "decay": 140,
+                "hold": 0,
+                "release": 160,
+                "velocity": 0.4,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "tremoloDepth",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "oscillator:0:fmAmount",
+                "rate": 0.5,
+                "depth": 0.12,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -23,
+                "knee": 24,
+                "ratio": 3,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [
+            {
+                "kind": "single",
+                "bypassed": false,
+                "bands": [
+                    {
+                        "bypassed": false,
+                        "type": "peaking",
+                        "frequency": 2400,
+                        "gain": 1.5,
+                        "q": 0.8
+                    }
+                ],
+                "lfos": [
+                    {
+                        "target": "eq:0:0:gain",
+                        "rate": 0.2,
+                        "depth": 0.15,
+                        "waveform": "sine",
+                        "bypassed": false
+                    }
+                ],
+                "envelopes": []
+            }
+        ],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "mercury-ep",
+        "name": "Mercury EP",
+        "category": "Keys",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.68,
+                "waveform": "triangle",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0.28,
+                "fmSource": "sine"
+            },
+            {
+                "bypassed": false,
+                "detune": 12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.22,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0.24,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.74,
+            "pan": 0
+        },
+        "noise": null,
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 3760,
+                "resonance": 0.1,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 16,
+                "repetitions": 3,
+                "mix": 0.14
+            }
+        ],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [
+            {
+                "bypassed": false,
+                "waveform": "sine",
+                "rate": 4.5,
+                "depth": 0.1,
+                "mix": 0.4
+            }
+        ],
+        "bpm": 116,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "wooden-hall",
+                "decay": 2.1,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.17
+            }
+        ],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 2,
+                "decay": 85,
+                "hold": 0,
+                "release": 145,
+                "velocity": 0.7,
+                "attackCurve": "exponential",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 110,
+                "decay": 140,
+                "hold": 0,
+                "release": 160,
+                "velocity": 0.4,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "tremoloDepth",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "oscillator:0:fmAmount",
+                "rate": 0.6000000000000001,
+                "depth": 0.12,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -23,
+                "knee": 24,
+                "ratio": 3,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [
+            {
+                "kind": "single",
+                "bypassed": false,
+                "bands": [
+                    {
+                        "bypassed": false,
+                        "type": "peaking",
+                        "frequency": 2400,
+                        "gain": 1.5,
+                        "q": 0.8
+                    }
+                ],
+                "lfos": [
+                    {
+                        "target": "eq:0:0:gain",
+                        "rate": 0.2,
+                        "depth": 0.15,
+                        "waveform": "sine",
+                        "bypassed": false
+                    }
+                ],
+                "envelopes": []
+            }
+        ],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "warm-circuit",
+        "name": "Warm Circuit",
+        "category": "Keys",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.68,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0.32,
+                "fmSource": "square"
+            },
+            {
+                "bypassed": false,
+                "detune": 12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.22,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0.24,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.74,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "white",
+            "level": 0.045,
+            "stereoSpread": 0.45
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 4240,
+                "resonance": 0.1,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 16,
+                "repetitions": 3,
+                "mix": 0.16
+            }
+        ],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [
+            {
+                "bypassed": false,
+                "waveform": "sine",
+                "rate": 5,
+                "depth": 0.1,
+                "mix": 0.4
+            }
+        ],
+        "bpm": 116,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "wooden-hall",
+                "decay": 2.1,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.17
+            }
+        ],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 2,
+                "decay": 85,
+                "hold": 0,
+                "release": 145,
+                "velocity": 0.7,
+                "attackCurve": "exponential",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 110,
+                "decay": 140,
+                "hold": 0,
+                "release": 160,
+                "velocity": 0.4,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "tremoloDepth",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "oscillator:0:fmAmount",
+                "rate": 0.7000000000000001,
+                "depth": 0.12,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -23,
+                "knee": 24,
+                "ratio": 3,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [
+            {
+                "kind": "single",
+                "bypassed": false,
+                "bands": [
+                    {
+                        "bypassed": false,
+                        "type": "peaking",
+                        "frequency": 2400,
+                        "gain": 1.5,
+                        "q": 0.8
+                    }
+                ],
+                "lfos": [
+                    {
+                        "target": "eq:0:0:gain",
+                        "rate": 0.2,
+                        "depth": 0.15,
+                        "waveform": "sine",
+                        "bypassed": false
+                    }
+                ],
+                "envelopes": []
+            }
+        ],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "prism-chord",
+        "name": "Prism Chord",
+        "category": "Keys",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.68,
+                "waveform": "triangle",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0.36,
+                "fmSource": "sine"
+            },
+            {
+                "bypassed": false,
+                "detune": 12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.22,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0.24,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.74,
+            "pan": 0
+        },
+        "noise": null,
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 4720,
+                "resonance": 0.1,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 16,
+                "repetitions": 3,
+                "mix": 0.18
+            }
+        ],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [
+            {
+                "bypassed": false,
+                "waveform": "sine",
+                "rate": 5.5,
+                "depth": 0.1,
+                "mix": 0.4
+            }
+        ],
+        "bpm": 116,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "wooden-hall",
+                "decay": 2.1,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.17
+            }
+        ],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 2,
+                "decay": 85,
+                "hold": 0,
+                "release": 145,
+                "velocity": 0.7,
+                "attackCurve": "exponential",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 110,
+                "decay": 140,
+                "hold": 0,
+                "release": 160,
+                "velocity": 0.4,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "tremoloDepth",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "oscillator:0:fmAmount",
+                "rate": 0.8,
+                "depth": 0.12,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -23,
+                "knee": 24,
+                "ratio": 3,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [
+            {
+                "kind": "single",
+                "bypassed": false,
+                "bands": [
+                    {
+                        "bypassed": false,
+                        "type": "peaking",
+                        "frequency": 2400,
+                        "gain": 1.5,
+                        "q": 0.8
+                    }
+                ],
+                "lfos": [
+                    {
+                        "target": "eq:0:0:gain",
+                        "rate": 0.2,
+                        "depth": 0.15,
+                        "waveform": "sine",
+                        "bypassed": false
+                    }
+                ],
+                "envelopes": []
+            }
+        ],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "copper-pick",
+        "name": "Copper Pick",
+        "category": "Pluck",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.68,
+                "waveform": "sawtooth",
+                "unisonDetune": 5,
+                "stereoSpread": 0.3,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            },
+            {
+                "bypassed": false,
+                "detune": 12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.22,
+                "waveform": "triangle",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.72,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "white",
+            "level": 0.025,
+            "stereoSpread": 0.3
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 1800,
+                "resonance": 0.42,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 16,
+                "repetitions": 4,
+                "mix": 0.21,
+                "resonator": {
+                    "bypassed": false,
+                    "frequency": 1200,
+                    "decay": 0.6,
+                    "feedback": 0.18,
+                    "damping": 0.48,
+                    "drive": 0.08,
+                    "mix": 0.25
+                },
+                "moduleOrder": [
+                    "resonator"
+                ]
+            }
+        ],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [],
+        "bpm": 122,
+        "resonators": [
+            {
+                "bypassed": false,
+                "frequency": 1500,
+                "decay": 0.8,
+                "feedback": 0.2,
+                "damping": 0.45,
+                "drive": 0.05,
+                "mix": 0.2
+            }
+        ],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "small-hall",
+                "decay": 1.8,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.12
+            }
+        ],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 1,
+                "decay": 95,
+                "hold": 0,
+                "release": 115,
+                "velocity": 0.7,
+                "attackCurve": "exponential",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 1,
+                "decay": 120,
+                "hold": 0,
+                "release": 80,
+                "velocity": 0.62,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "filterCutoff",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "resonator:0:frequency",
+                "rate": 0.25,
+                "depth": 0.1,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -24,
+                "knee": 24,
+                "ratio": 3.5,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "raindrop-wire",
+        "name": "Raindrop Wire",
+        "category": "Pluck",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.68,
+                "waveform": "square",
+                "unisonDetune": 8,
+                "stereoSpread": 0.3,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            },
+            {
+                "bypassed": false,
+                "detune": 12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.22,
+                "waveform": "triangle",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.72,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "white",
+            "level": 0.037000000000000005,
+            "stereoSpread": 0.3
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 2140,
+                "resonance": 0.42,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 8,
+                "repetitions": 4,
+                "mix": 0.21,
+                "resonator": {
+                    "bypassed": false,
+                    "frequency": 1380,
+                    "decay": 0.6,
+                    "feedback": 0.18,
+                    "damping": 0.48,
+                    "drive": 0.08,
+                    "mix": 0.25
+                },
+                "moduleOrder": [
+                    "resonator"
+                ]
+            }
+        ],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [],
+        "bpm": 122,
+        "resonators": [
+            {
+                "bypassed": false,
+                "frequency": 1720,
+                "decay": 0.8,
+                "feedback": 0.2,
+                "damping": 0.45,
+                "drive": 0.05,
+                "mix": 0.2
+            }
+        ],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "small-hall",
+                "decay": 1.8,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.12
+            }
+        ],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 1,
+                "decay": 95,
+                "hold": 0,
+                "release": 115,
+                "velocity": 0.7,
+                "attackCurve": "exponential",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 1,
+                "decay": 120,
+                "hold": 0,
+                "release": 80,
+                "velocity": 0.62,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "filterCutoff",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "resonator:0:frequency",
+                "rate": 0.31,
+                "depth": 0.1,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -24,
+                "knee": 24,
+                "ratio": 3.5,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "ember-harp",
+        "name": "Ember Harp",
+        "category": "Pluck",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.68,
+                "waveform": "sawtooth",
+                "unisonDetune": 11,
+                "stereoSpread": 0.3,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            },
+            {
+                "bypassed": false,
+                "detune": 12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.22,
+                "waveform": "triangle",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.72,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "white",
+            "level": 0.049,
+            "stereoSpread": 0.3
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 2480,
+                "resonance": 0.42,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 16,
+                "repetitions": 4,
+                "mix": 0.21,
+                "resonator": {
+                    "bypassed": false,
+                    "frequency": 1560,
+                    "decay": 0.6,
+                    "feedback": 0.18,
+                    "damping": 0.48,
+                    "drive": 0.08,
+                    "mix": 0.25
+                },
+                "moduleOrder": [
+                    "resonator"
+                ]
+            }
+        ],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [],
+        "bpm": 122,
+        "resonators": [
+            {
+                "bypassed": false,
+                "frequency": 1940,
+                "decay": 0.8,
+                "feedback": 0.2,
+                "damping": 0.45,
+                "drive": 0.05,
+                "mix": 0.2
+            }
+        ],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "small-hall",
+                "decay": 1.8,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.12
+            }
+        ],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 1,
+                "decay": 95,
+                "hold": 0,
+                "release": 115,
+                "velocity": 0.7,
+                "attackCurve": "exponential",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 1,
+                "decay": 120,
+                "hold": 0,
+                "release": 80,
+                "velocity": 0.62,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "filterCutoff",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "resonator:0:frequency",
+                "rate": 0.37,
+                "depth": 0.1,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -24,
+                "knee": 24,
+                "ratio": 3.5,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "bright-thread",
+        "name": "Bright Thread",
+        "category": "Pluck",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.68,
+                "waveform": "square",
+                "unisonDetune": 14,
+                "stereoSpread": 0.3,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            },
+            {
+                "bypassed": false,
+                "detune": 12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.22,
+                "waveform": "triangle",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.72,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "white",
+            "level": 0.061000000000000006,
+            "stereoSpread": 0.3
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 2820,
+                "resonance": 0.42,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 8,
+                "repetitions": 4,
+                "mix": 0.21,
+                "resonator": {
+                    "bypassed": false,
+                    "frequency": 1740,
+                    "decay": 0.6,
+                    "feedback": 0.18,
+                    "damping": 0.48,
+                    "drive": 0.08,
+                    "mix": 0.25
+                },
+                "moduleOrder": [
+                    "resonator"
+                ]
+            }
+        ],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [],
+        "bpm": 122,
+        "resonators": [
+            {
+                "bypassed": false,
+                "frequency": 2160,
+                "decay": 0.8,
+                "feedback": 0.2,
+                "damping": 0.45,
+                "drive": 0.05,
+                "mix": 0.2
+            }
+        ],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "small-hall",
+                "decay": 1.8,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.12
+            }
+        ],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 1,
+                "decay": 95,
+                "hold": 0,
+                "release": 115,
+                "velocity": 0.7,
+                "attackCurve": "exponential",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 1,
+                "decay": 120,
+                "hold": 0,
+                "release": 80,
+                "velocity": 0.62,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "filterCutoff",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "resonator:0:frequency",
+                "rate": 0.43,
+                "depth": 0.1,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -24,
+                "knee": 24,
+                "ratio": 3.5,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "kinetic-string",
+        "name": "Kinetic String",
+        "category": "Pluck",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.68,
+                "waveform": "sawtooth",
+                "unisonDetune": 17,
+                "stereoSpread": 0.3,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            },
+            {
+                "bypassed": false,
+                "detune": 12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.22,
+                "waveform": "triangle",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.72,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "white",
+            "level": 0.07300000000000001,
+            "stereoSpread": 0.3
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 3160,
+                "resonance": 0.42,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 16,
+                "repetitions": 4,
+                "mix": 0.21,
+                "resonator": {
+                    "bypassed": false,
+                    "frequency": 1920,
+                    "decay": 0.6,
+                    "feedback": 0.18,
+                    "damping": 0.48,
+                    "drive": 0.08,
+                    "mix": 0.25
+                },
+                "moduleOrder": [
+                    "resonator"
+                ]
+            }
+        ],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [],
+        "bpm": 122,
+        "resonators": [
+            {
+                "bypassed": false,
+                "frequency": 2380,
+                "decay": 0.8,
+                "feedback": 0.2,
+                "damping": 0.45,
+                "drive": 0.05,
+                "mix": 0.2
+            }
+        ],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "small-hall",
+                "decay": 1.8,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.12
+            }
+        ],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 1,
+                "decay": 95,
+                "hold": 0,
+                "release": 115,
+                "velocity": 0.7,
+                "attackCurve": "exponential",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 1,
+                "decay": 120,
+                "hold": 0,
+                "release": 80,
+                "velocity": 0.62,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "filterCutoff",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "resonator:0:frequency",
+                "rate": 0.49,
+                "depth": 0.1,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -24,
+                "knee": 24,
+                "ratio": 3.5,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "vector-run",
+        "name": "Vector Run",
+        "category": "Sequence",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.58,
+                "waveform": "sawtooth",
+                "unisonDetune": 0,
+                "stereoSpread": 0.42,
+                "fmAmount": 0.14,
+                "fmSource": "triangle"
+            },
+            {
+                "bypassed": false,
+                "detune": 12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.2,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.7,
+            "pan": 0
+        },
+        "noise": null,
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 2200,
+                "resonance": 0.3,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 16,
+                "repetitions": 5,
+                "mix": 0.18
+            }
+        ],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [
+            {
+                "bypassed": false,
+                "waveform": "square",
+                "rate": 5,
+                "depth": 0.3,
+                "mix": 0.65
+            }
+        ],
+        "bpm": 128,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "small-hall",
+                "decay": 1.7,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.1
+            }
+        ],
+        "amplitudeModulation": {
+            "waveform": "square",
+            "rate": 3,
+            "depth": 0.18
+        },
+        "envelopes": [
+            {
+                "attack": 2,
+                "decay": 60,
+                "hold": 0,
+                "release": 80,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 60,
+                "decay": 180,
+                "hold": 0,
+                "release": 180,
+                "velocity": 0.45,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "delayMix",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "filter:0:cutoff",
+                "rate": 1.5,
+                "depth": 0.16,
+                "waveform": "triangle",
+                "bypassed": false
+            },
+            {
+                "target": "delay:0:mix",
+                "rate": 0.25,
+                "depth": 0.1,
+                "waveform": "sine",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -25,
+                "knee": 24,
+                "ratio": 4,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "binary-garden",
+        "name": "Binary Garden",
+        "category": "Sequence",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.58,
+                "waveform": "square",
+                "unisonDetune": 0,
+                "stereoSpread": 0.42,
+                "fmAmount": 0.17500000000000002,
+                "fmSource": "triangle"
+            },
+            {
+                "bypassed": false,
+                "detune": 12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.2,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.7,
+            "pan": 0
+        },
+        "noise": null,
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 2580,
+                "resonance": 0.3,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 8,
+                "repetitions": 5,
+                "mix": 0.18
+            }
+        ],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [
+            {
+                "bypassed": false,
+                "waveform": "square",
+                "rate": 6,
+                "depth": 0.3,
+                "mix": 0.65
+            }
+        ],
+        "bpm": 128,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "small-hall",
+                "decay": 1.7,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.1
+            }
+        ],
+        "amplitudeModulation": {
+            "waveform": "square",
+            "rate": 3.5,
+            "depth": 0.18
+        },
+        "envelopes": [
+            {
+                "attack": 2,
+                "decay": 60,
+                "hold": 0,
+                "release": 80,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 60,
+                "decay": 180,
+                "hold": 0,
+                "release": 180,
+                "velocity": 0.45,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "delayMix",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "filter:0:cutoff",
+                "rate": 1.8,
+                "depth": 0.16,
+                "waveform": "triangle",
+                "bypassed": false
+            },
+            {
+                "target": "delay:0:mix",
+                "rate": 0.25,
+                "depth": 0.1,
+                "waveform": "sine",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -25,
+                "knee": 24,
+                "ratio": 4,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "neon-lattice",
+        "name": "Neon Lattice",
+        "category": "Sequence",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.58,
+                "waveform": "sawtooth",
+                "unisonDetune": 0,
+                "stereoSpread": 0.42,
+                "fmAmount": 0.21000000000000002,
+                "fmSource": "triangle"
+            },
+            {
+                "bypassed": false,
+                "detune": 12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.2,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.7,
+            "pan": 0
+        },
+        "noise": null,
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 2960,
+                "resonance": 0.3,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 16,
+                "repetitions": 5,
+                "mix": 0.18
+            }
+        ],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [
+            {
+                "bypassed": false,
+                "waveform": "square",
+                "rate": 7,
+                "depth": 0.3,
+                "mix": 0.65
+            }
+        ],
+        "bpm": 128,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "small-hall",
+                "decay": 1.7,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.1
+            }
+        ],
+        "amplitudeModulation": {
+            "waveform": "square",
+            "rate": 4,
+            "depth": 0.18
+        },
+        "envelopes": [
+            {
+                "attack": 2,
+                "decay": 60,
+                "hold": 0,
+                "release": 80,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 60,
+                "decay": 180,
+                "hold": 0,
+                "release": 180,
+                "velocity": 0.45,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "delayMix",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "filter:0:cutoff",
+                "rate": 2.1,
+                "depth": 0.16,
+                "waveform": "triangle",
+                "bypassed": false
+            },
+            {
+                "target": "delay:0:mix",
+                "rate": 0.25,
+                "depth": 0.1,
+                "waveform": "sine",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -25,
+                "knee": 24,
+                "ratio": 4,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "signal-stairs",
+        "name": "Signal Stairs",
+        "category": "Sequence",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.58,
+                "waveform": "square",
+                "unisonDetune": 0,
+                "stereoSpread": 0.42,
+                "fmAmount": 0.24500000000000002,
+                "fmSource": "triangle"
+            },
+            {
+                "bypassed": false,
+                "detune": 12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.2,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.7,
+            "pan": 0
+        },
+        "noise": null,
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 3340,
+                "resonance": 0.3,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 8,
+                "repetitions": 5,
+                "mix": 0.18
+            }
+        ],
+        "overdrives": [
+            {
+                "bypassed": false,
+                "drive": 0.22,
+                "tone": 0.56,
+                "feedback": 0.08,
+                "mix": 0.25
+            }
+        ],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [
+            {
+                "bypassed": false,
+                "waveform": "square",
+                "rate": 8,
+                "depth": 0.3,
+                "mix": 0.65
+            }
+        ],
+        "bpm": 128,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "small-hall",
+                "decay": 1.7,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.1
+            }
+        ],
+        "amplitudeModulation": {
+            "waveform": "square",
+            "rate": 4.5,
+            "depth": 0.18
+        },
+        "envelopes": [
+            {
+                "attack": 2,
+                "decay": 60,
+                "hold": 0,
+                "release": 80,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 60,
+                "decay": 180,
+                "hold": 0,
+                "release": 180,
+                "velocity": 0.45,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "delayMix",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "filter:0:cutoff",
+                "rate": 2.4,
+                "depth": 0.16,
+                "waveform": "triangle",
+                "bypassed": false
+            },
+            {
+                "target": "delay:0:mix",
+                "rate": 0.25,
+                "depth": 0.1,
+                "waveform": "sine",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -25,
+                "knee": 24,
+                "ratio": 4,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "motorik-star",
+        "name": "Motorik Star",
+        "category": "Sequence",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.58,
+                "waveform": "sawtooth",
+                "unisonDetune": 0,
+                "stereoSpread": 0.42,
+                "fmAmount": 0.28,
+                "fmSource": "triangle"
+            },
+            {
+                "bypassed": false,
+                "detune": 12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.2,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.7,
+            "pan": 0
+        },
+        "noise": null,
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 3720,
+                "resonance": 0.3,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 16,
+                "repetitions": 5,
+                "mix": 0.18
+            }
+        ],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [
+            {
+                "bypassed": false,
+                "waveform": "square",
+                "rate": 9,
+                "depth": 0.3,
+                "mix": 0.65
+            }
+        ],
+        "bpm": 128,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "small-hall",
+                "decay": 1.7,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.1
+            }
+        ],
+        "amplitudeModulation": {
+            "waveform": "square",
+            "rate": 5,
+            "depth": 0.18
+        },
+        "envelopes": [
+            {
+                "attack": 2,
+                "decay": 60,
+                "hold": 0,
+                "release": 80,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 60,
+                "decay": 180,
+                "hold": 0,
+                "release": 180,
+                "velocity": 0.45,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "delayMix",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "filter:0:cutoff",
+                "rate": 2.7,
+                "depth": 0.16,
+                "waveform": "triangle",
+                "bypassed": false
+            },
+            {
+                "target": "delay:0:mix",
+                "rate": 0.25,
+                "depth": 0.1,
+                "waveform": "sine",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -25,
+                "knee": 24,
+                "ratio": 4,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "concrete-kick",
+        "name": "Concrete Kick",
+        "category": "Percussion",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.7,
+                "waveform": "triangle",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0.24,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.78,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "pink",
+            "level": 0.12,
+            "stereoSpread": 0.25
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 1000,
+                "resonance": 0.35,
+                "gain": 0
+            }
+        ],
+        "delays": [],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [],
+        "bpm": 124,
+        "resonators": [
+            {
+                "bypassed": false,
+                "frequency": 320,
+                "decay": 0.35,
+                "feedback": 0.12,
+                "damping": 0.52,
+                "drive": 0.04,
+                "mix": 0.28
+            }
+        ],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "small-hall",
+                "decay": 1.1,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.08
+            }
+        ],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 1,
+                "decay": 75,
+                "hold": 0,
+                "release": 50,
+                "velocity": 0.7,
+                "attackCurve": "exponential",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 1,
+                "decay": 35,
+                "hold": 0,
+                "release": 20,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "noiseLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 1,
+                "decay": 40,
+                "hold": 0,
+                "release": 10,
+                "velocity": 0.6,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorPitch",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "resonator:0:mix",
+                "rate": 0.35,
+                "depth": 0.1,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -27,
+                "knee": 24,
+                "ratio": 5,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "alloy-tom",
+        "name": "Alloy Tom",
+        "category": "Percussion",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.7,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0.29,
+                "fmSource": "square"
+            }
+        ],
+        "output": {
+            "volume": 0.78,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "white",
+            "level": 0.145,
+            "stereoSpread": 0.25
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 1640,
+                "resonance": 0.35,
+                "gain": 0
+            }
+        ],
+        "delays": [],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [],
+        "bpm": 124,
+        "resonators": [
+            {
+                "bypassed": false,
+                "frequency": 660,
+                "decay": 0.43,
+                "feedback": 0.12,
+                "damping": 0.52,
+                "drive": 0.04,
+                "mix": 0.28
+            }
+        ],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "small-hall",
+                "decay": 1.3,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.10500000000000001
+            }
+        ],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 1,
+                "decay": 93,
+                "hold": 0,
+                "release": 50,
+                "velocity": 0.7,
+                "attackCurve": "exponential",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 1,
+                "decay": 47,
+                "hold": 0,
+                "release": 20,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "noiseLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 1,
+                "decay": 50,
+                "hold": 0,
+                "release": 10,
+                "velocity": 0.6,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorPitch",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "resonator:0:mix",
+                "rate": 0.35,
+                "depth": 0.1,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -27,
+                "knee": 24,
+                "ratio": 5,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "paper-snare",
+        "name": "Paper Snare",
+        "category": "Percussion",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.7,
+                "waveform": "triangle",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0.33999999999999997,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.78,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "pink",
+            "level": 0.16999999999999998,
+            "stereoSpread": 0.25
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 2280,
+                "resonance": 0.35,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 16,
+                "repetitions": 2,
+                "mix": 0.14
+            }
+        ],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [],
+        "bpm": 124,
+        "resonators": [
+            {
+                "bypassed": false,
+                "frequency": 1000,
+                "decay": 0.51,
+                "feedback": 0.12,
+                "damping": 0.52,
+                "drive": 0.04,
+                "mix": 0.28
+            }
+        ],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "small-hall",
+                "decay": 1.5,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.13
+            }
+        ],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 1,
+                "decay": 111,
+                "hold": 0,
+                "release": 50,
+                "velocity": 0.7,
+                "attackCurve": "exponential",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 1,
+                "decay": 59,
+                "hold": 0,
+                "release": 20,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "noiseLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 1,
+                "decay": 60,
+                "hold": 0,
+                "release": 10,
+                "velocity": 0.6,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorPitch",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "resonator:0:mix",
+                "rate": 0.35,
+                "depth": 0.1,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -27,
+                "knee": 24,
+                "ratio": 5,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "glass-strike",
+        "name": "Glass Strike",
+        "category": "Percussion",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.7,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0.39,
+                "fmSource": "square"
+            }
+        ],
+        "output": {
+            "volume": 0.78,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "white",
+            "level": 0.195,
+            "stereoSpread": 0.25
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 2920,
+                "resonance": 0.35,
+                "gain": 0
+            }
+        ],
+        "delays": [],
+        "overdrives": [
+            {
+                "bypassed": false,
+                "drive": 0.34,
+                "tone": 0.4,
+                "feedback": 0,
+                "mix": 0.3
+            }
+        ],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [],
+        "bpm": 124,
+        "resonators": [
+            {
+                "bypassed": false,
+                "frequency": 1340,
+                "decay": 0.59,
+                "feedback": 0.12,
+                "damping": 0.52,
+                "drive": 0.04,
+                "mix": 0.28
+            }
+        ],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "small-hall",
+                "decay": 1.7000000000000002,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.15500000000000003
+            }
+        ],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 1,
+                "decay": 129,
+                "hold": 0,
+                "release": 50,
+                "velocity": 0.7,
+                "attackCurve": "exponential",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 1,
+                "decay": 71,
+                "hold": 0,
+                "release": 20,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "noiseLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 1,
+                "decay": 70,
+                "hold": 0,
+                "release": 10,
+                "velocity": 0.6,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorPitch",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "resonator:0:mix",
+                "rate": 0.35,
+                "depth": 0.1,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -27,
+                "knee": 24,
+                "ratio": 5,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "distant-clap",
+        "name": "Distant Clap",
+        "category": "Percussion",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.7,
+                "waveform": "triangle",
+                "unisonDetune": 0,
+                "stereoSpread": 0,
+                "fmAmount": 0.44,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.78,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "pink",
+            "level": 0.22,
+            "stereoSpread": 0.25
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "bandpass",
+                "cutoff": 3560,
+                "resonance": 0.35,
+                "gain": 0
+            }
+        ],
+        "delays": [],
+        "overdrives": [],
+        "choruses": [],
+        "flangers": [],
+        "tremolos": [],
+        "bpm": 124,
+        "resonators": [
+            {
+                "bypassed": false,
+                "frequency": 1680,
+                "decay": 0.6699999999999999,
+                "feedback": 0.12,
+                "damping": 0.52,
+                "drive": 0.04,
+                "mix": 0.28
+            }
+        ],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "small-hall",
+                "decay": 1.9000000000000001,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.18
+            }
+        ],
+        "amplitudeModulation": null,
+        "envelopes": [
+            {
+                "attack": 1,
+                "decay": 147,
+                "hold": 0,
+                "release": 50,
+                "velocity": 0.7,
+                "attackCurve": "exponential",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 1,
+                "decay": 83,
+                "hold": 0,
+                "release": 20,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "noiseLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 1,
+                "decay": 80,
+                "hold": 0,
+                "release": 10,
+                "velocity": 0.6,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorPitch",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "resonator:0:mix",
+                "rate": 0.35,
+                "depth": 0.1,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -27,
+                "knee": 24,
+                "ratio": 5,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "weather-system",
+        "name": "Weather System",
+        "category": "Texture",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.42,
+                "waveform": "sawtooth",
+                "unisonDetune": 32,
+                "stereoSpread": 0.95,
+                "fmAmount": 0.16,
+                "fmSource": "triangle"
+            },
+            {
+                "bypassed": false,
+                "detune": -12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.18,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0.72,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.62,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "brown",
+            "level": 0.1,
+            "stereoSpread": 1
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 1300,
+                "resonance": 0.5,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 4,
+                "repetitions": 6,
+                "mix": 0.28,
+                "overdrive": {
+                    "bypassed": false,
+                    "gain": 0.16,
+                    "feedback": 0.12
+                },
+                "moduleOrder": [
+                    "overdrive"
+                ]
+            }
+        ],
+        "overdrives": [],
+        "choruses": [
+            {
+                "bypassed": false,
+                "waveform": "random",
+                "rate": 0.1,
+                "depth": 0.58,
+                "delay": 0.022,
+                "mix": 0.48
+            }
+        ],
+        "flangers": [
+            {
+                "bypassed": false,
+                "waveform": "triangle",
+                "rate": 0.12,
+                "depth": 0.42,
+                "delay": 0.004,
+                "feedback": 0.28,
+                "mix": 0.2
+            }
+        ],
+        "tremolos": [],
+        "bpm": 96,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "cathedral",
+                "decay": 6,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.45,
+                "resonator": {
+                    "bypassed": false,
+                    "frequency": 1800,
+                    "decay": 1.2,
+                    "feedback": 0.2,
+                    "damping": 0.6,
+                    "drive": 0.06,
+                    "mix": 0.15
+                },
+                "moduleOrder": [
+                    "resonator"
+                ]
+            }
+        ],
+        "amplitudeModulation": {
+            "waveform": "triangle",
+            "rate": 0.3,
+            "depth": 0.2
+        },
+        "envelopes": [
+            {
+                "attack": 80,
+                "decay": 160,
+                "hold": 0,
+                "release": 420,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 220,
+                "decay": 260,
+                "hold": 0,
+                "release": 500,
+                "velocity": 0.4,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "reverbMix",
+                "bypassed": false
+            },
+            {
+                "attack": 160,
+                "decay": 190,
+                "hold": 0,
+                "release": 280,
+                "velocity": 0.3,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "flangerFeedback",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "filter:0:cutoff",
+                "rate": 0.06,
+                "depth": 0.25,
+                "waveform": "random",
+                "bypassed": false
+            },
+            {
+                "target": "reverb:0:width",
+                "rate": 0.1,
+                "depth": 0.12,
+                "waveform": "sine",
+                "bypassed": false
+            },
+            {
+                "target": "noise:0:stereoSpread",
+                "rate": 0.18,
+                "depth": 0.16,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -27,
+                "knee": 24,
+                "ratio": 2.5,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [
+            {
+                "kind": "single",
+                "bypassed": false,
+                "bands": [
+                    {
+                        "bypassed": false,
+                        "type": "peaking",
+                        "frequency": 1800,
+                        "gain": -2,
+                        "q": 0.8
+                    }
+                ],
+                "lfos": [
+                    {
+                        "target": "eq:0:0:frequency",
+                        "rate": 0.11,
+                        "depth": 0.12,
+                        "waveform": "triangle",
+                        "bypassed": false
+                    }
+                ],
+                "envelopes": []
+            }
+        ],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "ghost-network",
+        "name": "Ghost Network",
+        "category": "Texture",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.42,
+                "waveform": "random",
+                "unisonDetune": 32,
+                "stereoSpread": 0.95,
+                "fmAmount": 0.16,
+                "fmSource": "triangle"
+            },
+            {
+                "bypassed": false,
+                "detune": -12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.18,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0.72,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.62,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "pink",
+            "level": 0.1,
+            "stereoSpread": 1
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 1720,
+                "resonance": 0.5,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 4,
+                "repetitions": 6,
+                "mix": 0.28,
+                "overdrive": {
+                    "bypassed": false,
+                    "gain": 0.16,
+                    "feedback": 0.12
+                },
+                "moduleOrder": [
+                    "overdrive"
+                ]
+            }
+        ],
+        "overdrives": [],
+        "choruses": [
+            {
+                "bypassed": false,
+                "waveform": "random",
+                "rate": 0.14,
+                "depth": 0.58,
+                "delay": 0.022,
+                "mix": 0.48
+            }
+        ],
+        "flangers": [
+            {
+                "bypassed": false,
+                "waveform": "triangle",
+                "rate": 0.12,
+                "depth": 0.42,
+                "delay": 0.004,
+                "feedback": 0.28,
+                "mix": 0.2
+            }
+        ],
+        "tremolos": [],
+        "bpm": 96,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "cathedral",
+                "decay": 6.6,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.45,
+                "resonator": {
+                    "bypassed": false,
+                    "frequency": 1800,
+                    "decay": 1.2,
+                    "feedback": 0.2,
+                    "damping": 0.6,
+                    "drive": 0.06,
+                    "mix": 0.15
+                },
+                "moduleOrder": [
+                    "resonator"
+                ]
+            }
+        ],
+        "amplitudeModulation": {
+            "waveform": "random",
+            "rate": 0.42,
+            "depth": 0.2
+        },
+        "envelopes": [
+            {
+                "attack": 115,
+                "decay": 160,
+                "hold": 0,
+                "release": 420,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 220,
+                "decay": 260,
+                "hold": 0,
+                "release": 500,
+                "velocity": 0.4,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "reverbMix",
+                "bypassed": false
+            },
+            {
+                "attack": 160,
+                "decay": 190,
+                "hold": 0,
+                "release": 280,
+                "velocity": 0.3,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "flangerFeedback",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "filter:0:cutoff",
+                "rate": 0.09,
+                "depth": 0.25,
+                "waveform": "random",
+                "bypassed": false
+            },
+            {
+                "target": "reverb:0:width",
+                "rate": 0.1,
+                "depth": 0.12,
+                "waveform": "sine",
+                "bypassed": false
+            },
+            {
+                "target": "noise:0:stereoSpread",
+                "rate": 0.18,
+                "depth": 0.16,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -27,
+                "knee": 24,
+                "ratio": 2.5,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [
+            {
+                "kind": "single",
+                "bypassed": false,
+                "bands": [
+                    {
+                        "bypassed": false,
+                        "type": "peaking",
+                        "frequency": 1800,
+                        "gain": -2,
+                        "q": 0.8
+                    }
+                ],
+                "lfos": [
+                    {
+                        "target": "eq:0:0:frequency",
+                        "rate": 0.11,
+                        "depth": 0.12,
+                        "waveform": "triangle",
+                        "bypassed": false
+                    }
+                ],
+                "envelopes": []
+            }
+        ],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "dust-horizon",
+        "name": "Dust Horizon",
+        "category": "Texture",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.42,
+                "waveform": "sawtooth",
+                "unisonDetune": 32,
+                "stereoSpread": 0.95,
+                "fmAmount": 0.16,
+                "fmSource": "triangle"
+            },
+            {
+                "bypassed": false,
+                "detune": -12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.18,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0.72,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.62,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "brown",
+            "level": 0.1,
+            "stereoSpread": 1
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 2140,
+                "resonance": 0.5,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 4,
+                "repetitions": 6,
+                "mix": 0.28,
+                "overdrive": {
+                    "bypassed": false,
+                    "gain": 0.16,
+                    "feedback": 0.12
+                },
+                "moduleOrder": [
+                    "overdrive"
+                ]
+            }
+        ],
+        "overdrives": [],
+        "choruses": [
+            {
+                "bypassed": false,
+                "waveform": "random",
+                "rate": 0.18,
+                "depth": 0.58,
+                "delay": 0.022,
+                "mix": 0.48
+            }
+        ],
+        "flangers": [
+            {
+                "bypassed": false,
+                "waveform": "triangle",
+                "rate": 0.12,
+                "depth": 0.42,
+                "delay": 0.004,
+                "feedback": 0.28,
+                "mix": 0.2
+            }
+        ],
+        "tremolos": [],
+        "bpm": 96,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "cathedral",
+                "decay": 7.2,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.45,
+                "resonator": {
+                    "bypassed": false,
+                    "frequency": 1800,
+                    "decay": 1.2,
+                    "feedback": 0.2,
+                    "damping": 0.6,
+                    "drive": 0.06,
+                    "mix": 0.15
+                },
+                "moduleOrder": [
+                    "resonator"
+                ]
+            }
+        ],
+        "amplitudeModulation": {
+            "waveform": "triangle",
+            "rate": 0.54,
+            "depth": 0.2
+        },
+        "envelopes": [
+            {
+                "attack": 150,
+                "decay": 160,
+                "hold": 0,
+                "release": 420,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 220,
+                "decay": 260,
+                "hold": 0,
+                "release": 500,
+                "velocity": 0.4,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "reverbMix",
+                "bypassed": false
+            },
+            {
+                "attack": 160,
+                "decay": 190,
+                "hold": 0,
+                "release": 280,
+                "velocity": 0.3,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "flangerFeedback",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "filter:0:cutoff",
+                "rate": 0.12,
+                "depth": 0.25,
+                "waveform": "random",
+                "bypassed": false
+            },
+            {
+                "target": "reverb:0:width",
+                "rate": 0.1,
+                "depth": 0.12,
+                "waveform": "sine",
+                "bypassed": false
+            },
+            {
+                "target": "noise:0:stereoSpread",
+                "rate": 0.18,
+                "depth": 0.16,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -27,
+                "knee": 24,
+                "ratio": 2.5,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [
+            {
+                "kind": "single",
+                "bypassed": false,
+                "bands": [
+                    {
+                        "bypassed": false,
+                        "type": "peaking",
+                        "frequency": 1800,
+                        "gain": -2,
+                        "q": 0.8
+                    }
+                ],
+                "lfos": [
+                    {
+                        "target": "eq:0:0:frequency",
+                        "rate": 0.11,
+                        "depth": 0.12,
+                        "waveform": "triangle",
+                        "bypassed": false
+                    }
+                ],
+                "envelopes": []
+            }
+        ],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "slow-satellite",
+        "name": "Slow Satellite",
+        "category": "Texture",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.42,
+                "waveform": "random",
+                "unisonDetune": 32,
+                "stereoSpread": 0.95,
+                "fmAmount": 0.16,
+                "fmSource": "triangle"
+            },
+            {
+                "bypassed": false,
+                "detune": -12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.18,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0.72,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.62,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "pink",
+            "level": 0.1,
+            "stereoSpread": 1
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 2560,
+                "resonance": 0.5,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 4,
+                "repetitions": 6,
+                "mix": 0.28,
+                "overdrive": {
+                    "bypassed": false,
+                    "gain": 0.16,
+                    "feedback": 0.12
+                },
+                "moduleOrder": [
+                    "overdrive"
+                ]
+            }
+        ],
+        "overdrives": [],
+        "choruses": [
+            {
+                "bypassed": false,
+                "waveform": "random",
+                "rate": 0.22,
+                "depth": 0.58,
+                "delay": 0.022,
+                "mix": 0.48
+            }
+        ],
+        "flangers": [
+            {
+                "bypassed": false,
+                "waveform": "triangle",
+                "rate": 0.12,
+                "depth": 0.42,
+                "delay": 0.004,
+                "feedback": 0.28,
+                "mix": 0.2
+            }
+        ],
+        "tremolos": [],
+        "bpm": 96,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "cathedral",
+                "decay": 7.8,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.45,
+                "resonator": {
+                    "bypassed": false,
+                    "frequency": 1800,
+                    "decay": 1.2,
+                    "feedback": 0.2,
+                    "damping": 0.6,
+                    "drive": 0.06,
+                    "mix": 0.15
+                },
+                "moduleOrder": [
+                    "resonator"
+                ]
+            }
+        ],
+        "amplitudeModulation": {
+            "waveform": "random",
+            "rate": 0.6599999999999999,
+            "depth": 0.2
+        },
+        "envelopes": [
+            {
+                "attack": 185,
+                "decay": 160,
+                "hold": 0,
+                "release": 420,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 220,
+                "decay": 260,
+                "hold": 0,
+                "release": 500,
+                "velocity": 0.4,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "reverbMix",
+                "bypassed": false
+            },
+            {
+                "attack": 160,
+                "decay": 190,
+                "hold": 0,
+                "release": 280,
+                "velocity": 0.3,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "flangerFeedback",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "filter:0:cutoff",
+                "rate": 0.15,
+                "depth": 0.25,
+                "waveform": "random",
+                "bypassed": false
+            },
+            {
+                "target": "reverb:0:width",
+                "rate": 0.1,
+                "depth": 0.12,
+                "waveform": "sine",
+                "bypassed": false
+            },
+            {
+                "target": "noise:0:stereoSpread",
+                "rate": 0.18,
+                "depth": 0.16,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -27,
+                "knee": 24,
+                "ratio": 2.5,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [
+            {
+                "kind": "single",
+                "bypassed": false,
+                "bands": [
+                    {
+                        "bypassed": false,
+                        "type": "peaking",
+                        "frequency": 1800,
+                        "gain": -2,
+                        "q": 0.8
+                    }
+                ],
+                "lfos": [
+                    {
+                        "target": "eq:0:0:frequency",
+                        "rate": 0.11,
+                        "depth": 0.12,
+                        "waveform": "triangle",
+                        "bypassed": false
+                    }
+                ],
+                "envelopes": []
+            }
+        ],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    },
+    {
+        "id": "empty-station",
+        "name": "Empty Station",
+        "category": "Texture",
+        "oscillators": [
+            {
+                "bypassed": false,
+                "detune": 0,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.42,
+                "waveform": "sawtooth",
+                "unisonDetune": 32,
+                "stereoSpread": 0.95,
+                "fmAmount": 0.16,
+                "fmSource": "triangle"
+            },
+            {
+                "bypassed": false,
+                "detune": -12,
+                "steppedDetune": false,
+                "glide": 0,
+                "level": 0.18,
+                "waveform": "sine",
+                "unisonDetune": 0,
+                "stereoSpread": 0.72,
+                "fmAmount": 0,
+                "fmSource": "sine"
+            }
+        ],
+        "output": {
+            "volume": 0.62,
+            "pan": 0
+        },
+        "noise": {
+            "bypassed": false,
+            "color": "brown",
+            "level": 0.1,
+            "stereoSpread": 1
+        },
+        "filters": [
+            {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 2980,
+                "resonance": 0.5,
+                "gain": 0
+            }
+        ],
+        "delays": [
+            {
+                "bypassed": false,
+                "time": 0.375,
+                "noteTime": 4,
+                "repetitions": 6,
+                "mix": 0.28,
+                "overdrive": {
+                    "bypassed": false,
+                    "gain": 0.16,
+                    "feedback": 0.12
+                },
+                "moduleOrder": [
+                    "overdrive"
+                ]
+            }
+        ],
+        "overdrives": [],
+        "choruses": [
+            {
+                "bypassed": false,
+                "waveform": "random",
+                "rate": 0.26,
+                "depth": 0.58,
+                "delay": 0.022,
+                "mix": 0.48
+            }
+        ],
+        "flangers": [
+            {
+                "bypassed": false,
+                "waveform": "triangle",
+                "rate": 0.12,
+                "depth": 0.42,
+                "delay": 0.004,
+                "feedback": 0.28,
+                "mix": 0.2
+            }
+        ],
+        "tremolos": [],
+        "bpm": 96,
+        "resonators": [],
+        "reverbs": [
+            {
+                "bypassed": false,
+                "hallType": "cathedral",
+                "decay": 8.4,
+                "preDelay": 0.025,
+                "damping": 0.6,
+                "width": 0.9,
+                "mix": 0.45,
+                "resonator": {
+                    "bypassed": false,
+                    "frequency": 1800,
+                    "decay": 1.2,
+                    "feedback": 0.2,
+                    "damping": 0.6,
+                    "drive": 0.06,
+                    "mix": 0.15
+                },
+                "moduleOrder": [
+                    "resonator"
+                ]
+            }
+        ],
+        "amplitudeModulation": {
+            "waveform": "triangle",
+            "rate": 0.78,
+            "depth": 0.2
+        },
+        "envelopes": [
+            {
+                "attack": 220,
+                "decay": 160,
+                "hold": 0,
+                "release": 420,
+                "velocity": 0.7,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "oscillatorLevel",
+                "bypassed": false
+            },
+            {
+                "attack": 220,
+                "decay": 260,
+                "hold": 0,
+                "release": 500,
+                "velocity": 0.4,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "reverbMix",
+                "bypassed": false
+            },
+            {
+                "attack": 160,
+                "decay": 190,
+                "hold": 0,
+                "release": 280,
+                "velocity": 0.3,
+                "attackCurve": "linear",
+                "releaseCurve": "linear",
+                "destination": "flangerFeedback",
+                "bypassed": false
+            }
+        ],
+        "lfos": [
+            {
+                "target": "filter:0:cutoff",
+                "rate": 0.18,
+                "depth": 0.25,
+                "waveform": "random",
+                "bypassed": false
+            },
+            {
+                "target": "reverb:0:width",
+                "rate": 0.1,
+                "depth": 0.12,
+                "waveform": "sine",
+                "bypassed": false
+            },
+            {
+                "target": "noise:0:stereoSpread",
+                "rate": 0.18,
+                "depth": 0.16,
+                "waveform": "triangle",
+                "bypassed": false
+            }
+        ],
+        "dynamics": [
+            {
+                "type": "compressor",
+                "bypassed": false,
+                "threshold": -27,
+                "knee": 24,
+                "ratio": 2.5,
+                "attack": 0.008,
+                "release": 0.18,
+                "makeupGain": 0
+            }
+        ],
+        "eqs": [
+            {
+                "kind": "single",
+                "bypassed": false,
+                "bands": [
+                    {
+                        "bypassed": false,
+                        "type": "peaking",
+                        "frequency": 1800,
+                        "gain": -2,
+                        "q": 0.8
+                    }
+                ],
+                "lfos": [
+                    {
+                        "target": "eq:0:0:frequency",
+                        "rate": 0.11,
+                        "depth": 0.12,
+                        "waveform": "triangle",
+                        "bypassed": false
+                    }
+                ],
+                "envelopes": []
+            }
+        ],
+        "effectOrder": [
+            "filters",
+            "overdrives",
+            "choruses",
+            "flangers",
+            "tremolos",
+            "delays",
+            "resonators",
+            "reverbs",
+            "eqs",
+            "dynamics"
+        ],
+        "isAmplitudeModulationBypassed": false
+    }
+]
