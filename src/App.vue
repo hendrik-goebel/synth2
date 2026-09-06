@@ -320,10 +320,26 @@ function handleChannelKey(event: KeyboardEvent) {
   loadChannel(channelNumber)
 }
 
+function handleInstrumentKey(event: KeyboardEvent) {
+  if (isMasterChannel.value || event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLTextAreaElement) return
+
+  const direction = event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0
+  if (!direction || !instrumentPresets.length) return
+
+  event.preventDefault()
+  const currentIndex = instrumentPresets.findIndex(({ id }) => id === selectedInstrumentId.value)
+  const nextIndex = currentIndex === -1
+    ? direction === -1 ? instrumentPresets.length - 1 : 0
+    : (currentIndex + direction + instrumentPresets.length) % instrumentPresets.length
+  applyInstrumentPreset(instrumentPresets[nextIndex].id)
+}
+
 function handleKeydown(event: KeyboardEvent) {
   handleFirstInteraction()
   handleChannelKey(event)
   if (event.repeat || event.metaKey || event.ctrlKey || event.altKey || event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLTextAreaElement) return
+
+  handleInstrumentKey(event)
 
   if (event.key.toLowerCase() === 'v') {
     event.preventDefault()
@@ -2565,7 +2581,11 @@ onUnmounted(() => {
 
       <label v-if="!isMasterChannel" class="instrument-selector ambient amb-surface amb-chamfer amb-rounded-lg">
         <span>Instrument</span>
-        <select :value="selectedInstrumentId" @change="applyInstrumentPreset(($event.target as HTMLSelectElement).value)">
+        <select
+          :value="selectedInstrumentId"
+          title="Use Arrow Up and Arrow Down to select the previous or next instrument"
+          @change="applyInstrumentPreset(($event.target as HTMLSelectElement).value)"
+        >
           <option value="" disabled>Select instrument</option>
           <option value="empty">Empty</option>
           <optgroup v-for="category in instrumentCategories" :key="category" :label="category">
