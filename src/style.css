@@ -37,11 +37,17 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   padding: clamp(8px, 1.2vw, 16px);
 }
 
-.active-channel-indicator {
+.top-right-indicators {
   position: fixed;
   z-index: 10;
   top: 12px;
   right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.active-channel-indicator, .midi-controller-indicator {
   min-width: 44px;
   padding: 5px 8px;
   color: #9bf4de;
@@ -54,6 +60,29 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   letter-spacing: .08em;
   text-align: center;
   font-variant-numeric: tabular-nums;
+}
+.midi-controller-indicator {
+  min-width: 58px;
+  color: #ffdf92;
+  border-color: #8b7042;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+.learning-state-indicator {
+  display: inline-grid;
+  place-items: center;
+  min-width: 17px;
+  min-height: 17px;
+  margin-left: 3px;
+  padding: 1px 3px;
+  color: #09241f;
+  background: linear-gradient(145deg, #ffd989, #d8a64c);
+  border-color: #ffe5a8;
+  border: 1px solid;
+  border-radius: 4px;
+  font-size: .58rem;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .panel {

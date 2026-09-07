@@ -46,7 +46,7 @@ const isCollapsed = ref(false)
       <button type="button" class="add-custom-slider-button" aria-label="Add custom slider" @click="emit('add')">+</button>
     </div>
     <div v-show="!isCollapsed" id="custom-sliders-content" class="custom-sliders-content">
-      <p v-if="!sliders.length" class="custom-sliders-empty">Add a slider, click Learn, then select controls to create a macro.</p>
+      <p v-if="!sliders.length" class="custom-sliders-empty"></p>
       <div v-else class="custom-slider-list">
         <article v-for="(slider, index) in sliders" :key="slider.id" class="custom-slider">
           <div class="custom-slider-header">

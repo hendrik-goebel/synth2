@@ -113,6 +113,7 @@ const midiStatus = ref('MIDI not connected.')
 const midiLearnTargetId = ref('')
 const midiLearnArmed = ref(false)
 const midiLearnStatus = ref('Select a parameter, then click Learn.')
+const activeMidiController = ref<number | null>(null)
 type MidiMapping = { channel: number; controller: number; targetId: string; targetChannel: number; reversed?: boolean }
 type MidiMappingGroup = Pick<MidiMapping, 'channel' | 'controller'> & { mappings: MidiMapping[] }
 type MidiParameterTarget = {
@@ -195,6 +196,7 @@ const seedStatus = ref('')
 let firstInteractionHandled = false
 let midiConnectionStarted = false
 let audioEnabled = false
+let midiControllerActivityTimeout: ReturnType<typeof setTimeout> | null = null
 
 function saveActiveChannel() {
   const channel = selectedChannel.value === 0 ? masterChannel : channels.value[selectedChannel.value - 1]
@@ -394,7 +396,10 @@ function selectMidiParameter(event: PointerEvent) {
     addCustomSliderAssignment(learningCustomSliderId.value, parameter)
     return
   }
-  if (parameter) midiLearnTargetId.value = parameter
+  if (parameter) {
+    midiLearnTargetId.value = parameter
+    if (midiLearnArmed.value) midiLearnStatus.value = 'Move a control on your MIDI controller...'
+  }
 }
 
 function handleControlPointerDown(event: PointerEvent) {
@@ -680,6 +685,7 @@ function pruneCustomSliderAssignments() {
 }
 
 function handleMidiControlChange({ channel, controller, value }: MidiControlChangeEvent) {
+  showMidiControllerActivity(controller)
   if (midiLearnArmed.value && midiLearnTargetId.value) {
     midiMappings.value = midiMappings.value.filter((mapping) => (
       mapping.targetId !== midiLearnTargetId.value || mapping.targetChannel !== selectedChannel.value
@@ -707,13 +713,25 @@ function handleMidiControlChange({ channel, controller, value }: MidiControlChan
   })
 }
 
+function showMidiControllerActivity(controller: number) {
+  activeMidiController.value = controller
+  if (midiControllerActivityTimeout !== null) clearTimeout(midiControllerActivityTimeout)
+  midiControllerActivityTimeout = setTimeout(() => {
+    activeMidiController.value = null
+    midiControllerActivityTimeout = null
+  }, 1500)
+}
+
 function armMidiLearn() {
-  if (!midiLearnTargetId.value) {
-    midiLearnStatus.value = 'Select a parameter before learning.'
+  if (midiLearnArmed.value) {
+    midiLearnArmed.value = false
+    midiLearnStatus.value = 'MIDI learning cancelled.'
     return
   }
   midiLearnArmed.value = true
-  midiLearnStatus.value = 'Move a control on your MIDI controller...'
+  midiLearnStatus.value = midiLearnTargetId.value
+    ? 'Move a control on your MIDI controller...'
+    : 'Select a parameter, then move a control on your MIDI controller...'
 }
 
 function addMidiParameter(mapping: Pick<MidiMapping, 'channel' | 'controller'>) {
@@ -2753,6 +2771,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown, true)
+  if (midiControllerActivityTimeout !== null) clearTimeout(midiControllerActivityTimeout)
   midiService.destroy()
   channels.value.forEach(({ synth }) => synth.destroy())
   masterSynth.destroy()
@@ -2761,9 +2780,14 @@ onUnmounted(() => {
 
 <template>
   <main class="app amb-light-tl" @pointerdown.capture="handleControlPointerDown" @pointerup.capture="releaseControlFocus" @change.capture="releaseControlFocus">
-    <aside class="active-channel-indicator" aria-live="polite">
-      {{ isMasterChannel ? 'MASTER' : `CH ${selectedChannel}` }}
-    </aside>
+    <div class="top-right-indicators">
+      <aside class="active-channel-indicator" aria-live="polite">
+        {{ isMasterChannel ? 'MASTER' : `CH ${selectedChannel}` }}
+        <span v-if="midiLearnArmed" class="learning-state-indicator" title="MIDI controller learning enabled">L</span>
+        <span v-if="learningCustomSliderId !== null" class="learning-state-indicator" title="Custom slider learning enabled">CL</span>
+      </aside>
+      <output v-if="activeMidiController !== null" class="midi-controller-indicator">CC {{ activeMidiController }}</output>
+    </div>
     <section class="panel ambient amb-surface amb-chamfer-2 amb-elevation-2 amb-rounded-xl amb-mat-brushed">
       <header class="topbar">
         <div class="brand-lockup">
