@@ -44,7 +44,7 @@ const emit = defineEmits<{
     @remove="emit('remove')"
   >
     <div class="oscillator-content">
-      <label class="control" :data-midi-target="`oscillator:${oscillatorIndex}:detune`">
+      <label class="control">
         <span>Wave</span>
         <select
           :value="waveform"
@@ -58,7 +58,7 @@ const emit = defineEmits<{
         </select>
       </label>
 
-    <label class="control">
+    <label class="control" :data-midi-target="`oscillator:${oscillatorIndex}:detune`">
       <span>Detune</span>
       <output>{{ detune }}</output>
       <div class="detune-slider">
@@ -83,7 +83,7 @@ const emit = defineEmits<{
       </div>
     </label>
 
-    <label class="control" :data-midi-target="`oscillator:${oscillatorIndex}:level`">
+    <label class="control">
       <span>Glide</span>
       <output>{{ glide }} ms</output>
       <input
@@ -96,7 +96,7 @@ const emit = defineEmits<{
       >
     </label>
 
-    <label class="control">
+    <label class="control" :data-midi-target="`oscillator:${oscillatorIndex}:level`">
       <span>Level</span>
       <output>{{ Math.round(level * 100) }}%</output>
       <input
@@ -109,19 +109,19 @@ const emit = defineEmits<{
       >
     </label>
 
-    <label class="control" :data-midi-target="`oscillator:${oscillatorIndex}:stereoSpread`">
+    <label class="control">
       <span>Unison</span>
       <output>{{ unisonDetune }}</output>
       <input type="range" min="0" max="100" step="1" :value="unisonDetune" @input="emit('update:unisonDetune', Number(($event.target as HTMLInputElement).value))">
     </label>
 
-    <label class="control" :data-midi-target="`oscillator:${oscillatorIndex}:fmAmount`">
+    <label class="control" :data-midi-target="`oscillator:${oscillatorIndex}:stereoSpread`">
       <span>Spread</span>
       <output>{{ Math.round(stereoSpread * 100) }}%</output>
       <input type="range" min="0" max="1" step="0.01" :value="stereoSpread" @input="emit('update:stereoSpread', Number(($event.target as HTMLInputElement).value))">
     </label>
 
-    <label class="control">
+    <label class="control" :data-midi-target="`oscillator:${oscillatorIndex}:fmAmount`">
       <span>FM</span>
       <output>{{ Math.round(fmAmount * 100) }}%</output>
       <input type="range" min="0" max="1" step="0.01" :value="fmAmount" @input="emit('update:fmAmount', Number(($event.target as HTMLInputElement).value))">

@@ -30,7 +30,7 @@ const emit = defineEmits<{
     @remove="emit('remove')"
   >
     <div class="modulation-controls">
-      <label class="control" :data-midi-target="`noise:${noiseIndex}:level`">
+      <label class="control">
         <span>Color</span>
         <select :value="color" @change="emit('update:color', ($event.target as HTMLSelectElement).value as NoiseColor)">
           <option value="white">White</option>
@@ -38,12 +38,12 @@ const emit = defineEmits<{
           <option value="brown">Brown</option>
         </select>
       </label>
-      <label class="control" :data-midi-target="`noise:${noiseIndex}:stereoSpread`">
+      <label class="control" :data-midi-target="`noise:${noiseIndex}:level`">
         <span>Level</span>
         <output>{{ Math.round(level * 100) }}%</output>
         <input type="range" min="0" max="1" step="0.01" :value="level" @input="emit('update:level', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="`noise:${noiseIndex}:stereoSpread`">
         <span>Spread</span>
         <output>{{ Math.round(stereoSpread * 100) }}%</output>
         <input type="range" min="-1" max="1" step="0.01" :value="stereoSpread" @input="emit('update:stereoSpread', Number(($event.target as HTMLInputElement).value))">

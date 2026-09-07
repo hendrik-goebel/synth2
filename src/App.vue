@@ -26,7 +26,7 @@ import CustomSliders from './components/CustomSliders.vue'
 
 type EnvelopeModule = EnvelopeSettings & { bypassed: boolean }
 type LfoControlModule = LfoSettings & { bypassed: boolean }
-type CustomSliderAssignment = { targetId: string; baseline: number; reversed?: boolean }
+type CustomSliderAssignment = { targetId: string; baseline: number; anchor: number; reversed?: boolean }
 type CustomSlider = { id: string; value: number; assignments: CustomSliderAssignment[] }
 /** A processor type accepted in module order data; the legacy modulation value is ignored when loading. */
 type ModuleKind = EffectGroup | 'amplitudeModulation'
@@ -585,10 +585,11 @@ function applyCustomSlider(slider: CustomSlider) {
     const target = midiParameterTargets.value.find((item) => item.id === assignment.targetId)
     if (!target) return
     const baselinePosition = midiParameterPosition(target, assignment.baseline)
-    const movement = assignment.reversed ? -slider.value : slider.value
-    const position = movement >= 0
-      ? baselinePosition + movement * (1 - baselinePosition)
-      : baselinePosition + movement * baselinePosition
+    const movement = slider.value - assignment.anchor
+    const position = Math.min(Math.max(
+      baselinePosition + (assignment.reversed ? -movement : movement),
+      0,
+    ), 1)
     target.apply(midiParameterValueAtPosition(target, position))
   })
 }
@@ -639,7 +640,7 @@ function addCustomSliderAssignment(sliderId: string, targetId: string) {
   const baseline = currentMidiParameterValue(targetId)
   if (baseline === null) return
   customSliders.value = customSliders.value.map((item) => item.id === sliderId
-    ? { ...item, assignments: [...item.assignments, { targetId, baseline }] }
+    ? { ...item, assignments: [...item.assignments, { targetId, baseline, anchor: slider.value }] }
     : item)
 }
 
@@ -1337,6 +1338,10 @@ function isCustomSlider(value: unknown): value is CustomSlider {
       && !assignment.targetId.startsWith('custom-slider:')
       && typeof assignment.baseline === 'number'
       && Number.isFinite(assignment.baseline)
+      && (assignment.anchor === undefined || (typeof assignment.anchor === 'number'
+        && Number.isFinite(assignment.anchor)
+        && assignment.anchor >= -1
+        && assignment.anchor <= 1))
       && (assignment.reversed === undefined || typeof assignment.reversed === 'boolean'))
 }
 
@@ -1344,7 +1349,7 @@ function normalizeCustomSliders(sliders: CustomSlider[] | undefined): CustomSlid
   return (sliders ?? []).map((slider) => ({
     id: slider.id,
     value: slider.value,
-    assignments: slider.assignments.map((assignment) => ({ ...assignment })),
+    assignments: slider.assignments.map((assignment) => ({ ...assignment, anchor: assignment.anchor ?? 0 })),
   }))
 }
 
