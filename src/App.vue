@@ -22,9 +22,12 @@ import EqControls from './components/EqControls.vue'
 import ChorusControls from './components/ChorusControls.vue'
 import FlangerControls from './components/FlangerControls.vue'
 import TremoloControls from './components/TremoloControls.vue'
+import CustomSliders from './components/CustomSliders.vue'
 
 type EnvelopeModule = EnvelopeSettings & { bypassed: boolean }
 type LfoControlModule = LfoSettings & { bypassed: boolean }
+type CustomSliderAssignment = { targetId: string; baseline: number; reversed?: boolean }
+type CustomSlider = { id: string; value: number; assignments: CustomSliderAssignment[] }
 /** A processor type accepted in module order data; the legacy modulation value is ignored when loading. */
 type ModuleKind = EffectGroup | 'amplitudeModulation'
 /** A single instance of a module type, identified by its position within that type's own settings array. */
@@ -50,6 +53,7 @@ type SeedChannel = Omit<SynthSetup, 'eqs' | 'choruses' | 'flangers' | 'tremolos'
   selectedInstrumentId: string
   moduleOrder?: ModuleOrderEntry[]
   effectOrder?: EffectGroup[]
+  customSliders?: CustomSlider[]
 }
 type SeedMasterChannel = Omit<SeedChannel, 'oscillators' | 'noises' | 'soundSourceOrder'> & { oscillators?: OscillatorSettings[] }
 type SeedState = {
@@ -87,6 +91,7 @@ type ChannelState = {
   moduleOrder: ModuleOrderEntry[]
   isAmplitudeModulationBypassed: boolean
   selectedInstrumentId: string
+  customSliders: CustomSlider[]
 }
 
 
@@ -127,6 +132,8 @@ const oscillators = ref<OscillatorSettings[]>([initialOscillatorSettings])
 const noises = ref<NoiseSettings[]>([])
 const soundSourceOrder = ref<SoundSourceOrderEntry[]>([{ type: 'oscillator', index: 0 }])
 const output = ref<OutputSettings>(initialOutputSettings)
+const customSliders = ref<CustomSlider[]>([])
+const learningCustomSliderId = ref<string | null>(null)
 const filters = ref<FilterSettings[]>([createFilterSettings()])
 const delays = ref<DelaySettings[]>([])
 const overdrives = ref<OverdriveSettings[]>([])
@@ -169,6 +176,7 @@ const masterChannel: ChannelState = {
   moduleOrder: [],
   isAmplitudeModulationBypassed: false,
   selectedInstrumentId: '',
+  customSliders: [],
 }
 const isMasterChannel = computed(() => selectedChannel.value === 0)
 const areOscillatorsCollapsed = ref(true)
@@ -213,6 +221,7 @@ function saveActiveChannel() {
   channel.moduleOrder = moduleOrder.value
   channel.isAmplitudeModulationBypassed = isAmplitudeModulationBypassed.value
   channel.selectedInstrumentId = selectedInstrumentId.value
+  channel.customSliders = customSliders.value
 }
 
 function loadChannel(channelNumber: number) {
@@ -247,6 +256,9 @@ function loadChannelState(channel: ChannelState) {
   moduleOrder.value = channel.moduleOrder
   isAmplitudeModulationBypassed.value = channel.isAmplitudeModulationBypassed
   selectedInstrumentId.value = channel.selectedInstrumentId
+  customSliders.value = channel.customSliders
+  learningCustomSliderId.value = null
+  pruneCustomSliderAssignments()
   lastAddedBypassTarget.value = null
   activeVoices.value = activeSynth.getActiveVoiceCount()
 }
@@ -279,6 +291,7 @@ function addChannel() {
     moduleOrder: [{ type: 'filters', index: 0 }],
     isAmplitudeModulationBypassed: false,
     selectedInstrumentId: '',
+    customSliders: [],
   }
   channels.value = [...channels.value, channel]
   if (audioEnabled) {
@@ -375,7 +388,12 @@ function selectMidiParameter(event: PointerEvent) {
   const target = event.target
   if (!(target instanceof HTMLElement)) return
 
-  const parameter = target.closest<HTMLElement>('[data-midi-target]')?.dataset.midiTarget
+  const control = target.closest<HTMLElement>('[data-midi-target]')
+  const parameter = control?.dataset.midiTarget
+  if (learningCustomSliderId.value && parameter && !parameter.startsWith('custom-slider:')) {
+    addCustomSliderAssignment(learningCustomSliderId.value, parameter)
+    return
+  }
   if (parameter) midiLearnTargetId.value = parameter
 }
 
@@ -407,6 +425,7 @@ channels.value.push({
   moduleOrder: moduleOrder.value,
   isAmplitudeModulationBypassed: isAmplitudeModulationBypassed.value,
   selectedInstrumentId: selectedInstrumentId.value,
+  customSliders: customSliders.value,
 })
 
 const canSelectInput = computed(() => midiInputs.value.length > 0)
@@ -515,15 +534,148 @@ const midiParameterTargets = computed<MidiParameterTarget[]>(() => {
     add(`eqs:${eqIndex}:${bandIndex}:q`, `EQ ${eqIndex + 1} / Band ${bandIndex + 1} Q`, 0.1, 18, (value) => updateEqBandSettings(eqIndex, bandIndex, { q: value }))
     add(`eqs:${eqIndex}:${bandIndex}:gain`, `EQ ${eqIndex + 1} / Band ${bandIndex + 1} gain`, -24, 24, (value) => updateEqBandSettings(eqIndex, bandIndex, { gain: value }))
   }))
+  customSliders.value.forEach((slider, index) => {
+    add(`custom-slider:${slider.id}`, `Custom Slider ${index + 1}`, -1, 1, (value) => updateCustomSlider(slider.id, value))
+  })
   return targets
 })
 
+const midiParameterTargetLabels = computed(() => Object.fromEntries(
+  midiParameterTargets.value.map((target) => [target.id, target.label]),
+))
+
+watch(
+  () => midiParameterTargets.value.filter((target) => !target.id.startsWith('custom-slider:')).map((target) => target.id).join('|'),
+  pruneCustomSliderAssignments,
+)
+
 function midiParameterValue(target: MidiParameterTarget, value: number): number {
-  const position = value / 127
+  return midiParameterValueAtPosition(target, value / 127)
+}
+
+function midiParameterValueAtPosition(target: MidiParameterTarget, position: number): number {
   const normalized = target.curve === 'logarithmic'
     ? Math.exp(Math.log(target.min) + position * (Math.log(target.max) - Math.log(target.min)))
     : target.min + position * (target.max - target.min)
   return normalized
+}
+
+function midiParameterPosition(target: MidiParameterTarget, value: number): number {
+  const clamped = Math.min(Math.max(value, target.min), target.max)
+  return target.curve === 'logarithmic'
+    ? (Math.log(clamped) - Math.log(target.min)) / (Math.log(target.max) - Math.log(target.min))
+    : (clamped - target.min) / (target.max - target.min)
+}
+
+function addCustomSlider() {
+  const id = `slider-${crypto.randomUUID()}`
+  customSliders.value = [...customSliders.value, { id, value: 0, assignments: [] }]
+}
+
+function updateCustomSlider(id: string, value: number) {
+  const slider = customSliders.value.find((item) => item.id === id)
+  if (!slider) return
+  const normalizedValue = Math.min(Math.max(value, -1), 1)
+  customSliders.value = customSliders.value.map((item) => item.id === id ? { ...item, value: normalizedValue } : item)
+  applyCustomSlider({ ...slider, value: normalizedValue })
+}
+
+function applyCustomSlider(slider: CustomSlider) {
+  slider.assignments.forEach((assignment) => {
+    const target = midiParameterTargets.value.find((item) => item.id === assignment.targetId)
+    if (!target) return
+    const baselinePosition = midiParameterPosition(target, assignment.baseline)
+    const movement = assignment.reversed ? -slider.value : slider.value
+    const position = movement >= 0
+      ? baselinePosition + movement * (1 - baselinePosition)
+      : baselinePosition + movement * baselinePosition
+    target.apply(midiParameterValueAtPosition(target, position))
+  })
+}
+
+function toggleCustomSliderLearn(id: string) {
+  learningCustomSliderId.value = learningCustomSliderId.value === id ? null : id
+}
+
+function currentMidiParameterValue(targetId: string): number | null {
+  const [group, indexValue, nestedOrParameter, parameterValue] = targetId.split(':')
+  const index = Number(indexValue)
+  if (group === 'output') {
+    const value = output.value[indexValue as keyof OutputSettings]
+    return typeof value === 'number' ? value : null
+  }
+  if (!Number.isInteger(index) || index < 0) return null
+  if (group === 'eqs') {
+    const band = eqs.value[index]?.bands[Number(nestedOrParameter)]
+    const value = band?.[parameterValue as keyof EqBandSettings]
+    return typeof value === 'number' ? value : null
+  }
+  const collections: Record<string, Array<Record<string, unknown>>> = {
+    oscillator: oscillators.value,
+    noise: noises.value,
+    filter: filters.value,
+    dynamics: dynamics.value,
+    delays: delays.value,
+    overdrives: overdrives.value,
+    choruses: choruses.value,
+    flangers: flangers.value,
+    tremolos: tremolos.value,
+    resonators: resonators.value,
+    reverbs: reverbs.value,
+  }
+  const settings = collections[group]?.[index]
+  if (!settings) return null
+  const nestedSettings = parameterValue ? settings[nestedOrParameter] : settings
+  const value = nestedSettings && typeof nestedSettings === 'object'
+    ? (nestedSettings as Record<string, unknown>)[parameterValue ?? nestedOrParameter]
+    : undefined
+  return typeof value === 'number' ? value : null
+}
+
+function addCustomSliderAssignment(sliderId: string, targetId: string) {
+  const slider = customSliders.value.find((item) => item.id === sliderId)
+  const target = midiParameterTargets.value.find((item) => item.id === targetId)
+  if (!slider || !target || slider.assignments.some((assignment) => assignment.targetId === targetId)) return
+  const baseline = currentMidiParameterValue(targetId)
+  if (baseline === null) return
+  customSliders.value = customSliders.value.map((item) => item.id === sliderId
+    ? { ...item, assignments: [...item.assignments, { targetId, baseline }] }
+    : item)
+}
+
+function removeCustomSliderAssignment(sliderId: string, targetId: string) {
+  customSliders.value = customSliders.value.map((slider) => slider.id === sliderId
+    ? { ...slider, assignments: slider.assignments.filter((assignment) => assignment.targetId !== targetId) }
+    : slider)
+}
+
+function toggleCustomSliderAssignmentReverse(sliderId: string, targetId: string) {
+  customSliders.value = customSliders.value.map((slider) => slider.id === sliderId
+    ? {
+        ...slider,
+        assignments: slider.assignments.map((assignment) => assignment.targetId === targetId
+          ? { ...assignment, reversed: !assignment.reversed }
+          : assignment),
+      }
+    : slider)
+}
+
+function removeCustomSlider(id: string) {
+  customSliders.value = customSliders.value.filter((slider) => slider.id !== id)
+  midiMappings.value = midiMappings.value.filter((mapping) => (
+    mapping.targetId !== `custom-slider:${id}` || mapping.targetChannel !== selectedChannel.value
+  ))
+  if (learningCustomSliderId.value === id) learningCustomSliderId.value = null
+}
+
+function pruneCustomSliderAssignments() {
+  const targetIds = new Set(midiParameterTargets.value
+    .filter((target) => !target.id.startsWith('custom-slider:'))
+    .map((target) => target.id))
+  customSliders.value = customSliders.value.map((slider) => ({
+    ...slider,
+    assignments: slider.assignments.filter((assignment) => targetIds.has(assignment.targetId)),
+  }))
 }
 
 function handleMidiControlChange({ channel, controller, value }: MidiControlChangeEvent) {
@@ -1040,6 +1192,7 @@ function createMasterFromSeed(seedMaster: SeedMasterChannel): ChannelState {
     moduleOrder: resolvedModuleOrder,
     isAmplitudeModulationBypassed: false,
     selectedInstrumentId: '',
+    customSliders: normalizeCustomSliders(seedMaster.customSliders),
   }
 }
 
@@ -1113,6 +1266,8 @@ function applyInstrumentPreset(instrumentId: string) {
   moduleOrder.value = resolvedModuleOrder
   isAmplitudeModulationBypassed.value = false
   selectedInstrumentId.value = preset.id
+  customSliders.value = []
+  learningCustomSliderId.value = null
   saveActiveChannel()
   previousSynth.destroy()
 
@@ -1160,11 +1315,37 @@ function createSeedChannel(channel: ChannelState): SeedChannel {
     moduleOrder: channel.moduleOrder,
     isAmplitudeModulationBypassed: channel.isAmplitudeModulationBypassed,
     selectedInstrumentId: channel.selectedInstrumentId,
+    customSliders: channel.customSliders,
   }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
+}
+
+function isCustomSlider(value: unknown): value is CustomSlider {
+  return isRecord(value)
+    && typeof value.id === 'string'
+    && value.id.length > 0
+    && typeof value.value === 'number'
+    && Number.isFinite(value.value)
+    && value.value >= -1
+    && value.value <= 1
+    && Array.isArray(value.assignments)
+    && value.assignments.every((assignment) => isRecord(assignment)
+      && typeof assignment.targetId === 'string'
+      && !assignment.targetId.startsWith('custom-slider:')
+      && typeof assignment.baseline === 'number'
+      && Number.isFinite(assignment.baseline)
+      && (assignment.reversed === undefined || typeof assignment.reversed === 'boolean'))
+}
+
+function normalizeCustomSliders(sliders: CustomSlider[] | undefined): CustomSlider[] {
+  return (sliders ?? []).map((slider) => ({
+    id: slider.id,
+    value: slider.value,
+    assignments: slider.assignments.map((assignment) => ({ ...assignment })),
+  }))
 }
 
 function isObjectArray(value: unknown, maximumLength: number, minimumLength = 0): value is Record<string, unknown>[] {
@@ -1346,6 +1527,7 @@ function isSeedChannel(value: unknown): value is SeedChannel {
     && typeof value.isAmplitudeModulationBypassed === 'boolean'
     && isObjectArray(value.oscillators, MAX_SEED_MODULES, 1)
     && (value.soundSourceOrder === undefined || isSoundSourceOrder(value.soundSourceOrder, value.oscillators.length, value.noises?.length ?? (value.noise ? 1 : 0)))
+    && (value.customSliders === undefined || (Array.isArray(value.customSliders) && value.customSliders.length <= MAX_SEED_MODULES && value.customSliders.every(isCustomSlider)))
     && hasValidSeedModules(value, 0)
 }
 
@@ -1353,6 +1535,7 @@ function isSeedMasterChannel(value: unknown): value is SeedMasterChannel {
   return isRecord(value)
     && typeof value.bpm === 'number'
     && isRecord(value.output)
+    && (value.customSliders === undefined || (Array.isArray(value.customSliders) && value.customSliders.length <= MAX_SEED_MODULES && value.customSliders.every(isCustomSlider)))
     && hasValidSeedModules(value, 0)
 }
 
@@ -1417,6 +1600,7 @@ function createChannelFromSeed(seedChannel: SeedChannel): ChannelState {
     moduleOrder: resolvedModuleOrder,
     isAmplitudeModulationBypassed: false,
     selectedInstrumentId: seedChannel.selectedInstrumentId,
+    customSliders: normalizeCustomSliders(seedChannel.customSliders),
   }
 }
 
@@ -2658,6 +2842,17 @@ onUnmounted(() => {
         @toggle-lfo-bypass="toggleLfoBypass"
         @remove-lfo="removeLfo"
         @add-lfo="addLfo('output', 0)"
+      />
+      <CustomSliders
+        :sliders="customSliders"
+        :learning-slider-id="learningCustomSliderId"
+        :target-labels="midiParameterTargetLabels"
+        @add="addCustomSlider"
+        @update="updateCustomSlider($event.id, $event.value)"
+        @learn="toggleCustomSliderLearn"
+        @toggle-assignment-reverse="toggleCustomSliderAssignmentReverse($event.sliderId, $event.targetId)"
+        @remove-assignment="removeCustomSliderAssignment($event.sliderId, $event.targetId)"
+        @remove="removeCustomSlider"
       />
       </div>
 

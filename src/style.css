@@ -69,7 +69,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 
 .topbar, .topbar-actions, .brand-lockup, .channel-bar, .channel-actions,
 .section-heading, .module-heading-actions, .effect-type-heading, .eq-band-header,
-.eq-band-actions, .seed-actions { display: flex; align-items: center; }
+.eq-band-actions, .seed-actions, .custom-sliders-heading, .custom-slider-header,
+.custom-slider-actions { display: flex; align-items: center; }
 .topbar, .channel-bar, .section-heading, .effect-type-heading, .eq-band-header { justify-content: space-between; }
 
 .topbar { gap: 12px; padding: 0 0 10px; border-bottom: 1px solid rgb(222 242 244 / 14%); }
@@ -173,10 +174,25 @@ select { width: 100%; min-height: 30px; padding: 5px 28px 5px 8px; }
 
 .instrument-selector { --amb-albedo: #253a40; display: grid; align-content: start; gap: 6px; padding: 10px 12px; }
 .instrument-export-button { white-space: nowrap; }
-.output-controls { --amb-albedo: #203c43; display: grid; gap: 9px; padding: 10px 12px; }
+.output-controls, .custom-sliders { --amb-albedo: #203c43; display: grid; gap: 9px; padding: 10px 12px; }
+.custom-sliders { border-top: 3px solid #c58ae8; }
 .setup-grid:not(:has(.instrument-selector)) .output-controls { grid-column: 1 / -1; }
-.output-controls h2 { margin: 0; }
+.output-controls h2, .custom-sliders h2 { margin: 0; }
 .output-control-grid, .oscillator-content, .eq-band-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+.custom-sliders-heading { justify-content: space-between; gap: 8px; }
+.custom-sliders-heading h2 { flex: 1; }
+.custom-sliders-content { display: grid; gap: 9px; }
+.add-custom-slider-button { min-width: 30px; padding-inline: 7px; color: #09241f; background: linear-gradient(145deg, #9af5df, #55c7af); border-color: #a6f9e5; font-size: 1rem; line-height: 1; }
+.custom-sliders-empty { margin: 0; color: #acbdbe; font-size: .72rem; line-height: 1.4; }
+.custom-slider-list { display: grid; gap: 8px; }
+.custom-slider { display: grid; gap: 7px; padding: 8px; background: #1b292f; border: 1px solid #40535c; border-radius: 8px; }
+.custom-slider-header { gap: 10px; }
+.custom-slider-control { flex: 1; }
+.custom-slider-actions { flex: 0 0 auto; gap: 5px; }
+.custom-slider-assignments { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.custom-slider-assignments li { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; padding-top: 5px; color: #91ecd8; border-top: 1px solid rgb(183 211 211 / 10%); font-size: .7rem; }
+.custom-slider-assignments span { min-width: 0; overflow-wrap: anywhere; }
+.custom-slider-assignment-actions { display: flex; flex: 0 0 auto; gap: 4px; }
 
 .synth-workspace { display: grid; grid-template-columns: 1fr; gap: clamp(8px, 1vw, 12px); align-items: start; }
 .synth-section { --amb-albedo: #203038; min-width: 0; padding: clamp(10px, 1vw, 14px); border: 1px solid #40565d; }
@@ -357,6 +373,7 @@ select { width: 100%; min-height: 30px; padding: 5px 28px 5px 8px; }
   .brand-mark { width: 32px; height: 32px; border-radius: 8px; }
   .topbar-actions, .channel-actions { justify-content: flex-start; width: 100%; }
   .channel-bar, .instrument-selector, .output-controls, .synth-section, .section-frame { padding: 10px; }
+  .custom-sliders { padding: 10px; }
   .connection-panel { padding: 10px; }
   .midi-controls, .seed-panel { padding-block: 8px; }
   .output-control-grid, .oscillator-content, .modulation-controls, .filter-control-grid,

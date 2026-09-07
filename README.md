@@ -26,6 +26,16 @@ The MIDI panel has separate **Control input** and **Note input** selectors. The
 IAC driver is preferred for notes and the Akai MIDImix for controls when both
 devices are available.
 
+## Custom sliders
+
+The **Custom Sliders** panel below Output creates per-channel macro faders.
+Click a slider's **Learn** button, then click one or more learnable synth
+controls to add them to that slider. Each assignment captures the parameter's
+current value; the centered slider position leaves it unchanged and movement
+adjusts it relatively within that parameter's own range. Click a custom slider
+and use the normal MIDI **Learn** workflow to assign it to a hardware CC.
+Use **R** next to an assignment to reverse just that parameter's slider response.
+
 ## Module modulation
 
 Each modulatable processing card has a **+ Mod** button. Choose **LFO** or
