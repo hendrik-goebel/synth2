@@ -99,17 +99,17 @@ function supportsGain(type: EqBandType): boolean {
               <option value="notch">Notch</option>
             </select>
           </label>
-          <label class="control">
+          <label class="control" :data-midi-target="`eqs:${eqIndex}:${bandIndex}:frequency`">
             <span>Frequency</span>
             <output>{{ band.frequency }} Hz</output>
             <input type="range" min="0" max="1000" step="1" :value="frequencySliderValue(band.frequency)" @input="updateFrequency(bandIndex, $event)">
           </label>
-          <label class="control">
+          <label class="control" :data-midi-target="`eqs:${eqIndex}:${bandIndex}:q`">
             <span>Q</span>
             <output>{{ band.q }}</output>
             <input type="range" min="0" max="1000" step="1" :value="qSliderValue(band.q)" @input="updateQ(bandIndex, $event)">
           </label>
-          <label v-if="supportsGain(band.type)" class="control">
+          <label v-if="supportsGain(band.type)" class="control" :data-midi-target="`eqs:${eqIndex}:${bandIndex}:gain`">
             <span>Gain</span>
             <output>{{ band.gain }} dB</output>
             <input type="range" min="-24" max="24" step="0.1" :value="band.gain" @input="emit('update:band', { index: bandIndex, changes: { gain: Number(($event.target as HTMLInputElement).value) } })">

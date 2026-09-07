@@ -347,6 +347,12 @@ function handleKeydown(event: KeyboardEvent) {
     return
   }
 
+  if (event.key.toLowerCase() === 'l') {
+    event.preventDefault()
+    armMidiLearn()
+    return
+  }
+
   if (event.key.toLowerCase() !== 'b') return
 
   event.preventDefault()
@@ -363,6 +369,19 @@ function releaseControlFocus(event: Event) {
   if (control instanceof HTMLButtonElement || control instanceof HTMLSelectElement || control instanceof HTMLInputElement) {
     control.blur()
   }
+}
+
+function selectMidiParameter(event: PointerEvent) {
+  const target = event.target
+  if (!(target instanceof HTMLElement)) return
+
+  const parameter = target.closest<HTMLElement>('[data-midi-target]')?.dataset.midiTarget
+  if (parameter) midiLearnTargetId.value = parameter
+}
+
+function handleControlPointerDown(event: PointerEvent) {
+  handleFirstInteraction()
+  selectMidiParameter(event)
 }
 
 channels.value.push({
@@ -2519,7 +2538,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="app amb-light-tl" @pointerdown.capture="handleFirstInteraction" @pointerup.capture="releaseControlFocus" @change.capture="releaseControlFocus">
+  <main class="app amb-light-tl" @pointerdown.capture="handleControlPointerDown" @pointerup.capture="releaseControlFocus" @change.capture="releaseControlFocus">
     <aside class="active-channel-indicator" aria-live="polite">
       {{ isMasterChannel ? 'MASTER' : `CH ${selectedChannel}` }}
     </aside>
@@ -3292,7 +3311,13 @@ onUnmounted(() => {
                 </option>
               </select>
             </label>
-            <button type="button" :class="{ 'midi-learn-active': midiLearnArmed }" @click="armMidiLearn">
+            <button
+              type="button"
+              :class="{ 'midi-learn-active': midiLearnArmed }"
+              title="Arm MIDI Learn (L)"
+              aria-keyshortcuts="l"
+              @click="armMidiLearn"
+            >
               {{ midiLearnArmed ? 'Learning...' : 'Learn' }}
             </button>
           </div>

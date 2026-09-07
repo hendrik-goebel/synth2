@@ -42,32 +42,32 @@ const emit = defineEmits<{
     @remove="emit('remove')"
   >
     <div class="modulation-controls">
-      <label class="control">
+      <label class="control" :data-midi-target="`dynamics:${dynamicsIndex}:threshold`">
         <span>Threshold</span>
         <output>{{ threshold }} dB</output>
         <input type="range" min="-60" max="0" step="0.5" :value="threshold" @input="emit('update:threshold', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="`dynamics:${dynamicsIndex}:knee`">
         <span>Knee</span>
         <output>{{ knee }} dB</output>
         <input type="range" min="0" max="40" step="0.5" :value="knee" @input="emit('update:knee', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="`dynamics:${dynamicsIndex}:ratio`">
         <span>Ratio</span>
         <output>{{ ratio }}:1</output>
         <input type="range" min="1" max="20" step="0.5" :value="ratio" @input="emit('update:ratio', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="`dynamics:${dynamicsIndex}:attack`">
         <span>Attack</span>
         <output>{{ Math.round(attack * 1000) }} ms</output>
         <input type="range" min="0" max="1" step="0.001" :value="attack" @input="emit('update:attack', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="`dynamics:${dynamicsIndex}:release`">
         <span>Release</span>
         <output>{{ Math.round(release * 1000) }} ms</output>
         <input type="range" min="0.01" max="1" step="0.001" :value="release" @input="emit('update:release', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="`dynamics:${dynamicsIndex}:makeupGain`">
         <span>Makeup Gain</span>
         <output>{{ makeupGain }} dB</output>
         <input type="range" min="0" max="24" step="0.5" :value="makeupGain" @input="emit('update:makeupGain', Number(($event.target as HTMLInputElement).value))">

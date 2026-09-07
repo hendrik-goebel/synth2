@@ -44,7 +44,7 @@ const emit = defineEmits<{
     @remove="emit('remove')"
   >
     <div class="oscillator-content">
-      <label class="control">
+      <label class="control" :data-midi-target="`oscillator:${oscillatorIndex}:detune`">
         <span>Wave</span>
         <select
           :value="waveform"
@@ -83,7 +83,7 @@ const emit = defineEmits<{
       </div>
     </label>
 
-    <label class="control">
+    <label class="control" :data-midi-target="`oscillator:${oscillatorIndex}:level`">
       <span>Glide</span>
       <output>{{ glide }} ms</output>
       <input
@@ -109,13 +109,13 @@ const emit = defineEmits<{
       >
     </label>
 
-    <label class="control">
+    <label class="control" :data-midi-target="`oscillator:${oscillatorIndex}:stereoSpread`">
       <span>Unison</span>
       <output>{{ unisonDetune }}</output>
       <input type="range" min="0" max="100" step="1" :value="unisonDetune" @input="emit('update:unisonDetune', Number(($event.target as HTMLInputElement).value))">
     </label>
 
-    <label class="control">
+    <label class="control" :data-midi-target="`oscillator:${oscillatorIndex}:fmAmount`">
       <span>Spread</span>
       <output>{{ Math.round(stereoSpread * 100) }}%</output>
       <input type="range" min="0" max="1" step="0.01" :value="stereoSpread" @input="emit('update:stereoSpread', Number(($event.target as HTMLInputElement).value))">

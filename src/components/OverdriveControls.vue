@@ -55,22 +55,22 @@ const emit = defineEmits<{
     @remove="emit('remove')"
   >
     <div class="modulation-controls">
-      <label class="control">
+      <label class="control" :data-midi-target="`overdrives:${overdriveIndex}:drive`">
         <span>Drive</span>
         <output>{{ Math.round(drive * 100) }}%</output>
         <input type="range" min="0" max="1" step="0.01" :value="drive" @input="emit('update:drive', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="`overdrives:${overdriveIndex}:tone`">
         <span>Tone</span>
         <output>{{ Math.round(tone * 100) }}%</output>
         <input type="range" min="0" max="1" step="0.01" :value="tone" @input="emit('update:tone', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="`overdrives:${overdriveIndex}:feedback`">
         <span>Feedback</span>
         <output>{{ Math.round(feedback * 100) }}%</output>
         <input type="range" min="0" max="1001" step="1" :value="feedbackSliderValue(props.feedback)" @input="updateFeedback">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="`overdrives:${overdriveIndex}:mix`">
         <span>Mix</span>
         <output>{{ Math.round(mix * 100) }}%</output>
         <input type="range" min="0" max="1" step="0.01" :value="mix" @input="emit('update:mix', Number(($event.target as HTMLInputElement).value))">

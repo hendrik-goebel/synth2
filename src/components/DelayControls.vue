@@ -72,19 +72,19 @@ const delayModules = computed<DelayModuleKind[]>(() => {
     @remove="emit('remove')"
   >
     <div class="modulation-controls">
-      <label class="control">
+      <label class="control" :data-midi-target="`delays:${delayIndex}:time`">
         <span>Time</span>
         <output>{{ noteTime === 1 ? '1 bar' : `1/${noteTime}` }} · {{ Math.round(time * 1000) }} ms</output>
         <select :value="noteTime" @change="emit('update:noteTime', Number(($event.target as HTMLSelectElement).value))">
           <option v-for="value in [1, 3, 4, 5, 6, 8, 9, 16, 32]" :key="value" :value="value">1/{{ value }}</option>
         </select>
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="`delays:${delayIndex}:repetitions`">
         <span>Repetitions</span>
         <output>{{ repetitions }}</output>
         <input type="range" min="1" max="20" step="1" :value="repetitions" @input="emit('update:repetitions', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="`delays:${delayIndex}:mix`">
         <span>Mix</span>
         <output>{{ Math.round(mix * 100) }}%</output>
         <input type="range" min="0" max="1" step="0.01" :value="mix" @input="emit('update:mix', Number(($event.target as HTMLInputElement).value))">

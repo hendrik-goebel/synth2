@@ -88,27 +88,27 @@ function moduleIndex(module: ReverbModuleKind): number {
           <option value="arena">Arena</option>
         </select>
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="`reverbs:${reverbIndex}:decay`">
         <span>Decay</span>
         <output>{{ decay.toFixed(1) }} s</output>
         <input type="range" min="0.6" max="10" step="0.1" :value="decay" @input="emit('update:decay', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="`reverbs:${reverbIndex}:preDelay`">
         <span>Pre-delay</span>
         <output>{{ Math.round(preDelay * 1000) }} ms</output>
         <input type="range" min="0" max="0.2" step="0.005" :value="preDelay" @input="emit('update:preDelay', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="`reverbs:${reverbIndex}:damping`">
         <span>Damping</span>
         <output>{{ Math.round(damping * 100) }}%</output>
         <input type="range" min="0" max="1" step="0.01" :value="damping" @input="emit('update:damping', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="`reverbs:${reverbIndex}:width`">
         <span>Width</span>
         <output>{{ Math.round(width * 100) }}%</output>
         <input type="range" min="0" max="1" step="0.01" :value="width" @input="emit('update:width', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="`reverbs:${reverbIndex}:mix`">
         <span>Mix</span>
         <output>{{ Math.round(mix * 100) }}%</output>
         <input type="range" min="0" max="1" step="0.01" :value="mix" @input="emit('update:mix', Number(($event.target as HTMLInputElement).value))">

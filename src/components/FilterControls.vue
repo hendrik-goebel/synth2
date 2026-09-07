@@ -74,17 +74,17 @@ const emit = defineEmits<{
           <option value="bandpass">Band-pass</option>
         </select>
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="`filter:${filterIndex}:cutoff`">
         <span>Cutoff</span>
         <output>{{ props.cutoff }} Hz</output>
         <input type="range" min="0" max="1000" step="1" :value="cutoffSliderValue(props.cutoff)" @input="updateCutoff">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="`filter:${filterIndex}:resonance`">
         <span>Resonance</span>
         <output>{{ props.resonance }} Q</output>
         <input type="range" min="0" max="1001" step="1" :value="resonanceSliderValue(props.resonance)" @input="updateResonance">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="`filter:${filterIndex}:gain`">
         <span>Gain</span>
         <output>{{ props.gain }} dB</output>
         <input type="range" min="-24" max="24" step="0.1" :value="props.gain" @input="emit('update:gain', Number(($event.target as HTMLInputElement).value))">

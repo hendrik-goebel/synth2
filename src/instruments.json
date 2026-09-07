@@ -1,4 +1,170 @@
-[
+[{
+    "id": "fat-bass",
+    "name": "Fat Bass",
+    "category": "Custom",
+    "oscillators": [
+        {
+            "bypassed": false,
+            "detune": 0,
+            "steppedDetune": false,
+            "glide": 0,
+            "level": 0.5,
+            "waveform": "triangle",
+            "unisonDetune": 41,
+            "stereoSpread": 0.9,
+            "fmAmount": 0,
+            "fmSource": "sine"
+        },
+        {
+            "bypassed": false,
+            "detune": 12,
+            "steppedDetune": false,
+            "glide": 0,
+            "level": 0.26,
+            "waveform": "sine",
+            "unisonDetune": 0,
+            "stereoSpread": 0.65,
+            "fmAmount": 0,
+            "fmSource": "sine"
+        }
+    ],
+    "output": {
+        "volume": 0.65,
+        "pan": 0
+    },
+    "noise": {
+        "bypassed": false,
+        "color": "white",
+        "level": 0.07500000000000001,
+        "stereoSpread": 0.85
+    },
+    "filters": [
+        {
+            "bypassed": false,
+            "type": "lowpass",
+            "cutoff": 2820,
+            "resonance": 0.16,
+            "gain": 0
+        }
+    ],
+    "delays": [
+        {
+            "bypassed": false,
+            "time": 0.375,
+            "noteTime": 4,
+            "repetitions": 3,
+            "mix": 0.16
+        }
+    ],
+    "overdrives": [],
+    "choruses": [
+        {
+            "bypassed": false,
+            "waveform": "sine",
+            "rate": 0.22,
+            "depth": 0.46,
+            "delay": 0.02,
+            "mix": 0.4
+        }
+    ],
+    "flangers": [],
+    "tremolos": [],
+    "bpm": 108,
+    "resonators": [],
+    "reverbs": [
+        {
+            "bypassed": false,
+            "hallType": "opera-house",
+            "decay": 6.8,
+            "preDelay": 0.025,
+            "damping": 0.6,
+            "width": 0.9,
+            "mix": 0.36,
+            "filter": {
+                "bypassed": false,
+                "type": "lowpass",
+                "cutoff": 7200,
+                "resonance": 0,
+                "gain": 0
+            },
+            "moduleOrder": [
+                "filter"
+            ]
+        }
+    ],
+    "amplitudeModulation": {
+        "waveform": "sine",
+        "rate": 0.30000000000000004,
+        "depth": 0.09
+    },
+    "envelopes": [
+        {
+            "attack": 380,
+            "decay": 160,
+            "hold": 0,
+            "release": 500,
+            "velocity": 0.7,
+            "attackCurve": "linear",
+            "releaseCurve": "linear",
+            "destination": "oscillatorLevel",
+            "bypassed": false
+        },
+        {
+            "attack": 360,
+            "decay": 260,
+            "hold": 0,
+            "release": 420,
+            "velocity": 0.48,
+            "attackCurve": "linear",
+            "releaseCurve": "linear",
+            "destination": "filterCutoff",
+            "bypassed": false
+        }
+    ],
+    "lfos": [
+        {
+            "target": "filter:0:cutoff",
+            "rate": 0.22000000000000003,
+            "depth": 0.2,
+            "waveform": "triangle",
+            "bypassed": false
+        },
+        {
+            "target": "chorus:0:depth",
+            "rate": 0.12,
+            "depth": 0.13,
+            "waveform": "sine",
+            "bypassed": false
+        }
+    ],
+    "dynamics": [
+        {
+            "type": "compressor",
+            "bypassed": false,
+            "threshold": -26,
+            "knee": 24,
+            "ratio": 2.2,
+            "attack": 0.008,
+            "release": 0.18,
+            "makeupGain": 0
+        }
+    ],
+    "eqs": [],
+    "effectOrder": [
+        "filters",
+        "overdrives",
+        "choruses",
+        "flangers",
+        "tremolos",
+        "delays",
+        "resonators",
+        "reverbs",
+        "eqs",
+        "dynamics"
+    ],
+    "isAmplitudeModulationBypassed": false
+},
+
     {
         "id": "subway-pressure",
         "name": "Subway Pressure",

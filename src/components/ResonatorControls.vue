@@ -65,32 +65,32 @@ function updateFrequency(event: Event) {
     @remove="emit('remove')"
   >
     <div class="modulation-controls">
-      <label class="control">
+      <label class="control" :data-midi-target="resonatorIndex === undefined ? undefined : `resonators:${resonatorIndex}:frequency`">
         <span>Frequency</span>
         <output>{{ Math.round(frequency) }} Hz</output>
         <input type="range" min="0" max="1000" step="1" :value="frequencySliderValue(frequency)" @input="updateFrequency">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="resonatorIndex === undefined ? undefined : `resonators:${resonatorIndex}:decay`">
         <span>Decay</span>
         <output>{{ decay.toFixed(1) }} s</output>
         <input type="range" min="0" max="5" step="0.1" :value="decay" @input="emit('update:decay', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="resonatorIndex === undefined ? undefined : `resonators:${resonatorIndex}:feedback`">
         <span>Feedback</span>
         <output>{{ Math.round(feedback * 100) }}%</output>
         <input type="range" min="0" max="0.85" step="0.01" :value="feedback" @input="emit('update:feedback', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="resonatorIndex === undefined ? undefined : `resonators:${resonatorIndex}:damping`">
         <span>Damping</span>
         <output>{{ Math.round(damping * 100) }}%</output>
         <input type="range" min="0" max="1" step="0.01" :value="damping" @input="emit('update:damping', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="resonatorIndex === undefined ? undefined : `resonators:${resonatorIndex}:drive`">
         <span>Drive</span>
         <output>{{ Math.round(drive * 100) }}%</output>
         <input type="range" min="0" max="1" step="0.01" :value="drive" @input="emit('update:drive', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="resonatorIndex === undefined ? undefined : `resonators:${resonatorIndex}:mix`">
         <span>Mix</span>
         <output>{{ Math.round(mix * 100) }}%</output>
         <input type="range" min="0" max="1" step="0.01" :value="mix" @input="emit('update:mix', Number(($event.target as HTMLInputElement).value))">

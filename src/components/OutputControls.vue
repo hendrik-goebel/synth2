@@ -29,12 +29,12 @@ const lfoTargetOptions = [
   <section class="output-controls ambient amb-surface amb-chamfer amb-rounded-md" aria-labelledby="output-heading">
     <h2 id="output-heading">Output</h2>
     <div class="output-control-grid">
-      <label class="control">
+      <label class="control" data-midi-target="output:volume">
         <span>Volume</span>
         <output>{{ Math.round(volume * 100) }}%</output>
         <input type="range" min="0" max="1" step="0.01" :value="volume" @input="emit('update:volume', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control">
+      <label class="control" data-midi-target="output:pan">
         <span>Pan</span>
         <output>{{ pan === 0 ? 'Center' : `${pan < 0 ? 'Left' : 'Right'} ${Math.round(Math.abs(pan) * 100)}%` }}</output>
         <input type="range" min="-1" max="1" step="0.01" :value="pan" @input="emit('update:pan', Number(($event.target as HTMLInputElement).value))">
