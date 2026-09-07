@@ -6,6 +6,7 @@ const props = defineProps<{
   resonatorIndex?: number
   sectionTitle?: string
   idPrefix?: string
+  midiTargetPrefix?: string
   bypassed: boolean
   frequency: number
   decay: number
@@ -32,6 +33,7 @@ const emit = defineEmits<{
 
 const title = computed(() => props.sectionTitle ?? `Resonator ${(props.resonatorIndex ?? 0) + 1}`)
 const resolvedIdPrefix = computed(() => props.idPrefix ?? `resonator-${props.resonatorIndex ?? 0}`)
+const resolvedMidiTargetPrefix = computed(() => props.midiTargetPrefix ?? (props.resonatorIndex === undefined ? undefined : `resonators:${props.resonatorIndex}`))
 
 function logarithmicPosition(value: number): number {
   return Math.log(value / 40) / Math.log(12000 / 40)
@@ -65,32 +67,32 @@ function updateFrequency(event: Event) {
     @remove="emit('remove')"
   >
     <div class="modulation-controls">
-      <label class="control" :data-midi-target="resonatorIndex === undefined ? undefined : `resonators:${resonatorIndex}:frequency`">
+      <label class="control" :data-midi-target="resolvedMidiTargetPrefix ? `${resolvedMidiTargetPrefix}:frequency` : undefined">
         <span>Frequency</span>
         <output>{{ Math.round(frequency) }} Hz</output>
         <input type="range" min="0" max="1000" step="1" :value="frequencySliderValue(frequency)" @input="updateFrequency">
       </label>
-      <label class="control" :data-midi-target="resonatorIndex === undefined ? undefined : `resonators:${resonatorIndex}:decay`">
+      <label class="control" :data-midi-target="resolvedMidiTargetPrefix ? `${resolvedMidiTargetPrefix}:decay` : undefined">
         <span>Decay</span>
         <output>{{ decay.toFixed(1) }} s</output>
         <input type="range" min="0" max="5" step="0.1" :value="decay" @input="emit('update:decay', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control" :data-midi-target="resonatorIndex === undefined ? undefined : `resonators:${resonatorIndex}:feedback`">
+      <label class="control" :data-midi-target="resolvedMidiTargetPrefix ? `${resolvedMidiTargetPrefix}:feedback` : undefined">
         <span>Feedback</span>
         <output>{{ Math.round(feedback * 100) }}%</output>
         <input type="range" min="0" max="0.85" step="0.01" :value="feedback" @input="emit('update:feedback', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control" :data-midi-target="resonatorIndex === undefined ? undefined : `resonators:${resonatorIndex}:damping`">
+      <label class="control" :data-midi-target="resolvedMidiTargetPrefix ? `${resolvedMidiTargetPrefix}:damping` : undefined">
         <span>Damping</span>
         <output>{{ Math.round(damping * 100) }}%</output>
         <input type="range" min="0" max="1" step="0.01" :value="damping" @input="emit('update:damping', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control" :data-midi-target="resonatorIndex === undefined ? undefined : `resonators:${resonatorIndex}:drive`">
+      <label class="control" :data-midi-target="resolvedMidiTargetPrefix ? `${resolvedMidiTargetPrefix}:drive` : undefined">
         <span>Drive</span>
         <output>{{ Math.round(drive * 100) }}%</output>
         <input type="range" min="0" max="1" step="0.01" :value="drive" @input="emit('update:drive', Number(($event.target as HTMLInputElement).value))">
       </label>
-      <label class="control" :data-midi-target="resonatorIndex === undefined ? undefined : `resonators:${resonatorIndex}:mix`">
+      <label class="control" :data-midi-target="resolvedMidiTargetPrefix ? `${resolvedMidiTargetPrefix}:mix` : undefined">
         <span>Mix</span>
         <output>{{ Math.round(mix * 100) }}%</output>
         <input type="range" min="0" max="1" step="0.01" :value="mix" @input="emit('update:mix', Number(($event.target as HTMLInputElement).value))">

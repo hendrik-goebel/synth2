@@ -477,6 +477,39 @@ const midiParameterTargets = computed<MidiParameterTarget[]>(() => {
       add(id, `${effect.label} ${index + 1} / ${item.label}`, item.min, item.max, update, item.curve)
     }))
   }
+  const addNestedFilterTargets = (group: 'delays' | 'reverbs', index: number) => {
+    const update = group === 'delays' ? updateDelayFilter : updateReverbFilter
+    const label = group === 'delays' ? 'Delay' : 'Reverb'
+    add(`${group}:${index}:filter:cutoff`, `${label} ${index + 1} filter / Cutoff`, 20, 20000, (value) => update(index, { cutoff: Math.round(value) }), 'logarithmic')
+    add(`${group}:${index}:filter:resonance`, `${label} ${index + 1} filter / Resonance`, 0, 3, (value) => update(index, { resonance: value }))
+    add(`${group}:${index}:filter:gain`, `${label} ${index + 1} filter / Gain`, -24, 24, (value) => update(index, { gain: value }))
+  }
+  const addNestedOverdriveTargets = (group: 'delays' | 'reverbs', index: number) => {
+    const update = group === 'delays' ? updateDelayOverdrive : updateReverbOverdrive
+    const label = group === 'delays' ? 'Delay' : 'Reverb'
+    add(`${group}:${index}:overdrive:gain`, `${label} ${index + 1} overdrive / Gain`, 0, 1, (value) => update(index, { gain: value }))
+    add(`${group}:${index}:overdrive:feedback`, `${label} ${index + 1} overdrive / Feedback`, 0, 0.6, (value) => update(index, { feedback: value }))
+  }
+  const addNestedResonatorTargets = (group: 'delays' | 'reverbs', index: number) => {
+    const update = group === 'delays' ? updateDelayResonator : updateReverbResonator
+    const label = group === 'delays' ? 'Delay' : 'Reverb'
+    add(`${group}:${index}:resonator:frequency`, `${label} ${index + 1} resonator / Frequency`, 40, 12000, (value) => update(index, { frequency: Math.round(value) }), 'logarithmic')
+    add(`${group}:${index}:resonator:decay`, `${label} ${index + 1} resonator / Decay`, 0, 5, (value) => update(index, { decay: value }))
+    add(`${group}:${index}:resonator:feedback`, `${label} ${index + 1} resonator / Feedback`, 0, 0.85, (value) => update(index, { feedback: value }))
+    add(`${group}:${index}:resonator:damping`, `${label} ${index + 1} resonator / Damping`, 0, 1, (value) => update(index, { damping: value }))
+    add(`${group}:${index}:resonator:drive`, `${label} ${index + 1} resonator / Drive`, 0, 1, (value) => update(index, { drive: value }))
+    add(`${group}:${index}:resonator:mix`, `${label} ${index + 1} resonator / Mix`, 0, 1, (value) => update(index, { mix: value }))
+  }
+  delays.value.forEach((delay, index) => {
+    if (delay.filter) addNestedFilterTargets('delays', index)
+    if (delay.overdrive) addNestedOverdriveTargets('delays', index)
+    if (delay.resonator) addNestedResonatorTargets('delays', index)
+  })
+  reverbs.value.forEach((reverb, index) => {
+    if (reverb.filter) addNestedFilterTargets('reverbs', index)
+    if (reverb.overdrive) addNestedOverdriveTargets('reverbs', index)
+    if (reverb.resonator) addNestedResonatorTargets('reverbs', index)
+  })
   eqs.value.forEach((eq, eqIndex) => eq.bands.forEach((_, bandIndex) => {
     add(`eqs:${eqIndex}:${bandIndex}:frequency`, `EQ ${eqIndex + 1} / Band ${bandIndex + 1} frequency`, 20, 20000, (value) => updateEqBandSettings(eqIndex, bandIndex, { frequency: Math.round(value) }), 'logarithmic')
     add(`eqs:${eqIndex}:${bandIndex}:q`, `EQ ${eqIndex + 1} / Band ${bandIndex + 1} Q`, 0.1, 18, (value) => updateEqBandSettings(eqIndex, bandIndex, { q: value }))

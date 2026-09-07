@@ -5,6 +5,7 @@ import type { FilterSettings, FilterType } from '../services/synthEngine'
 defineProps<{
   sectionTitle: string
   idPrefix: string
+  midiTargetPrefix?: string
   filter: FilterSettings
   canMoveUp: boolean
   canMoveDown: boolean
@@ -41,17 +42,17 @@ const emit = defineEmits<{
           <option value="bandpass">Band-pass</option>
         </select>
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="midiTargetPrefix ? `${midiTargetPrefix}:cutoff` : undefined">
         <span>Cutoff</span>
         <output>{{ Math.round(filter.cutoff) }} Hz</output>
         <input type="range" min="20" max="20000" step="1" :value="filter.cutoff" @input="emit('update', { cutoff: Number(($event.target as HTMLInputElement).value) })">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="midiTargetPrefix ? `${midiTargetPrefix}:resonance` : undefined">
         <span>Resonance</span>
         <output>{{ filter.resonance }} Q</output>
         <input type="range" min="0" max="3" step="0.1" :value="filter.resonance" @input="emit('update', { resonance: Number(($event.target as HTMLInputElement).value) })">
       </label>
-      <label v-if="filter.type === 'bandpass'" class="control">
+      <label v-if="filter.type === 'bandpass'" class="control" :data-midi-target="midiTargetPrefix ? `${midiTargetPrefix}:gain` : undefined">
         <span>Gain</span>
         <output>{{ filter.gain.toFixed(1) }} dB</output>
         <input type="range" min="-24" max="24" step="0.1" :value="filter.gain" @input="emit('update', { gain: Number(($event.target as HTMLInputElement).value) })">

@@ -15,7 +15,8 @@ continues to re-export its established settings factories and types.
 Use a Web MIDI-compatible browser in a secure context, click **Connect**, choose
 your MIDI input, then click a learnable synth control (or select a parameter under **CC
 parameter**) and click **Learn CC**. Clicking a learnable control selects its
-matching CC parameter automatically. Move a knob or fader on the controller to bind it; subsequent
+matching CC parameter automatically, including filter, overdrive, and resonator
+modules inside delays and reverbs. Move a knob or fader on the controller to bind it; subsequent
 movements update that parameter on the learned MIDI channel. When available,
 the Akai MIDImix is selected automatically; otherwise choose it in the input
 selector. The MIDImix works with its knobs and faders as standard MIDI CC

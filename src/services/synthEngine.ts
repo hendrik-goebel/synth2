@@ -288,7 +288,7 @@ export class SynthEngine {
     if (!filter) throw new RangeError(`Unknown filter index: ${index}`)
     filter.settings = { ...filter.settings, ...changes }
     applyFilterSettings(this.audioContext, filter)
-    this.routeOutput()
+    if (changes.bypassed !== undefined) this.routeOutput()
   }
 
   addCompressor(settings: CompressorSettings = createCompressorSettings()): void {

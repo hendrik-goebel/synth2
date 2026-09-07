@@ -7,6 +7,7 @@ const MAX_GAIN = 1
 const props = defineProps<{
   sectionTitle: string
   idPrefix: string
+  midiTargetPrefix?: string
   bypassed: boolean
   gain: number
   feedback: number
@@ -52,12 +53,12 @@ function updateGain(event: Event) {
     @remove="emit('remove')"
   >
     <div class="modulation-controls">
-      <label class="control">
+      <label class="control" :data-midi-target="midiTargetPrefix ? `${midiTargetPrefix}:gain` : undefined">
         <span>Gain</span>
         <output>{{ Math.round(gain * 100) }}%</output>
         <input type="range" min="0" max="1001" step="1" :value="gainSliderValue(gain)" @input="updateGain">
       </label>
-      <label class="control">
+      <label class="control" :data-midi-target="midiTargetPrefix ? `${midiTargetPrefix}:feedback` : undefined">
         <span>Feedback</span>
         <output>{{ Math.round(feedback * 100) }}%</output>
         <input type="range" min="0" max="0.6" step="0.01" :value="feedback" @input="emit('update:feedback', Number(($event.target as HTMLInputElement).value))">
