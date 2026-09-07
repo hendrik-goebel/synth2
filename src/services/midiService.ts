@@ -31,6 +31,9 @@ type MidiServiceOptions = {
 
 const preferredInputName = /midi[\s_-]*mix/i
 const preferredNoteInputName = /(?:iac|inter[-\s]?application)/i
+const clockIntervalsForInitialTempo = 12
+const clockIntervalsForTempoCorrection = 24
+const clockTempoCorrectionFactor = 0.02
 
 export class MidiService {
   private readonly onNoteOn: (event: MidiNoteEvent) => void
@@ -44,6 +47,7 @@ export class MidiService {
   private lastClockTimestamp: number | null = null
   private readonly clockIntervals: number[] = []
   private clockTicksSinceTempoUpdate = 0
+  private lockedClockTempo: number | null = null
 
   constructor(options: MidiServiceOptions) {
     this.onNoteOn = options.onNoteOn
@@ -212,12 +216,23 @@ export class MidiService {
       // disconnected transport. Valid tempos for this UI are 30–300 BPM.
       if (interval >= 8 && interval <= 84) {
         this.clockIntervals.push(interval)
-        if (this.clockIntervals.length > 24) this.clockIntervals.shift()
+        if (this.clockIntervals.length > clockIntervalsForTempoCorrection) this.clockIntervals.shift()
         this.clockTicksSinceTempoUpdate += 1
 
-        if (this.clockIntervals.length >= 12 && this.clockTicksSinceTempoUpdate >= 6) {
+        if (this.lockedClockTempo === null && this.clockIntervals.length >= clockIntervalsForInitialTempo) {
           const averageInterval = this.clockIntervals.reduce((sum, value) => sum + value, 0) / this.clockIntervals.length
-          this.onClockTempo(60000 / (averageInterval * 24))
+          this.lockedClockTempo = 60000 / (averageInterval * 24)
+          this.onClockTempo(this.lockedClockTempo)
+          this.clockTicksSinceTempoUpdate = 0
+        } else if (
+          this.lockedClockTempo !== null
+          && this.clockIntervals.length >= clockIntervalsForTempoCorrection
+          && this.clockTicksSinceTempoUpdate >= clockIntervalsForTempoCorrection
+        ) {
+          const averageInterval = this.clockIntervals.reduce((sum, value) => sum + value, 0) / this.clockIntervals.length
+          const measuredTempo = 60000 / (averageInterval * 24)
+          this.lockedClockTempo += (measuredTempo - this.lockedClockTempo) * clockTempoCorrectionFactor
+          this.onClockTempo(this.lockedClockTempo)
           this.clockTicksSinceTempoUpdate = 0
         }
       } else {
@@ -232,6 +247,7 @@ export class MidiService {
     this.lastClockTimestamp = null
     this.clockIntervals.length = 0
     this.clockTicksSinceTempoUpdate = 0
+    this.lockedClockTempo = null
   }
 
   private publishState(statusText: string): void {
