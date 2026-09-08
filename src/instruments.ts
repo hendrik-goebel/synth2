@@ -46,5 +46,9 @@ export type InstrumentPreset = {
   isAmplitudeModulationBypassed: boolean
 }
 
+// Envelope times in instruments.json follow the engine's attack/decay/hold/release
+// limits (300/150/150/450 ms). Oscillator-level decay delays the attack; keep it
+// at zero for responsive patches. Shared effect envelopes restart for every note,
+// so the defaults bypass them except for the intentional pluck cutoff transient.
 export const instrumentPresets = instrumentConfigs as InstrumentPreset[]
 export const instrumentCategories = [...new Set(instrumentPresets.map(({ category }) => category))]
