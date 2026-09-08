@@ -1,6 +1,6 @@
 import {
   applyChorusSettings, applyDelaySettings, applyDynamicsSettings, applyEqBandSettings, applyFilterSettings, applyFlangerSettings, applyOutputSettings, applyOverdriveSettings, applyResonatorSettings, applyReverbSettings, applyTremoloSettings,
-  createAmplitudeModulation, createChorusModule, createChorusSettings, createCompressorSettings, createDelayModule, createDelaySettings, createDynamicsModule, createEnvelopeSettings, createEqBandSettings, createEqModule, createFilterModule, createFilterSettings, createFlangerModule, createFlangerSettings, createFrequencyModulator, createGateSettings, createHallImpulse, createLimiterSettings, createLfoModule, createNoiseSettings, createNoiseSource, createOscillatorSettings, createOscillatorSource, createOutputSettings, createOverdriveModule, createOverdriveSettings, createResonatorModule, createResonatorSettings, createReverbModule, createReverbSettings, createSingleBandEqSettings, createTremoloModule, createTremoloSettings,
+  createAmplitudeModulation, createChorusModule, createChorusSettings, createCompressorSettings, createDelayModule, createDelaySettings, createDynamicsModule, createEnvelopeSettings, createEqBandSettings, createEqModule, createFilterModule, createFilterSettings, createFlangerModule, createFlangerSettings, createFrequencyModulator, createGateSettings, createLimiterSettings, createLfoModule, createNoiseSettings, createNoiseSource, createOscillatorSettings, createOscillatorSource, createOutputSettings, createOverdriveModule, createOverdriveSettings, createResonatorModule, createResonatorSettings, createReverbModule, createReverbSettings, createSingleBandEqSettings, createTremoloModule, createTremoloSettings, scheduleReverbImpulse,
   destroyAmplitudeModulation, destroyChorusModule, destroyDelayModule, destroyDynamicsModule, destroyEqModule, destroyFilterModule, destroyFlangerModule, destroyLfoModule, destroyOverdriveModule, destroyResonatorModule, destroyReverbModule, destroyTremoloModule,
   layerDetune, lfoDepth, routeChorusModule, routeDelayModule, routeDynamicsModule, routeEqModule, routeFilterModule, routeFlangerModule, routeOverdriveModule, routeResonatorModule, routeReverbModule, routeTremoloModule, setWaveform,
   type AmplitudeModulationSettings, type ChorusModule, type ChorusSettings, type CompressorSettings, type DelayModule, type DelaySettings, type DynamicsModule, type DynamicsSettings, type DynamicsSettingsChanges, type EffectGroup, type EnvelopeCurve, type EnvelopeDestination, type EnvelopeSettings, type EqBandSettings, type EqEnvelopeSettings, type EqLfoSettings, type EqModulationTarget, type EqModule, type EqParameter, type EqSettings, type FilterModule, type FilterSettings, type FlangerModule, type FlangerSettings, type FlatAudioModule, type GateSettings, type LfoModule, type LfoSettings, type LfoTarget, type LimiterSettings, type NoiseSettings, type OscillatorSettings, type OutputSettings, type OverdriveModule, type OverdriveSettings, type ResonatorModule, type ResonatorSettings, type ReverbModule, type ReverbSettings, type TremoloModule, type TremoloSettings,
@@ -287,7 +287,7 @@ export class SynthEngine {
     const filter = this.filters[index]
     if (!filter) throw new RangeError(`Unknown filter index: ${index}`)
     filter.settings = { ...filter.settings, ...changes }
-    applyFilterSettings(this.audioContext, filter)
+    applyFilterSettings(this.audioContext, filter, changes)
     if (changes.bypassed !== undefined) this.routeOutput()
   }
 
@@ -376,7 +376,7 @@ export class SynthEngine {
     const overdrive = this.overdrives[index]
     if (!overdrive) throw new RangeError(`Unknown overdrive index: ${index}`)
     overdrive.settings = { ...overdrive.settings, ...changes }
-    applyOverdriveSettings(this.audioContext, overdrive)
+    applyOverdriveSettings(this.audioContext, overdrive, changes)
   }
 
   removeOverdrive(index: number): void {
@@ -659,7 +659,8 @@ export class SynthEngine {
     const reverb = this.reverbs[index]
     if (!reverb) throw new RangeError(`Unknown reverb index: ${index}`)
     reverb.settings = { ...reverb.settings, ...changes }
-    applyReverbSettings(this.audioContext, reverb, changes.hallType !== undefined || changes.decay !== undefined)
+    applyReverbSettings(this.audioContext, reverb, false)
+    if (changes.hallType !== undefined || changes.decay !== undefined) scheduleReverbImpulse(this.audioContext, reverb)
     if (Object.hasOwn(changes, 'filter') || Object.hasOwn(changes, 'overdrive') || Object.hasOwn(changes, 'resonator') || Object.hasOwn(changes, 'moduleOrder')) this.routeOutput()
   }
 
@@ -923,7 +924,10 @@ export class SynthEngine {
       const reverbWidthEnvelope = this.activeEnvelopeSettings('reverbWidth', { type: 'reverb', index })
       if (reverbDecayEnvelope) {
         const peakGain = this.envelopePeakGain(velocity, reverbDecayEnvelope.velocity)
-        reverb.convolver.buffer = createHallImpulse(this.audioContext, { ...reverb.settings, decay: 0.6 + (reverb.settings.decay - 0.6) * peakGain })
+        scheduleReverbImpulse(this.audioContext, reverb, {
+          ...reverb.settings,
+          decay: 0.6 + (reverb.settings.decay - 0.6) * peakGain,
+        })
       }
       if (reverbMixEnvelope) this.applyPositiveEnvelopeOnNoteOn(reverb.wet.gain, now, reverbMixEnvelope, 0, reverb.settings.mix * this.envelopePeakGain(velocity, reverbMixEnvelope.velocity))
       if (reverbPreDelayEnvelope) this.applyPositiveEnvelopeOnNoteOn(reverb.preDelay.delayTime, now, reverbPreDelayEnvelope, 0, reverb.settings.preDelay * this.envelopePeakGain(velocity, reverbPreDelayEnvelope.velocity))

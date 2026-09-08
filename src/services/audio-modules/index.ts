@@ -9,7 +9,7 @@ export { createChorusSettings, createChorusModule, applyChorusSettings, routeCho
 export { createFlangerSettings, createFlangerModule, applyFlangerSettings, routeFlangerModule, destroyFlangerModule, type FlangerModule } from './flanger'
 export { createTremoloSettings, createTremoloModule, applyTremoloSettings, routeTremoloModule, destroyTremoloModule, type TremoloModule } from './tremolo'
 export { createResonatorSettings, createResonatorModule, applyResonatorSettings, routeResonatorModule, destroyResonatorModule, type ResonatorModule } from './resonator'
-export { createReverbSettings, createReverbModule, applyReverbSettings, routeReverbModule, destroyReverbModule, createHallImpulse, type ReverbModule } from './reverb'
+export { createReverbSettings, createReverbModule, applyReverbSettings, scheduleReverbImpulse, routeReverbModule, destroyReverbModule, createHallImpulse, type ReverbModule } from './reverb'
 export { createCompressorSettings, createGateSettings, createLimiterSettings, createDynamicsModule, applyDynamicsSettings, routeDynamicsModule, destroyDynamicsModule, type DynamicsModule } from './dynamics'
 export { createEqBandSettings, createSingleBandEqSettings, createMultibandEqSettings, createEqModule, applyEqBandSettings, routeEqModule, destroyEqModule, type EqModule } from './eq'
 export { createLfoModule, destroyLfoModule, lfoDepth, type LfoModule } from './lfo'

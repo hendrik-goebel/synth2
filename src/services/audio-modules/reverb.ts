@@ -2,11 +2,15 @@ import type { HallType, ReverbModuleKind, ReverbSettings } from './types'
 import { createWarmOverdriveCurve } from './overdrive'
 import { applyResonatorSettings, createResonatorModule, createResonatorSettings, destroyResonatorModule, routeResonatorModule, type ResonatorModule } from './resonator'
 
+const impulseCache = new Map<string, AudioBuffer>()
+const IMPULSE_UPDATE_DELAY_MS = 100
+
 export type ReverbModule = {
   input: GainNode; preDelay: DelayNode; convolver: ConvolverNode; tone: BiquadFilterNode
   splitter: ChannelSplitterNode; left: GainNode; right: GainNode; leftCross: GainNode; rightCross: GainNode
   merger: ChannelMergerNode; filter: BiquadFilterNode; overdriveGain: GainNode; overdrive: WaveShaperNode
   overdriveFeedbackDelay: DelayNode; overdriveFeedback: GainNode; resonator: ResonatorModule; wet: GainNode; dry: GainNode; output: GainNode; settings: ReverbSettings
+  impulseUpdateTimer?: ReturnType<typeof setTimeout>
 }
 
 export function createReverbSettings(): ReverbSettings {
@@ -64,6 +68,14 @@ export function applyReverbSettings(audioContext: AudioContext, reverb: ReverbMo
   if (replaceImpulse) convolver.buffer = createHallImpulse(audioContext, settings)
 }
 
+export function scheduleReverbImpulse(audioContext: AudioContext, reverb: ReverbModule, settings: ReverbSettings = reverb.settings): void {
+  if (reverb.impulseUpdateTimer !== undefined) clearTimeout(reverb.impulseUpdateTimer)
+  reverb.impulseUpdateTimer = setTimeout(() => {
+    reverb.convolver.buffer = createHallImpulse(audioContext, settings)
+    reverb.impulseUpdateTimer = undefined
+  }, IMPULSE_UPDATE_DELAY_MS)
+}
+
 export function routeReverbModule(input: AudioNode, reverb: ReverbModule): AudioNode {
   reverb.output.disconnect()
   reverb.merger.disconnect()
@@ -100,6 +112,7 @@ export function routeReverbModule(input: AudioNode, reverb: ReverbModule): Audio
 }
 
 export function destroyReverbModule(module: ReverbModule): void {
+  if (module.impulseUpdateTimer !== undefined) clearTimeout(module.impulseUpdateTimer)
   module.input.disconnect(); module.preDelay.disconnect(); module.convolver.disconnect(); module.tone.disconnect(); module.splitter.disconnect()
   module.left.disconnect(); module.right.disconnect(); module.leftCross.disconnect(); module.rightCross.disconnect(); module.merger.disconnect()
   module.filter.disconnect(); module.overdriveGain.disconnect(); module.overdrive.disconnect(); module.overdriveFeedbackDelay.disconnect(); module.overdriveFeedback.disconnect()
@@ -108,6 +121,9 @@ export function destroyReverbModule(module: ReverbModule): void {
 }
 
 export function createHallImpulse(audioContext: AudioContext, settings: ReverbSettings): AudioBuffer {
+  const cacheKey = `${audioContext.sampleRate}:${settings.hallType}:${Math.round(settings.decay * 100)}`
+  const cached = impulseCache.get(cacheKey)
+  if (cached) return cached
   const hallTypes: Record<HallType, { duration: number; density: number; reflections: number; reflectionWindow: number }> = {
     'small-hall': { duration: 0.72, density: 0.8, reflections: 56, reflectionWindow: 0.055 },
     'wooden-hall': { duration: 0.88, density: 0.9, reflections: 72, reflectionWindow: 0.075 },
@@ -145,5 +161,7 @@ export function createHallImpulse(audioContext: AudioContext, settings: ReverbSe
       channels[0][diffuseFrame] += diffuseGain * Math.sqrt(1 - pan); channels[1][diffuseFrame] += diffuseGain * Math.sqrt(pan)
     }
   }
+  impulseCache.set(cacheKey, impulse)
+  if (impulseCache.size > 64) impulseCache.delete(impulseCache.keys().next().value!)
   return impulse
 }

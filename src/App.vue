@@ -197,6 +197,8 @@ let firstInteractionHandled = false
 let midiConnectionStarted = false
 let audioEnabled = false
 let midiControllerActivityTimeout: ReturnType<typeof setTimeout> | null = null
+const pendingCustomSliderValues = new Map<string, number>()
+let customSliderFrame: number | null = null
 
 function saveActiveChannel() {
   const channel = selectedChannel.value === 0 ? masterChannel : channels.value[selectedChannel.value - 1]
@@ -550,6 +552,9 @@ const midiParameterTargets = computed<MidiParameterTarget[]>(() => {
 const midiParameterTargetLabels = computed(() => Object.fromEntries(
   midiParameterTargets.value.map((target) => [target.id, target.label]),
 ))
+const midiParameterTargetMap = computed(() => new Map(
+  midiParameterTargets.value.map((target) => [target.id, target]),
+))
 
 watch(
   () => midiParameterTargets.value.filter((target) => !target.id.startsWith('custom-slider:')).map((target) => target.id).join('|'),
@@ -584,12 +589,22 @@ function updateCustomSlider(id: string, value: number) {
   if (!slider) return
   const normalizedValue = Math.min(Math.max(value, -1), 1)
   customSliders.value = customSliders.value.map((item) => item.id === id ? { ...item, value: normalizedValue } : item)
-  applyCustomSlider({ ...slider, value: normalizedValue })
+  pendingCustomSliderValues.set(id, normalizedValue)
+  if (customSliderFrame === null) customSliderFrame = requestAnimationFrame(flushCustomSliderUpdates)
+}
+
+function flushCustomSliderUpdates() {
+  customSliderFrame = null
+  pendingCustomSliderValues.forEach((value, id) => {
+    const slider = customSliders.value.find((item) => item.id === id)
+    if (slider) applyCustomSlider({ ...slider, value })
+  })
+  pendingCustomSliderValues.clear()
 }
 
 function applyCustomSlider(slider: CustomSlider) {
   slider.assignments.forEach((assignment) => {
-    const target = midiParameterTargets.value.find((item) => item.id === assignment.targetId)
+    const target = midiParameterTargetMap.value.get(assignment.targetId)
     if (!target) return
     const baselinePosition = midiParameterPosition(target, assignment.baseline)
     const movement = slider.value - assignment.anchor
@@ -642,7 +657,7 @@ function currentMidiParameterValue(targetId: string): number | null {
 
 function addCustomSliderAssignment(sliderId: string, targetId: string) {
   const slider = customSliders.value.find((item) => item.id === sliderId)
-  const target = midiParameterTargets.value.find((item) => item.id === targetId)
+  const target = midiParameterTargetMap.value.get(targetId)
   if (!slider || !target || slider.assignments.some((assignment) => assignment.targetId === targetId)) return
   const baseline = currentMidiParameterValue(targetId)
   if (baseline === null) return
@@ -669,6 +684,7 @@ function toggleCustomSliderAssignmentReverse(sliderId: string, targetId: string)
 }
 
 function removeCustomSlider(id: string) {
+  pendingCustomSliderValues.delete(id)
   customSliders.value = customSliders.value.filter((slider) => slider.id !== id)
   midiMappings.value = midiMappings.value.filter((mapping) => (
     mapping.targetId !== `custom-slider:${id}` || mapping.targetChannel !== selectedChannel.value
@@ -698,7 +714,7 @@ function handleMidiControlChange({ channel, controller, value }: MidiControlChan
     return
   }
   midiMappings.value.filter((mapping) => mapping.channel === channel && mapping.controller === controller).forEach((mapping) => {
-    const target = midiParameterTargets.value.find((item) => item.id === mapping.targetId)
+    const target = midiParameterTargetMap.value.get(mapping.targetId)
     if (!target) return
 
     const mappedValue = midiParameterValue(target, mapping.reversed ? 127 - value : value)
@@ -2774,6 +2790,8 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown, true)
   if (midiControllerActivityTimeout !== null) clearTimeout(midiControllerActivityTimeout)
+  if (customSliderFrame !== null) cancelAnimationFrame(customSliderFrame)
+  pendingCustomSliderValues.clear()
   midiService.destroy()
   channels.value.forEach(({ synth }) => synth.destroy())
   masterSynth.destroy()

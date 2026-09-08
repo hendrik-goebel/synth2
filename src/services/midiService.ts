@@ -46,6 +46,7 @@ export class MidiService {
   private selectedNoteInputId: string | null = null
   private lastClockTimestamp: number | null = null
   private readonly clockIntervals: number[] = []
+  private clockIntervalTotal = 0
   private clockTicksSinceTempoUpdate = 0
   private lockedClockTempo: number | null = null
 
@@ -216,11 +217,14 @@ export class MidiService {
       // disconnected transport. Valid tempos for this UI are 30–300 BPM.
       if (interval >= 8 && interval <= 84) {
         this.clockIntervals.push(interval)
-        if (this.clockIntervals.length > clockIntervalsForTempoCorrection) this.clockIntervals.shift()
+        this.clockIntervalTotal += interval
+        if (this.clockIntervals.length > clockIntervalsForTempoCorrection) {
+          this.clockIntervalTotal -= this.clockIntervals.shift()!
+        }
         this.clockTicksSinceTempoUpdate += 1
 
         if (this.lockedClockTempo === null && this.clockIntervals.length >= clockIntervalsForInitialTempo) {
-          const averageInterval = this.clockIntervals.reduce((sum, value) => sum + value, 0) / this.clockIntervals.length
+          const averageInterval = this.clockIntervalTotal / this.clockIntervals.length
           this.lockedClockTempo = 60000 / (averageInterval * 24)
           this.onClockTempo(this.lockedClockTempo)
           this.clockTicksSinceTempoUpdate = 0
@@ -229,7 +233,7 @@ export class MidiService {
           && this.clockIntervals.length >= clockIntervalsForTempoCorrection
           && this.clockTicksSinceTempoUpdate >= clockIntervalsForTempoCorrection
         ) {
-          const averageInterval = this.clockIntervals.reduce((sum, value) => sum + value, 0) / this.clockIntervals.length
+          const averageInterval = this.clockIntervalTotal / this.clockIntervals.length
           const measuredTempo = 60000 / (averageInterval * 24)
           this.lockedClockTempo += (measuredTempo - this.lockedClockTempo) * clockTempoCorrectionFactor
           this.onClockTempo(this.lockedClockTempo)
@@ -246,6 +250,7 @@ export class MidiService {
   private resetClockTracking(): void {
     this.lastClockTimestamp = null
     this.clockIntervals.length = 0
+    this.clockIntervalTotal = 0
     this.clockTicksSinceTempoUpdate = 0
     this.lockedClockTempo = null
   }

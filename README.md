@@ -93,6 +93,26 @@ Create a production build with:
 npm run build
 ```
 
+## Real-time performance checks
+
+Audio parameter changes are smoothed and deduplicated before they are scheduled,
+and custom-slider updates are coalesced to one application per animation frame.
+Reverb impulse updates are cached and deferred for 100 ms after the last decay
+or hall-type change so a live controller never builds large buffers on its hot
+path. The most recent requested reverb setting is then applied.
+
+Before releasing audio changes, test in a supported Chromium-based browser with
+the browser performance recorder enabled:
+
+1. Hold a multi-note MIDI chord with the maximum intended oscillator, modulation,
+   and effect configuration active.
+2. Move a hardware CC or custom slider continuously while MIDI clock is running.
+3. Confirm no audible dropouts, that note-on/off remains immediate, and that the
+   performance trace has no sustained allocation or long-task growth.
+
+Web Audio scheduling is browser and device dependent, so this is a repeatable
+stability check rather than a universal real-time guarantee.
+
 If installation fails with a missing Rolldown native binding, remove the local
 `node_modules` directory and run `npm ci` again using a supported Node version.
 test

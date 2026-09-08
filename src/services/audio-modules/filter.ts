@@ -1,4 +1,5 @@
 import type { FilterSettings } from './types'
+import { hasChanged, setSmoothedValue } from './audio-control'
 
 const PARAMETER_SMOOTHING_SECONDS = 0.04
 const MIN_CUTOFF_HZ = 20
@@ -32,17 +33,12 @@ function qForFilter(settings: FilterSettings): number {
   return settings.type === 'bandpass' ? Math.max(MIN_BANDPASS_Q, q) : q
 }
 
-function smoothParameter(parameter: AudioParam, value: number, now: number): void {
-  parameter.cancelAndHoldAtTime(now)
-  parameter.setTargetAtTime(value, now, PARAMETER_SMOOTHING_SECONDS)
-}
-
-export function applyFilterSettings(audioContext: AudioContext, filter: FilterModule): void {
+export function applyFilterSettings(audioContext: AudioContext, filter: FilterModule, changes?: Partial<FilterSettings>): void {
   const now = audioContext.currentTime
-  filter.node.type = filter.settings.type
-  smoothParameter(filter.node.frequency, cutoffForContext(audioContext, filter.settings.cutoff), now)
-  smoothParameter(filter.node.Q, qForFilter(filter.settings), now)
-  smoothParameter(filter.gainNode.gain, 10 ** (filter.settings.gain / 20), now)
+  if (hasChanged(changes, 'type')) filter.node.type = filter.settings.type
+  if (hasChanged(changes, 'cutoff')) setSmoothedValue(filter.node.frequency, cutoffForContext(audioContext, filter.settings.cutoff), now, PARAMETER_SMOOTHING_SECONDS)
+  if (hasChanged(changes, 'resonance') || hasChanged(changes, 'type')) setSmoothedValue(filter.node.Q, qForFilter(filter.settings), now, PARAMETER_SMOOTHING_SECONDS)
+  if (hasChanged(changes, 'gain')) setSmoothedValue(filter.gainNode.gain, 10 ** (filter.settings.gain / 20), now, PARAMETER_SMOOTHING_SECONDS)
 }
 
 export function routeFilterModule(input: AudioNode, filter: FilterModule): AudioNode {

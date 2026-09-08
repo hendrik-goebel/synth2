@@ -1,4 +1,7 @@
 import type { OverdriveSettings } from './types'
+import { hasChanged, setSmoothedValue } from './audio-control'
+
+const curveCache = new Map<number, Float32Array<ArrayBuffer>>()
 
 export type OverdriveModule = {
   input: GainNode; dcBlocker: BiquadFilterNode; driveGain: GainNode; shaper: WaveShaperNode
@@ -11,12 +14,17 @@ export function createOverdriveSettings(): OverdriveSettings {
 }
 
 export function createWarmOverdriveCurve(drive: number): Float32Array<ArrayBuffer> {
+  const key = Math.round(drive * 1000)
+  const cached = curveCache.get(key)
+  if (cached) return cached
   const curve = new Float32Array(2048)
-  const gain = 1 + drive * 5
+  const gain = 1 + (key / 1000) * 5
   for (let index = 0; index < curve.length; index += 1) {
     const input = (index * 2) / (curve.length - 1) - 1
     curve[index] = Math.tanh(input * gain) / Math.tanh(gain)
   }
+  curveCache.set(key, curve)
+  if (curveCache.size > 256) curveCache.delete(curveCache.keys().next().value!)
   return curve
 }
 
@@ -33,26 +41,34 @@ export function createOverdriveModule(audioContext: AudioContext, settings: Over
   return module
 }
 
-export function applyOverdriveSettings(audioContext: AudioContext, overdrive: OverdriveModule): void {
+export function applyOverdriveSettings(audioContext: AudioContext, overdrive: OverdriveModule, changes?: Partial<OverdriveSettings>): void {
   const { dcBlocker, driveGain, shaper, tone, feedbackTone, feedbackDelay, feedbackGain, wet, dry, output, settings } = overdrive
   const now = audioContext.currentTime
-  dcBlocker.type = 'highpass'
-  dcBlocker.frequency.setTargetAtTime(35, now, 0.02)
-  dcBlocker.Q.setTargetAtTime(0.7, now, 0.02)
-  driveGain.gain.setTargetAtTime(1 + settings.drive * 18, now, 0.02)
-  tone.type = 'lowpass'
-  tone.frequency.setTargetAtTime(1800 + settings.tone * 10200, now, 0.03)
-  tone.Q.setTargetAtTime(0.6, now, 0.03)
-  feedbackTone.type = 'lowpass'
-  feedbackTone.frequency.setTargetAtTime(900 + settings.tone * 4100, now, 0.03)
-  feedbackTone.Q.setTargetAtTime(0.7, now, 0.03)
-  feedbackDelay.delayTime.setTargetAtTime(0.012, now, 0.02)
-  feedbackGain.gain.setTargetAtTime(Math.min(0.6, settings.feedback), now, 0.03)
-  wet.gain.setTargetAtTime(settings.mix, now, 0.02)
-  dry.gain.setTargetAtTime(1 - settings.mix, now, 0.02)
-  output.gain.setTargetAtTime(1 / (1 + settings.drive * 0.8), now, 0.02)
-  shaper.oversample = '4x'
-  shaper.curve = createWarmOverdriveCurve(settings.drive)
+  if (changes === undefined) {
+    dcBlocker.type = 'highpass'
+    setSmoothedValue(dcBlocker.frequency, 35, now, 0.02)
+    setSmoothedValue(dcBlocker.Q, 0.7, now, 0.02)
+    tone.type = 'lowpass'
+    setSmoothedValue(tone.Q, 0.6, now, 0.03)
+    feedbackTone.type = 'lowpass'
+    setSmoothedValue(feedbackTone.Q, 0.7, now, 0.03)
+    setSmoothedValue(feedbackDelay.delayTime, 0.012, now, 0.02)
+    shaper.oversample = '4x'
+  }
+  if (hasChanged(changes, 'drive')) {
+    setSmoothedValue(driveGain.gain, 1 + settings.drive * 18, now, 0.02)
+    setSmoothedValue(output.gain, 1 / (1 + settings.drive * 0.8), now, 0.02)
+    shaper.curve = createWarmOverdriveCurve(settings.drive)
+  }
+  if (hasChanged(changes, 'tone')) {
+    setSmoothedValue(tone.frequency, 1800 + settings.tone * 10200, now, 0.03)
+    setSmoothedValue(feedbackTone.frequency, 900 + settings.tone * 4100, now, 0.03)
+  }
+  if (hasChanged(changes, 'feedback')) setSmoothedValue(feedbackGain.gain, Math.min(0.6, settings.feedback), now, 0.03)
+  if (hasChanged(changes, 'mix')) {
+    setSmoothedValue(wet.gain, settings.mix, now, 0.02)
+    setSmoothedValue(dry.gain, 1 - settings.mix, now, 0.02)
+  }
 }
 
 export function routeOverdriveModule(input: AudioNode, overdrive: OverdriveModule): AudioNode {
