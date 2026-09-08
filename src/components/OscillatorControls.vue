@@ -83,7 +83,7 @@ const emit = defineEmits<{
       </div>
     </label>
 
-    <label class="control">
+    <label class="control" :data-midi-target="`oscillator:${oscillatorIndex}:glide`">
       <span>Glide</span>
       <output>{{ glide }} ms</output>
       <input
@@ -109,7 +109,7 @@ const emit = defineEmits<{
       >
     </label>
 
-    <label class="control">
+    <label class="control" :data-midi-target="`oscillator:${oscillatorIndex}:unisonDetune`">
       <span>Unison</span>
       <output>{{ unisonDetune }}</output>
       <input type="range" min="0" max="100" step="1" :value="unisonDetune" @input="emit('update:unisonDetune', Number(($event.target as HTMLInputElement).value))">

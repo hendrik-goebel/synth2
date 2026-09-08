@@ -444,7 +444,9 @@ const midiParameterTargets = computed<MidiParameterTarget[]>(() => {
   add('output:pan', 'Output / Pan', -1, 1, (value) => updateOutputSettings({ pan: value }))
   oscillators.value.forEach((_, index) => {
     add(`oscillator:${index}:detune`, `Oscillator ${index + 1} / Detune`, -1200, 1200, (value) => updateOscillatorSettings(index, { detune: Math.round(value) }))
+    add(`oscillator:${index}:glide`, `Oscillator ${index + 1} / Glide`, 0, 2000, (value) => updateOscillatorSettings(index, { glide: Math.round(value) }))
     add(`oscillator:${index}:level`, `Oscillator ${index + 1} / Level`, 0, 1, (value) => updateOscillatorSettings(index, { level: value }))
+    add(`oscillator:${index}:unisonDetune`, `Oscillator ${index + 1} / Unison`, 0, 100, (value) => updateOscillatorSettings(index, { unisonDetune: Math.round(value) }))
     add(`oscillator:${index}:stereoSpread`, `Oscillator ${index + 1} / Stereo spread`, -1, 1, (value) => updateOscillatorSettings(index, { stereoSpread: value }))
     add(`oscillator:${index}:fmAmount`, `Oscillator ${index + 1} / FM amount`, 0, 1, (value) => updateOscillatorSettings(index, { fmAmount: value }))
   })
