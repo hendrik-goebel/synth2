@@ -21,29 +21,50 @@ type MidiState = {
   statusText: string
 }
 
+export const broadcastChannelInputId = 'broadcastchannel'
+export const supportsBroadcastChannel = typeof BroadcastChannel !== 'undefined'
+
 type MidiServiceOptions = {
   onNoteOn: (event: MidiNoteEvent) => void
   onNoteOff: (event: MidiNoteEvent) => void
   onControlChange: (event: MidiControlChangeEvent) => void
   onClockTempo: (bpm: number) => void
+  onClockStop: () => void
   onStateChange: (state: MidiState) => void
 }
 
 const preferredInputName = /midi[\s_-]*mix/i
 const preferredNoteInputName = /(?:iac|inter[-\s]?application)/i
+const clockBroadcastChannelName = 'arpeggiator-midi-clock-v1'
+const notesBroadcastChannelName = 'arpeggiator-midi-events-v1'
 const clockIntervalsForInitialTempo = 12
 const clockIntervalsForTempoCorrection = 24
 const clockTempoCorrectionFactor = 0.02
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function isMidiClockStatus(value: unknown): value is 0xf8 | 0xfa | 0xfb | 0xfc {
+  return value === 0xf8 || value === 0xfa || value === 0xfb || value === 0xfc
+}
+
+function isMidiByteArray(value: unknown): value is number[] {
+  return Array.isArray(value) && value.every((byte) => Number.isInteger(byte) && byte >= 0 && byte <= 255)
+}
 
 export class MidiService {
   private readonly onNoteOn: (event: MidiNoteEvent) => void
   private readonly onNoteOff: (event: MidiNoteEvent) => void
   private readonly onControlChange: (event: MidiControlChangeEvent) => void
   private readonly onClockTempo: (bpm: number) => void
+  private readonly onClockStop: () => void
   private readonly onStateChange: (state: MidiState) => void
   private midiAccess: MIDIAccess | null = null
-  private selectedInputId: string | null = null
-  private selectedNoteInputId: string | null = null
+  private clockBroadcastChannel: BroadcastChannel | null = null
+  private notesBroadcastChannel: BroadcastChannel | null = null
+  private selectedInputId: string | null = supportsBroadcastChannel ? broadcastChannelInputId : null
+  private selectedNoteInputId: string | null = supportsBroadcastChannel ? broadcastChannelInputId : null
   private lastClockTimestamp: number | null = null
   private readonly clockIntervals: number[] = []
   private clockIntervalTotal = 0
@@ -55,6 +76,7 @@ export class MidiService {
     this.onNoteOff = options.onNoteOff
     this.onControlChange = options.onControlChange
     this.onClockTempo = options.onClockTempo
+    this.onClockStop = options.onClockStop
     this.onStateChange = options.onStateChange
   }
 
@@ -109,50 +131,37 @@ export class MidiService {
       }
       this.midiAccess.onstatechange = null
     }
+    this.closeBroadcastChannels()
   }
 
   private refreshInputSubscription(): void {
-    if (!this.midiAccess) {
-      return
-    }
-
-    for (const input of this.midiAccess.inputs.values()) {
-      input.onmidimessage = null
-    }
-
     const availableInputs = this.getInputs()
-    if (availableInputs.length === 0) {
-      this.selectedInputId = null
-      this.selectedNoteInputId = null
-      return
+    if (this.midiAccess) {
+      for (const input of this.midiAccess.inputs.values()) {
+        input.onmidimessage = null
+      }
+
+      if (availableInputs.length > 0) {
+        if (this.selectedInputId !== broadcastChannelInputId && !availableInputs.some((input) => input.id === this.selectedInputId)) {
+          const preferredInput = availableInputs.find((input) => preferredInputName.test(input.name))
+          this.selectedInputId = preferredInput?.id ?? availableInputs[0].id
+        }
+
+        if (this.selectedNoteInputId !== broadcastChannelInputId && !availableInputs.some((input) => input.id === this.selectedNoteInputId)) {
+          const preferredNoteInput = availableInputs.find((input) => preferredNoteInputName.test(input.name))
+          this.selectedNoteInputId = preferredNoteInput?.id ?? availableInputs[0].id
+        }
+      } else {
+        if (this.selectedInputId !== broadcastChannelInputId) this.selectedInputId = null
+        if (this.selectedNoteInputId !== broadcastChannelInputId) this.selectedNoteInputId = null
+      }
     }
 
-    const selectedExists = this.selectedInputId
-      ? availableInputs.some((input) => input.id === this.selectedInputId)
-      : false
-
-    if (!selectedExists) {
-      const preferredInput = availableInputs.find((input) => preferredInputName.test(input.name))
-      this.selectedInputId = preferredInput?.id ?? availableInputs[0].id
-    }
-
-    const selectedNoteExists = this.selectedNoteInputId
-      ? availableInputs.some((input) => input.id === this.selectedNoteInputId)
-      : false
-
-    if (!selectedNoteExists) {
-      const preferredNoteInput = availableInputs.find((input) => preferredNoteInputName.test(input.name))
-      this.selectedNoteInputId = preferredNoteInput?.id ?? availableInputs[0].id
-    }
+    this.refreshBroadcastChannelSubscriptions()
+    if (!this.midiAccess) return
 
     const selectedInput = this.selectedInputId ? this.midiAccess.inputs.get(this.selectedInputId) : null
     const selectedNoteInput = this.selectedNoteInputId ? this.midiAccess.inputs.get(this.selectedNoteInputId) : null
-    if (!selectedInput && !selectedNoteInput) {
-      this.selectedInputId = null
-      this.selectedNoteInputId = null
-      return
-    }
-
     if (selectedInput) {
       selectedInput.onmidimessage = (event: MIDIMessageEvent) => {
         this.handleMidiMessage(event, selectedInput === selectedNoteInput, true)
@@ -170,14 +179,20 @@ export class MidiService {
       return
     }
 
-    const [status, note, velocity] = event.data
+    this.handleMidiData(event.data, event.timeStamp, acceptNotes, acceptControls)
+  }
+
+  private handleMidiData(data: ArrayLike<number>, timestamp: number, acceptNotes: boolean, acceptControls: boolean): void {
+    const status = data[0]
+    const note = data[1]
+    const velocity = data[2]
     if (status === undefined) {
       return
     }
 
     // MIDI clock is a one-byte realtime message sent 24 times per quarter note.
     if (status === 0xf8) {
-      this.handleClockTick(event.timeStamp)
+      this.handleClockTick(timestamp)
       return
     }
 
@@ -185,6 +200,7 @@ export class MidiService {
     // the next tempo estimate.
     if (status === 0xfa || status === 0xfb || status === 0xfc) {
       this.resetClockTracking()
+      if (status === 0xfc) this.onClockStop()
       return
     }
 
@@ -208,6 +224,45 @@ export class MidiService {
     if (command === 0x80 || (command === 0x90 && velocity === 0)) {
       if (acceptNotes) this.onNoteOff({ channel, note, velocity })
     }
+  }
+
+  private refreshBroadcastChannelSubscriptions(): void {
+    if (!supportsBroadcastChannel) return
+
+    if (this.selectedInputId === broadcastChannelInputId && !this.clockBroadcastChannel) {
+      this.clockBroadcastChannel = new BroadcastChannel(clockBroadcastChannelName)
+      this.clockBroadcastChannel.onmessage = (event: MessageEvent<unknown>) => {
+        const message = event.data
+        if (!isRecord(message) || message.type !== 'midi-clock' || !isMidiClockStatus(message.status)) return
+        this.handleMidiData([message.status], performance.now(), false, false)
+      }
+    } else if (this.selectedInputId !== broadcastChannelInputId && this.clockBroadcastChannel) {
+      this.clockBroadcastChannel.close()
+      this.clockBroadcastChannel = null
+      this.resetClockTracking()
+    }
+
+    if (this.selectedNoteInputId === broadcastChannelInputId && !this.notesBroadcastChannel) {
+      this.notesBroadcastChannel = new BroadcastChannel(notesBroadcastChannelName)
+      this.notesBroadcastChannel.onmessage = (event: MessageEvent<unknown>) => {
+        console.log('BroadcastChannel MIDI message received', event.data)
+        const message = event.data
+        if (!isRecord(message) || message.type !== 'midi-message' || !isMidiByteArray(message.data)) return
+        this.handleMidiData(message.data, performance.now(), true, false)
+      }
+    } else if (this.selectedNoteInputId !== broadcastChannelInputId && this.notesBroadcastChannel) {
+      this.notesBroadcastChannel.close()
+      this.notesBroadcastChannel = null
+      this.onClockStop()
+    }
+  }
+
+  private closeBroadcastChannels(): void {
+    this.clockBroadcastChannel?.close()
+    this.notesBroadcastChannel?.close()
+    this.clockBroadcastChannel = null
+    this.notesBroadcastChannel = null
+    this.resetClockTracking()
   }
 
   private handleClockTick(timestamp: number): void {

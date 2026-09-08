@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { instrumentCategories, instrumentPresets, type InstrumentPreset } from './instruments'
-import { MidiService, type MidiControlChangeEvent } from './services/midiService'
+import { broadcastChannelInputId, MidiService, supportsBroadcastChannel, type MidiControlChangeEvent } from './services/midiService'
 import { decodeSeed, encodeSeed } from './services/seedService'
 import { createChorusSettings, createDelaySettings, createEnvelopeSettings, createEqBandSettings, createFilterSettings, createFlangerSettings, createMultibandEqSettings, createNoiseSettings, createOutputSettings, createOverdriveSettings, createResonatorSettings, createReverbSettings, createCompressorSettings, createGateSettings, createLimiterSettings, createOscillatorSettings, createSingleBandEqSettings, createTremoloSettings, type AmplitudeModulationSettings, type ChorusSettings, type DelayModuleKind, type DelaySettings, type DynamicsSettings, type DynamicsSettingsChanges, type EqBandSettings, type EqEnvelopeSettings, type EqLfoSettings, type EqModulationTarget, type EqParameter, type EqSettings, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type EnvelopeSource, type EnvelopeSourceType, type FilterSettings, type FlangerSettings, type FlatAudioModule, type LfoSettings, type NoiseSettings, type OscillatorSettings, type OutputSettings, type OverdriveSettings, type ResonatorSettings, type ReverbModuleKind, type ReverbSettings, type TremoloSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
@@ -106,8 +106,8 @@ const createChannelSynth = (oscillatorSettings: OscillatorSettings, outputSettin
 })
 let activeSynth = createChannelSynth(initialOscillatorSettings, initialOutputSettings)
 const selectedChannel = ref(1)
-const selectedInputId = ref('')
-const selectedNoteInputId = ref('')
+const selectedInputId = ref(broadcastChannelInputId)
+const selectedNoteInputId = ref(broadcastChannelInputId)
 const midiInputs = ref<{ id: string; name: string }[]>([])
 const midiStatus = ref('MIDI not connected.')
 const midiLearnTargetId = ref('')
@@ -435,7 +435,7 @@ channels.value.push({
   customSliders: customSliders.value,
 })
 
-const canSelectInput = computed(() => midiInputs.value.length > 0)
+const canSelectInput = computed(() => supportsBroadcastChannel || midiInputs.value.length > 0)
 
 const midiParameterTargets = computed<MidiParameterTarget[]>(() => {
   const targets: MidiParameterTarget[] = []
@@ -949,12 +949,14 @@ const reverbEnvelopeDestinations = [
 
 const midiService = new MidiService({
   onNoteOn: ({ channel, note, velocity }) => {
+    console.log('MIDI note on received', { channel, note, velocity })
     const target = channels.value[channel - 1]
     if (!target) return
     target.synth.noteOn(note, velocity)
     activeVoices.value = channels.value.reduce((count, item) => count + item.synth.getActiveVoiceCount(), 0)
   },
-  onNoteOff: ({ channel, note }) => {
+  onNoteOff: ({ channel, note, velocity }) => {
+    console.log('MIDI note off received', { channel, note, velocity })
     const target = channels.value[channel - 1]
     if (!target) return
     target.synth.noteOff(note)
@@ -964,6 +966,7 @@ const midiService = new MidiService({
   onClockTempo: (tempo) => {
     syncMidiClockTempo(tempo)
   },
+  onClockStop: handlePanic,
   onStateChange: (state) => {
     midiInputs.value = state.inputs
     midiStatus.value = state.statusText
@@ -1037,6 +1040,10 @@ function handleChannelChange(event: Event) {
 function handlePanic() {
   channels.value.forEach(({ synth }) => synth.stopAllNotes())
   activeVoices.value = 0
+}
+
+function handleDocumentVisibilityChange() {
+  if (document.visibilityState !== 'visible') handlePanic()
 }
 
 /** Returns the per-type instance counts of a setup's audio-routable modules, used to expand/validate module orders. */
@@ -2783,12 +2790,16 @@ function addModuleModulation(type: 'lfo' | 'env' | 'overdrive' | 'filter' | 'res
 onMounted(() => {
   loadMidiMappings()
   midiMappingsLoaded = true
+  midiService.setSelectedInput(selectedInputId.value)
+  midiService.setSelectedNoteInput(selectedNoteInputId.value)
   midiService.setChannel(selectedChannel.value)
   window.addEventListener('keydown', handleKeydown, true)
+  document.addEventListener('visibilitychange', handleDocumentVisibilityChange)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown, true)
+  document.removeEventListener('visibilitychange', handleDocumentVisibilityChange)
   if (midiControllerActivityTimeout !== null) clearTimeout(midiControllerActivityTimeout)
   if (customSliderFrame !== null) cancelAnimationFrame(customSliderFrame)
   pendingCustomSliderValues.clear()
@@ -2813,7 +2824,7 @@ onUnmounted(() => {
         <div class="brand-lockup">
           <span class="brand-mark" aria-hidden="true"></span>
           <div>
-            <p class="eyebrow">Synthetic MIDI instrument</p>
+            <p class="eyebrow">Synthetic instrument</p>
             <h1>Mr. Synth</h1>
             <p class="brand-description">The synth which does, what a synth should do</p>
           </div>
@@ -3549,9 +3560,10 @@ onUnmounted(() => {
         </div>
         <div class="midi-fields">
           <label class="field">
-            <span>Control input</span>
+            <span>Control &amp; clock input</span>
             <select v-model="selectedInputId" :disabled="!canSelectInput" @change="handleInputChange">
               <option value="" disabled>Select input</option>
+              <option v-if="supportsBroadcastChannel" :value="broadcastChannelInputId">Broadcadstchannel (tab)</option>
               <option v-for="input in midiInputs" :key="input.id" :value="input.id">
                 {{ input.name }}
               </option>
@@ -3561,6 +3573,7 @@ onUnmounted(() => {
             <span>Note input</span>
             <select v-model="selectedNoteInputId" :disabled="!canSelectInput" @change="handleNoteInputChange">
               <option value="" disabled>Select input</option>
+              <option v-if="supportsBroadcastChannel" :value="broadcastChannelInputId">Broadcadstchannel (tab)</option>
               <option v-for="input in midiInputs" :key="input.id" :value="input.id">
                 {{ input.name }}
               </option>

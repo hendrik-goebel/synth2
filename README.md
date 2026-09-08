@@ -22,9 +22,12 @@ the Akai MIDImix is selected automatically; otherwise choose it in the input
 selector. The MIDImix works with its knobs and faders as standard MIDI CC
 controls.
 
-The MIDI panel has separate **Control input** and **Note input** selectors. The
-IAC driver is preferred for notes and the Akai MIDImix for controls when both
-devices are available.
+The MIDI panel has separate **Control & clock input** and **Note input**
+selectors. Both default to **BroadcastChannel**, which receives clock/transport
+from `arpeggiator-midi-clock-v1` and notes from `arpeggiator-midi-events-v1`
+respectively, allowing a same-origin Web Arpeggiator tab to drive the synth.
+Choose hardware inputs to use Web MIDI instead. The IAC driver is preferred for
+notes and the Akai MIDImix for controls when both devices are available.
 
 ## Custom sliders
 
