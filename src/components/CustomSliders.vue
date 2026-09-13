@@ -5,6 +5,7 @@ type CustomSliderAssignment = {
   targetId: string
   baseline: number
   reversed?: boolean
+  response?: 0.5 | 0.75 | 1 | 1.25 | 1.5
 }
 
 type CustomSlider = {
@@ -24,6 +25,7 @@ const emit = defineEmits<{
   update: [payload: { id: string; value: number }]
   learn: [id: string]
   toggleAssignmentReverse: [payload: { sliderId: string; targetId: string }]
+  cycleAssignmentResponse: [payload: { sliderId: string; targetId: string }]
   removeAssignment: [payload: { sliderId: string; targetId: string }]
   remove: [id: string]
 }>()
@@ -84,6 +86,13 @@ const isCollapsed = ref(false)
                   title="Reverse this assignment"
                   @click="emit('toggleAssignmentReverse', { sliderId: slider.id, targetId: assignment.targetId })"
                 >R</button>
+                <button
+                  type="button"
+                  class="custom-slider-response"
+                  :aria-label="`Change response for ${targetLabels[assignment.targetId] ?? assignment.targetId}`"
+                  :title="`Response: ${(assignment.response ?? 1).toFixed(2)}×. Click to change.`"
+                  @click="emit('cycleAssignmentResponse', { sliderId: slider.id, targetId: assignment.targetId })"
+                >{{ assignment.response === 0.5 ? '<<' : assignment.response === 0.75 ? '<' : assignment.response === 1.25 ? '>' : assignment.response === 1.5 ? '>>' : '0' }}</button>
                 <button type="button" class="midi-remove-assignment" :aria-label="`Remove ${targetLabels[assignment.targetId] ?? assignment.targetId}`" @click="emit('removeAssignment', { sliderId: slider.id, targetId: assignment.targetId })">−</button>
               </div>
             </li>

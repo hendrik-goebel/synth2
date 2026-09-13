@@ -26,7 +26,8 @@ import CustomSliders from './components/CustomSliders.vue'
 
 type EnvelopeModule = EnvelopeSettings & { bypassed: boolean }
 type LfoControlModule = LfoSettings & { bypassed: boolean }
-type CustomSliderAssignment = { targetId: string; baseline: number; anchor: number; reversed?: boolean }
+type CustomSliderResponse = 0.5 | 0.75 | 1 | 1.25 | 1.5
+type CustomSliderAssignment = { targetId: string; baseline: number; anchor: number; reversed?: boolean; response?: CustomSliderResponse }
 type CustomSlider = { id: string; value: number; assignments: CustomSliderAssignment[] }
 /** A processor type accepted in module order data; the legacy modulation value is ignored when loading. */
 type ModuleKind = EffectGroup | 'amplitudeModulation'
@@ -609,7 +610,7 @@ function applyCustomSlider(slider: CustomSlider) {
     const target = midiParameterTargetMap.value.get(assignment.targetId)
     if (!target) return
     const baselinePosition = midiParameterPosition(target, assignment.baseline)
-    const movement = slider.value - assignment.anchor
+    const movement = (slider.value - assignment.anchor) * (assignment.response ?? 1)
     const position = Math.min(Math.max(
       baselinePosition + (assignment.reversed ? -movement : movement),
       0,
@@ -664,7 +665,7 @@ function addCustomSliderAssignment(sliderId: string, targetId: string) {
   const baseline = currentMidiParameterValue(targetId)
   if (baseline === null) return
   customSliders.value = customSliders.value.map((item) => item.id === sliderId
-    ? { ...item, assignments: [...item.assignments, { targetId, baseline, anchor: slider.value }] }
+    ? { ...item, assignments: [...item.assignments, { targetId, baseline, anchor: slider.value, response: 1 }] }
     : item)
 }
 
@@ -681,6 +682,22 @@ function toggleCustomSliderAssignmentReverse(sliderId: string, targetId: string)
         assignments: slider.assignments.map((assignment) => assignment.targetId === targetId
           ? { ...assignment, reversed: !assignment.reversed }
           : assignment),
+      }
+    : slider)
+}
+
+const customSliderResponses: CustomSliderResponse[] = [0.5, 0.75, 1, 1.25, 1.5]
+
+function cycleCustomSliderAssignmentResponse(sliderId: string, targetId: string) {
+  customSliders.value = customSliders.value.map((slider) => slider.id === sliderId
+    ? {
+        ...slider,
+        assignments: slider.assignments.map((assignment) => {
+          if (assignment.targetId !== targetId) return assignment
+          const currentIndex = customSliderResponses.indexOf(assignment.response ?? 1)
+          const response = customSliderResponses[(currentIndex + 1) % customSliderResponses.length]
+          return { ...assignment, response }
+        }),
       }
     : slider)
 }
@@ -1392,14 +1409,19 @@ function isCustomSlider(value: unknown): value is CustomSlider {
         && Number.isFinite(assignment.anchor)
         && assignment.anchor >= -1
         && assignment.anchor <= 1))
-      && (assignment.reversed === undefined || typeof assignment.reversed === 'boolean'))
+      && (assignment.reversed === undefined || typeof assignment.reversed === 'boolean')
+      && (assignment.response === undefined || isCustomSliderResponse(assignment.response)))
+}
+
+function isCustomSliderResponse(value: unknown): value is CustomSliderResponse {
+  return value === 0.5 || value === 0.75 || value === 1 || value === 1.25 || value === 1.5
 }
 
 function normalizeCustomSliders(sliders: CustomSlider[] | undefined): CustomSlider[] {
   return (sliders ?? []).map((slider) => ({
     id: slider.id,
     value: slider.value,
-    assignments: slider.assignments.map((assignment) => ({ ...assignment, anchor: assignment.anchor ?? 0 })),
+    assignments: slider.assignments.map((assignment) => ({ ...assignment, anchor: assignment.anchor ?? 0, response: assignment.response ?? 1 })),
   }))
 }
 
@@ -2919,6 +2941,7 @@ onUnmounted(() => {
         @update="updateCustomSlider($event.id, $event.value)"
         @learn="toggleCustomSliderLearn"
         @toggle-assignment-reverse="toggleCustomSliderAssignmentReverse($event.sliderId, $event.targetId)"
+        @cycle-assignment-response="cycleCustomSliderAssignmentResponse($event.sliderId, $event.targetId)"
         @remove-assignment="removeCustomSliderAssignment($event.sliderId, $event.targetId)"
         @remove="removeCustomSlider"
       />

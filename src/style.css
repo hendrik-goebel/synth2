@@ -222,6 +222,7 @@ select { width: 100%; min-height: 30px; padding: 5px 28px 5px 8px; }
 .custom-slider-assignments li { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; padding-top: 5px; color: #91ecd8; border-top: 1px solid rgb(183 211 211 / 10%); font-size: .7rem; }
 .custom-slider-assignments span { min-width: 0; overflow-wrap: anywhere; }
 .custom-slider-assignment-actions { display: flex; flex: 0 0 auto; gap: 4px; }
+.custom-slider-response { min-width: 26px; min-height: 26px; padding: 0 4px; font-size: .66rem; line-height: 1; }
 
 .synth-workspace { display: grid; grid-template-columns: 1fr; gap: clamp(8px, 1vw, 12px); align-items: start; }
 .synth-section { --amb-albedo: #203038; min-width: 0; padding: clamp(10px, 1vw, 14px); border: 1px solid #40565d; }
