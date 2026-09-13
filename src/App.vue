@@ -106,7 +106,8 @@ const createChannelSynth = (oscillatorSettings: OscillatorSettings, outputSettin
 })
 let activeSynth = createChannelSynth(initialOscillatorSettings, initialOutputSettings)
 const selectedChannel = ref(1)
-const selectedInputId = ref(broadcastChannelInputId)
+const selectedControlInputId = ref(broadcastChannelInputId)
+const selectedClockInputId = ref(broadcastChannelInputId)
 const selectedNoteInputId = ref(broadcastChannelInputId)
 const midiInputs = ref<{ id: string; name: string }[]>([])
 const midiStatus = ref('MIDI not connected.')
@@ -971,12 +972,13 @@ const midiService = new MidiService({
     midiInputs.value = state.inputs
     midiStatus.value = state.statusText
 
-    if (state.selectedInputId) {
-      selectedInputId.value = state.selectedInputId
+    if (state.selectedControlInputId) {
+      selectedControlInputId.value = state.selectedControlInputId
     } else {
-      selectedInputId.value = ''
+      selectedControlInputId.value = ''
     }
 
+    selectedClockInputId.value = state.selectedClockInputId ?? ''
     selectedNoteInputId.value = state.selectedNoteInputId ?? ''
   },
 })
@@ -1023,8 +1025,12 @@ function handleFirstInteraction() {
   connectMidi()
 }
 
-function handleInputChange() {
-  midiService.setSelectedInput(selectedInputId.value || null)
+function handleControlInputChange() {
+  midiService.setSelectedControlInput(selectedControlInputId.value || null)
+}
+
+function handleClockInputChange() {
+  midiService.setSelectedClockInput(selectedClockInputId.value || null)
 }
 
 function handleNoteInputChange() {
@@ -2790,7 +2796,8 @@ function addModuleModulation(type: 'lfo' | 'env' | 'overdrive' | 'filter' | 'res
 onMounted(() => {
   loadMidiMappings()
   midiMappingsLoaded = true
-  midiService.setSelectedInput(selectedInputId.value)
+  midiService.setSelectedControlInput(selectedControlInputId.value)
+  midiService.setSelectedClockInput(selectedClockInputId.value)
   midiService.setSelectedNoteInput(selectedNoteInputId.value)
   midiService.setChannel(selectedChannel.value)
   window.addEventListener('keydown', handleKeydown, true)
@@ -3560,10 +3567,20 @@ onUnmounted(() => {
         </div>
         <div class="midi-fields">
           <label class="field">
-            <span>Control &amp; clock input</span>
-            <select v-model="selectedInputId" :disabled="!canSelectInput" @change="handleInputChange">
+            <span>Control input</span>
+            <select v-model="selectedControlInputId" :disabled="!canSelectInput" @change="handleControlInputChange">
               <option value="" disabled>Select input</option>
-              <option v-if="supportsBroadcastChannel" :value="broadcastChannelInputId">Broadcadstchannel (tab)</option>
+              <option v-if="supportsBroadcastChannel" :value="broadcastChannelInputId">BroadcastChannel (tab)</option>
+              <option v-for="input in midiInputs" :key="input.id" :value="input.id">
+                {{ input.name }}
+              </option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Clock input</span>
+            <select v-model="selectedClockInputId" :disabled="!canSelectInput" @change="handleClockInputChange">
+              <option value="" disabled>Select input</option>
+              <option v-if="supportsBroadcastChannel" :value="broadcastChannelInputId">BroadcastChannel (tab)</option>
               <option v-for="input in midiInputs" :key="input.id" :value="input.id">
                 {{ input.name }}
               </option>
@@ -3573,7 +3590,7 @@ onUnmounted(() => {
             <span>Note input</span>
             <select v-model="selectedNoteInputId" :disabled="!canSelectInput" @change="handleNoteInputChange">
               <option value="" disabled>Select input</option>
-              <option v-if="supportsBroadcastChannel" :value="broadcastChannelInputId">Broadcadstchannel (tab)</option>
+              <option v-if="supportsBroadcastChannel" :value="broadcastChannelInputId">BroadcastChannel (tab)</option>
               <option v-for="input in midiInputs" :key="input.id" :value="input.id">
                 {{ input.name }}
               </option>

@@ -330,7 +330,7 @@ select { width: 100%; min-height: 30px; padding: 5px 28px 5px 8px; }
 .midi-controls { border-bottom: 1px solid rgb(183 211 211 / 10%); }
 .status { color: #acbdbe; font-size: .72rem; line-height: 1.4; }
 .midi-controls { display: grid; gap: 9px; }
-.midi-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 90px; gap: 8px; }
+.midi-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 90px; gap: 8px; }
 .midi-learn { display: grid; gap: 7px; }
 .midi-learn-parameter { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 5px; }
 .midi-learn-active { color: #09241f; background: linear-gradient(145deg, #ffd989, #d8a64c); border-color: #ffe5a8; }
