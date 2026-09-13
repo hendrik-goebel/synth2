@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { instrumentCategories, instrumentPresets, type InstrumentPreset } from './instruments'
-import { broadcastChannelInputId, MidiService, supportsBroadcastChannel, type MidiControlChangeEvent } from './services/midiService'
+import { autoInputId, broadcastChannelInputId, MidiService, supportsBroadcastChannel, type MidiControlChangeEvent } from './services/midiService'
 import { decodeSeed, encodeSeed } from './services/seedService'
 import { createChorusSettings, createDelaySettings, createEnvelopeSettings, createEqBandSettings, createFilterSettings, createFlangerSettings, createMultibandEqSettings, createNoiseSettings, createOutputSettings, createOverdriveSettings, createResonatorSettings, createReverbSettings, createCompressorSettings, createGateSettings, createLimiterSettings, createOscillatorSettings, createSingleBandEqSettings, createTremoloSettings, type AmplitudeModulationSettings, type ChorusSettings, type DelayModuleKind, type DelaySettings, type DynamicsSettings, type DynamicsSettingsChanges, type EqBandSettings, type EqEnvelopeSettings, type EqLfoSettings, type EqModulationTarget, type EqParameter, type EqSettings, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type EnvelopeSource, type EnvelopeSourceType, type FilterSettings, type FlangerSettings, type FlatAudioModule, type LfoSettings, type NoiseSettings, type OscillatorSettings, type OutputSettings, type OverdriveSettings, type ResonatorSettings, type ReverbModuleKind, type ReverbSettings, type TremoloSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
@@ -106,9 +106,9 @@ const createChannelSynth = (oscillatorSettings: OscillatorSettings, outputSettin
 })
 let activeSynth = createChannelSynth(initialOscillatorSettings, initialOutputSettings)
 const selectedChannel = ref(1)
-const selectedControlInputId = ref(broadcastChannelInputId)
-const selectedClockInputId = ref(broadcastChannelInputId)
-const selectedNoteInputId = ref(broadcastChannelInputId)
+const selectedControlInputId = ref(autoInputId)
+const selectedClockInputId = ref(autoInputId)
+const selectedNoteInputId = ref(autoInputId)
 const midiInputs = ref<{ id: string; name: string }[]>([])
 const midiStatus = ref('MIDI not connected.')
 const midiLearnTargetId = ref('')
@@ -437,6 +437,7 @@ channels.value.push({
 })
 
 const canSelectInput = computed(() => supportsBroadcastChannel || midiInputs.value.length > 0)
+const canSelectControlInput = computed(() => midiInputs.value.length > 0)
 
 const midiParameterTargets = computed<MidiParameterTarget[]>(() => {
   const targets: MidiParameterTarget[] = []
@@ -3568,9 +3569,9 @@ onUnmounted(() => {
         <div class="midi-fields">
           <label class="field">
             <span>Control input</span>
-            <select v-model="selectedControlInputId" :disabled="!canSelectInput" @change="handleControlInputChange">
+            <select v-model="selectedControlInputId" :disabled="!canSelectControlInput" @change="handleControlInputChange">
               <option value="" disabled>Select input</option>
-              <option v-if="supportsBroadcastChannel" :value="broadcastChannelInputId">BroadcastChannel (tab)</option>
+              <option :value="autoInputId">Auto</option>
               <option v-for="input in midiInputs" :key="input.id" :value="input.id">
                 {{ input.name }}
               </option>
@@ -3580,6 +3581,7 @@ onUnmounted(() => {
             <span>Clock input</span>
             <select v-model="selectedClockInputId" :disabled="!canSelectInput" @change="handleClockInputChange">
               <option value="" disabled>Select input</option>
+              <option :value="autoInputId">Auto</option>
               <option v-if="supportsBroadcastChannel" :value="broadcastChannelInputId">BroadcastChannel (tab)</option>
               <option v-for="input in midiInputs" :key="input.id" :value="input.id">
                 {{ input.name }}
@@ -3590,6 +3592,7 @@ onUnmounted(() => {
             <span>Note input</span>
             <select v-model="selectedNoteInputId" :disabled="!canSelectInput" @change="handleNoteInputChange">
               <option value="" disabled>Select input</option>
+              <option :value="autoInputId">Auto</option>
               <option v-if="supportsBroadcastChannel" :value="broadcastChannelInputId">BroadcastChannel (tab)</option>
               <option v-for="input in midiInputs" :key="input.id" :value="input.id">
                 {{ input.name }}
