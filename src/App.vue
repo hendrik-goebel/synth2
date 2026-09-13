@@ -733,11 +733,10 @@ function handleMidiControlChange({ channel, controller, value }: MidiControlChan
     return
   }
   midiMappings.value.filter((mapping) => mapping.channel === channel && mapping.controller === controller).forEach((mapping) => {
-    const target = midiParameterTargetMap.value.get(mapping.targetId)
-    if (!target) return
-
-    const mappedValue = midiParameterValue(target, mapping.reversed ? 127 - value : value)
     if (mapping.targetChannel === 0 || mapping.targetChannel === selectedChannel.value) {
+      const target = midiParameterTargetMap.value.get(mapping.targetId)
+      if (!target) return
+      const mappedValue = midiParameterValue(target, mapping.reversed ? 127 - value : value)
       target.apply(mappedValue)
       return
     }
@@ -745,7 +744,14 @@ function handleMidiControlChange({ channel, controller, value }: MidiControlChan
     if (mapping.targetChannel > channels.value.length) return
     const previousChannel = selectedChannel.value
     loadChannel(mapping.targetChannel)
+    const target = midiParameterTargetMap.value.get(mapping.targetId)
+    if (!target) {
+      loadChannel(previousChannel)
+      return
+    }
+    const mappedValue = midiParameterValue(target, mapping.reversed ? 127 - value : value)
     target.apply(mappedValue)
+    if (mapping.targetId.startsWith('custom-slider:')) flushCustomSliderUpdates()
     loadChannel(previousChannel)
   })
 }

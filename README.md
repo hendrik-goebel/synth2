@@ -42,6 +42,8 @@ controls to add them to that slider. Each assignment captures the parameter's
 current value; the centered slider position leaves it unchanged and movement
 adjusts it relatively within that parameter's own range. Click a custom slider
 and use the normal MIDI **Learn** workflow to assign it to a hardware CC.
+Mapped controls update their assigned synth channel even while another channel
+is selected.
 Use **R** next to an assignment to reverse just that parameter's slider response.
 The adjacent response button cycles the movement multiplier: `<<` (0.5x),
 `<` (0.75x), `0` (1x), `>` (1.25x), and `>>` (1.5x).
