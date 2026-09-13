@@ -30,7 +30,7 @@ allowing a same-origin Web Arpeggiator tab to drive the synth. The IAC driver
 is preferred for notes and the Akai MIDImix for controls when both devices are
 available.
 
-Choose **Auto** in any selector to listen on every hardware MIDI input for that
+Choose **Auto** in any selector to listen on every available input for that
 message type. The first matching control change, clock/transport message, or
 note event selects its originating driver.
 

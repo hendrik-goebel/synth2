@@ -283,38 +283,40 @@ export class MidiService {
   private refreshBroadcastChannelSubscriptions(): void {
     if (!supportsBroadcastChannel) return
 
-    if (this.selectedClockInputId === broadcastChannelInputId && !this.clockBroadcastChannel) {
+    if ((this.selectedClockInputId === broadcastChannelInputId || this.selectedClockInputId === autoInputId) && !this.clockBroadcastChannel) {
       this.clockBroadcastChannel = new BroadcastChannel(clockBroadcastChannelName)
       this.clockBroadcastChannel.onmessage = (event: MessageEvent<unknown>) => {
         const message = event.data
         if (!isRecord(message) || message.type !== 'midi-clock' || !isMidiClockStatus(message.status)) return
+        const isAuto = this.selectedClockInputId === autoInputId
         this.handleMidiData(
           [message.status],
           performance.now(),
-          null,
-          { acceptNotes: false, acceptControls: false, acceptClock: true, autoNotes: false, autoControls: false, autoClock: false },
+          isAuto ? broadcastChannelInputId : null,
+          { acceptNotes: false, acceptControls: false, acceptClock: !isAuto, autoNotes: false, autoControls: false, autoClock: isAuto },
         )
       }
-    } else if (this.selectedClockInputId !== broadcastChannelInputId && this.clockBroadcastChannel) {
+    } else if (this.selectedClockInputId !== broadcastChannelInputId && this.selectedClockInputId !== autoInputId && this.clockBroadcastChannel) {
       this.clockBroadcastChannel.close()
       this.clockBroadcastChannel = null
       this.resetClockTracking()
     }
 
-    if (this.selectedNoteInputId === broadcastChannelInputId && !this.notesBroadcastChannel) {
+    if ((this.selectedNoteInputId === broadcastChannelInputId || this.selectedNoteInputId === autoInputId) && !this.notesBroadcastChannel) {
       this.notesBroadcastChannel = new BroadcastChannel(notesBroadcastChannelName)
       this.notesBroadcastChannel.onmessage = (event: MessageEvent<unknown>) => {
         console.log('BroadcastChannel MIDI message received', event.data)
         const message = event.data
         if (!isRecord(message) || message.type !== 'midi-message' || !isMidiByteArray(message.data)) return
+        const isAuto = this.selectedNoteInputId === autoInputId
         this.handleMidiData(
           message.data,
           performance.now(),
-          null,
-          { acceptNotes: true, acceptControls: false, acceptClock: false, autoNotes: false, autoControls: false, autoClock: false },
+          isAuto ? broadcastChannelInputId : null,
+          { acceptNotes: !isAuto, acceptControls: false, acceptClock: false, autoNotes: isAuto, autoControls: false, autoClock: false },
         )
       }
-    } else if (this.selectedNoteInputId !== broadcastChannelInputId && this.notesBroadcastChannel) {
+    } else if (this.selectedNoteInputId !== broadcastChannelInputId && this.selectedNoteInputId !== autoInputId && this.notesBroadcastChannel) {
       this.notesBroadcastChannel.close()
       this.notesBroadcastChannel = null
       this.onClockStop()
