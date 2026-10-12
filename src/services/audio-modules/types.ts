@@ -87,6 +87,7 @@ export type LfoSettings = { waveform: Waveform; rate: number; depth: number; tar
 
 export type EnvelopeCurve = 'linear' | 'exponential'
 export type EnvelopeDestination =
+  | 'outputVolume' | 'outputPan'
   | 'oscillatorLevel' | 'oscillatorPitch' | 'noiseLevel' | 'filterCutoff' | 'filterResonance'
   | 'delayTime' | 'delayRepetitions' | 'delayMix'
   | 'overdriveDrive' | 'overdriveTone' | 'overdriveFeedback' | 'overdriveMix'

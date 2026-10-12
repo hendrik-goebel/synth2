@@ -3,6 +3,11 @@
 A browser-based synthesizer built with Vue 3, TypeScript, Vite, the Web MIDI API,
 and the Web Audio API.
 
+## Container integration
+
+A parent iframe container or opener can load and export setup seeds through
+`window.postMessage`. See the [protocol specification and integration example](docs/container-integration.md).
+
 ## Audio module organization
 
 `src/services/synthEngine.ts` coordinates voices, modulation, and the ordered

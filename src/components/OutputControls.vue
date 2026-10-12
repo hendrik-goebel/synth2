@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import LfoControls from './LfoControls.vue'
-import type { LfoSettings } from '../services/synthEngine'
+import EnvelopeControls from './EnvelopeControls.vue'
+import type { EnvelopeDestination, EnvelopeSettings, LfoSettings } from '../services/synthEngine'
 
 type LfoModule = LfoSettings & { bypassed: boolean; index: number }
 
@@ -8,6 +9,7 @@ defineProps<{
   volume: number
   pan: number
   lfos: LfoModule[]
+  envelopes: (EnvelopeSettings & { bypassed: boolean; index: number })[]
 }>()
 
 const emit = defineEmits<{
@@ -16,13 +18,21 @@ const emit = defineEmits<{
   updateLfo: [payload: { index: number; settings: Partial<LfoSettings> }]
   toggleLfoBypass: [index: number]
   removeLfo: [index: number]
-  addLfo: []
+  updateEnvelope: [payload: { index: number; settings: Partial<EnvelopeSettings> }]
+  toggleEnvelopeBypass: [index: number]
+  removeEnvelope: [index: number]
+  modulate: []
 }>()
 
 const lfoTargetOptions = [
   { value: 'output:0:volume', label: 'Volume' },
   { value: 'output:0:pan', label: 'Pan' },
 ] satisfies { value: LfoSettings['target']; label: string }[]
+
+const envelopeDestinationOptions = [
+  { value: 'outputVolume', label: 'Volume' },
+  { value: 'outputPan', label: 'Pan' },
+] satisfies { value: EnvelopeDestination; label: string }[]
 </script>
 
 <template>
@@ -44,10 +54,20 @@ const lfoTargetOptions = [
       :lfos="lfos"
       :target-options="lfoTargetOptions"
       id-prefix="output"
+      :show-add-button="false"
       @update="emit('updateLfo', $event)"
       @toggle-bypass="emit('toggleLfoBypass', $event)"
       @remove="emit('removeLfo', $event)"
-      @add="emit('addLfo')"
     />
+    <EnvelopeControls
+      :envelopes="envelopes"
+      :destination-options="envelopeDestinationOptions"
+      id-prefix="output"
+      :show-add-button="false"
+      @update="emit('updateEnvelope', $event)"
+      @toggle-bypass="emit('toggleEnvelopeBypass', $event)"
+      @remove="emit('removeEnvelope', $event)"
+    />
+    <button type="button" class="add-env-button" @click="emit('modulate')">+ Mod</button>
   </section>
 </template>

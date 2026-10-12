@@ -39,9 +39,21 @@ const preferredInputName = /midi[\s_-]*mix/i
 const preferredNoteInputName = /(?:iac|inter[-\s]?application)/i
 const clockBroadcastChannelName = 'arpeggiator-midi-clock-v1'
 const notesBroadcastChannelName = 'arpeggiator-midi-events-v1'
-const clockIntervalsForInitialTempo = 12
-const clockIntervalsForTempoCorrection = 24
-const clockTempoCorrectionFactor = 0.02
+// MIDI clock sends 24 ticks per quarter note. Tempo estimation is deliberately
+// lazy: ticks are counted over a multi-beat window (robust against jitter,
+// bursts and dropped ticks), corrections run at most once per beat, tiny
+// discrepancies are ignored entirely, and the locked tempo only ever creeps
+// toward the measurement so external timing noise cannot make it jump.
+const clockTicksForInitialTempo = 24
+const clockTicksForTempoMeasurement = 96
+const clockTicksBetweenTempoCorrections = 24
+const clockTempoDeadbandBpm = 0.5
+const clockTempoCorrectionBaseFactor = 0.01
+const clockTempoCorrectionGain = 0.5
+const clockTempoCorrectionMaxFactor = 0.25
+const clockMinPlausibleTempo = 20
+const clockMaxPlausibleTempo = 400
+const clockGapResetMs = 400
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -69,8 +81,7 @@ export class MidiService {
   private selectedClockInputId: string | null = autoInputId
   private selectedNoteInputId: string | null = autoInputId
   private lastClockTimestamp: number | null = null
-  private readonly clockIntervals: number[] = []
-  private clockIntervalTotal = 0
+  private readonly clockTickTimestamps: number[] = []
   private clockTicksSinceTempoUpdate = 0
   private lockedClockTempo: number | null = null
 
@@ -346,46 +357,72 @@ export class MidiService {
   }
 
   private handleClockTick(timestamp: number): void {
-    if (this.lastClockTimestamp !== null) {
-      const interval = timestamp - this.lastClockTimestamp
-      // Ignore duplicate timestamps and clock gaps caused by a stopped or
-      // disconnected transport. Valid tempos for this UI are 30–300 BPM.
-      if (interval >= 8 && interval <= 84) {
-        this.clockIntervals.push(interval)
-        this.clockIntervalTotal += interval
-        if (this.clockIntervals.length > clockIntervalsForTempoCorrection) {
-          this.clockIntervalTotal -= this.clockIntervals.shift()!
-        }
-        this.clockTicksSinceTempoUpdate += 1
-
-        if (this.lockedClockTempo === null && this.clockIntervals.length >= clockIntervalsForInitialTempo) {
-          const averageInterval = this.clockIntervalTotal / this.clockIntervals.length
-          this.lockedClockTempo = 60000 / (averageInterval * 24)
-          this.onClockTempo(this.lockedClockTempo)
-          this.clockTicksSinceTempoUpdate = 0
-        } else if (
-          this.lockedClockTempo !== null
-          && this.clockIntervals.length >= clockIntervalsForTempoCorrection
-          && this.clockTicksSinceTempoUpdate >= clockIntervalsForTempoCorrection
-        ) {
-          const averageInterval = this.clockIntervalTotal / this.clockIntervals.length
-          const measuredTempo = 60000 / (averageInterval * 24)
-          this.lockedClockTempo += (measuredTempo - this.lockedClockTempo) * clockTempoCorrectionFactor
-          this.onClockTempo(this.lockedClockTempo)
-          this.clockTicksSinceTempoUpdate = 0
-        }
-      } else {
-        this.resetClockTracking()
-      }
+    // A gap this long means the transport stopped or disconnected without a
+    // stop message; start a fresh estimate instead of mixing separate runs.
+    if (this.lastClockTimestamp !== null && timestamp - this.lastClockTimestamp > clockGapResetMs) {
+      this.resetClockTracking()
     }
 
     this.lastClockTimestamp = timestamp
+    this.clockTickTimestamps.push(timestamp)
+    if (this.clockTickTimestamps.length > clockTicksForTempoMeasurement) {
+      this.clockTickTimestamps.shift()
+    }
+    this.clockTicksSinceTempoUpdate += 1
+
+    if (this.lockedClockTempo === null) {
+      if (this.clockTickTimestamps.length < clockTicksForInitialTempo) return
+      const measuredTempo = this.measureClockTempo()
+      if (!this.isPlausibleClockTempo(measuredTempo)) {
+        // Garbage timestamps (e.g. a whole window delivered in one burst);
+        // retry with a fresh window instead of locking onto noise.
+        this.clockTickTimestamps.length = 0
+        return
+      }
+      this.lockedClockTempo = measuredTempo
+      this.onClockTempo(this.lockedClockTempo)
+      this.clockTicksSinceTempoUpdate = 0
+      return
+    }
+
+    if (this.clockTickTimestamps.length < clockTicksForTempoMeasurement || this.clockTicksSinceTempoUpdate < clockTicksBetweenTempoCorrections) return
+
+    this.clockTicksSinceTempoUpdate = 0
+    const measuredTempo = this.measureClockTempo()
+    if (!this.isPlausibleClockTempo(measuredTempo)) {
+      this.clockTickTimestamps.length = 0
+      return
+    }
+
+    const tempoError = measuredTempo - this.lockedClockTempo
+    // Ignore discrepancies smaller than the resolution of the tempo display;
+    // reacting to them just makes the timing fidget.
+    if (Math.abs(tempoError) <= clockTempoDeadbandBpm) return
+
+    // Correction speed scales with the size of the discrepancy: jitter and
+    // slow drift are followed very lazily, while a real tempo change on the
+    // external source converges within a few beats. The tempo never jumps.
+    const relativeError = Math.abs(tempoError) / this.lockedClockTempo
+    const correctionFactor = Math.min(clockTempoCorrectionMaxFactor, clockTempoCorrectionBaseFactor + relativeError * clockTempoCorrectionGain)
+    this.lockedClockTempo += tempoError * correctionFactor
+    this.onClockTempo(this.lockedClockTempo)
+  }
+
+  private measureClockTempo(): number | null {
+    const tickTimestamps = this.clockTickTimestamps
+    if (tickTimestamps.length < 2) return null
+    const span = tickTimestamps[tickTimestamps.length - 1] - tickTimestamps[0]
+    if (span <= 0) return null
+    return (60000 * (tickTimestamps.length - 1)) / (span * 24)
+  }
+
+  private isPlausibleClockTempo(tempo: number | null): tempo is number {
+    return tempo !== null && Number.isFinite(tempo) && tempo >= clockMinPlausibleTempo && tempo <= clockMaxPlausibleTempo
   }
 
   private resetClockTracking(): void {
     this.lastClockTimestamp = null
-    this.clockIntervals.length = 0
-    this.clockIntervalTotal = 0
+    this.clockTickTimestamps.length = 0
     this.clockTicksSinceTempoUpdate = 0
     this.lockedClockTempo = null
   }

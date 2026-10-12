@@ -127,6 +127,8 @@ export class SynthEngine {
     this.activeVoices.forEach(({ voices }) => voices.forEach((voice) => this.stopVoice(voice)))
     this.activeVoices = []
     this.heldNoteCounts.clear()
+    this.restoreOutputEnvelope('outputVolume')
+    this.restoreOutputEnvelope('outputPan')
   }
 
   getActiveVoiceCount(): number {
@@ -746,6 +748,9 @@ export class SynthEngine {
   setEnvelopeSettings(index: number, changes: Partial<EnvelopeSettings>): void {
     const envelope = this.envelopeSettings[index]
     if (!envelope) throw new RangeError(`Unknown envelope index: ${index}`)
+    if (changes.destination !== undefined && changes.destination !== envelope.settings.destination) {
+      this.restoreOutputEnvelope(envelope.settings.destination)
+    }
     envelope.settings = this.normalizeEnvelopeSettings(changes, envelope.settings)
   }
 
@@ -759,6 +764,7 @@ export class SynthEngine {
 
   removeEnvelope(index: number): void {
     if (!this.envelopeSettings[index]) throw new RangeError(`Unknown envelope index: ${index}`)
+    this.restoreOutputEnvelope(this.envelopeSettings[index].settings.destination)
     this.envelopeSettings.splice(index, 1)
   }
 
@@ -766,6 +772,24 @@ export class SynthEngine {
     const envelope = this.envelopeSettings[index]
     if (!envelope) throw new RangeError(`Unknown envelope index: ${index}`)
     envelope.bypassed = bypassed
+    if (bypassed) this.restoreOutputEnvelope(envelope.settings.destination)
+  }
+
+  private restoreOutputEnvelope(destination: EnvelopeDestination): void {
+    const param = destination === 'outputVolume' ? this.outputGain.gain
+      : destination === 'outputPan' ? this.outputPanner.pan : undefined
+    if (!param) return
+    const now = this.audioContext.currentTime
+    param.cancelScheduledValues(now)
+    param.setTargetAtTime(destination === 'outputVolume' ? this.outputSettings.volume : this.outputSettings.pan, now, 0.01)
+  }
+
+  triggerOutputEnvelopes(velocity: number): void {
+    const now = this.audioContext.currentTime
+    const volume = this.activeEnvelopeSettings('outputVolume')
+    const pan = this.activeEnvelopeSettings('outputPan')
+    if (volume) this.applyPositiveEnvelopeOnNoteOn(this.outputGain.gain, now, volume, 0, this.outputSettings.volume * this.envelopePeakGain(velocity, volume.velocity))
+    if (pan) this.applyPositiveEnvelopeOnNoteOn(this.outputPanner.pan, now, pan, 0, this.outputSettings.pan * this.envelopePeakGain(velocity, pan.velocity))
   }
 
   destroy(): void {
@@ -874,6 +898,7 @@ export class SynthEngine {
   }
 
   private applyEffectEnvelopes(now: number, velocity: number): void {
+    this.triggerOutputEnvelopes(velocity)
     this.filters.forEach((filter, index) => {
       const cutoffEnvelope = this.activeEnvelopeSettings('filterCutoff', { type: 'filter', index })
       const resonanceEnvelope = this.activeEnvelopeSettings('filterResonance', { type: 'filter', index })
@@ -1234,6 +1259,7 @@ export class SynthEngine {
   }
 
   private clampEnvelopeDestination(value: EnvelopeDestination | undefined, fallback: EnvelopeDestination): EnvelopeDestination {
+    if (value === 'outputVolume' || value === 'outputPan') return value
     return value === 'oscillatorLevel' || value === 'oscillatorPitch' || value === 'noiseLevel' || value === 'filterCutoff' || value === 'filterResonance' || value === 'delayTime' || value === 'delayRepetitions' || value === 'delayMix' || value === 'overdriveDrive' || value === 'overdriveTone' || value === 'overdriveFeedback' || value === 'overdriveMix' || value === 'chorusRate' || value === 'chorusDepth' || value === 'chorusDelay' || value === 'chorusMix' || value === 'flangerRate' || value === 'flangerDepth' || value === 'flangerDelay' || value === 'flangerFeedback' || value === 'flangerMix' || value === 'tremoloRate' || value === 'tremoloDepth' || value === 'tremoloMix' || value === 'resonatorFrequency' || value === 'resonatorDecay' || value === 'resonatorFeedback' || value === 'resonatorDamping' || value === 'resonatorDrive' || value === 'resonatorMix' || value === 'reverbDecay' || value === 'reverbMix' || value === 'reverbPreDelay' || value === 'reverbDamping' || value === 'reverbWidth' ? value : fallback
   }
 

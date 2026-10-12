@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { instrumentCategories, instrumentPresets, type InstrumentPreset } from './instruments'
 import { autoInputId, broadcastChannelInputId, MidiService, supportsBroadcastChannel, type MidiControlChangeEvent } from './services/midiService'
 import { decodeSeed, encodeSeed } from './services/seedService'
+import { createSeedMessageHandler } from './services/seedMessaging'
 import { createChorusSettings, createDelaySettings, createEnvelopeSettings, createEqBandSettings, createFilterSettings, createFlangerSettings, createMultibandEqSettings, createNoiseSettings, createOutputSettings, createOverdriveSettings, createResonatorSettings, createReverbSettings, createCompressorSettings, createGateSettings, createLimiterSettings, createOscillatorSettings, createSingleBandEqSettings, createTremoloSettings, type AmplitudeModulationSettings, type ChorusSettings, type DelayModuleKind, type DelaySettings, type DynamicsSettings, type DynamicsSettingsChanges, type EqBandSettings, type EqEnvelopeSettings, type EqLfoSettings, type EqModulationTarget, type EqParameter, type EqSettings, type EffectGroup, type EnvelopeDestination, type EnvelopeSettings, type EnvelopeSource, type EnvelopeSourceType, type FilterSettings, type FlangerSettings, type FlatAudioModule, type LfoSettings, type NoiseSettings, type OscillatorSettings, type OutputSettings, type OverdriveSettings, type ResonatorSettings, type ReverbModuleKind, type ReverbSettings, type TremoloSettings, type Waveform, SynthEngine } from './services/synthEngine'
 import OscillatorControls from './components/OscillatorControls.vue'
 import NoiseControls from './components/NoiseControls.vue'
@@ -36,7 +37,7 @@ type ModuleOrderEntry = { type: ModuleKind; index: number }
 type LastAddedBypassTarget = { type: EffectGroup; index: number } | { type: 'delay-filter' | 'delay-overdrive' | 'delay-resonator' | 'reverb-filter' | 'reverb-overdrive' | 'reverb-resonator'; index: number }
 type SoundSourceType = 'oscillator' | 'noise'
 type SoundSourceOrderEntry = { type: SoundSourceType; index: number }
-type ModuleModulationTarget = EnvelopeSource | { type: 'eq'; index: number }
+type ModuleModulationTarget = EnvelopeSource | { type: 'eq'; index: number } | { type: 'output'; index: number }
 type SynthSetup = Omit<InstrumentPreset, 'id' | 'name' | 'category' | 'effectOrder'> & {
   noises?: NoiseSettings[]
   soundSourceOrder?: SoundSourceOrderEntry[]
@@ -447,6 +448,20 @@ const midiParameterTargets = computed<MidiParameterTarget[]>(() => {
   }
   add('output:volume', 'Output / Volume', 0, 1, (value) => updateOutputSettings({ volume: value }))
   add('output:pan', 'Output / Pan', -1, 1, (value) => updateOutputSettings({ pan: value }))
+  envelopes.value.forEach((_, index) => {
+    const parameters = [
+      { parameter: 'attack', label: 'Attack', max: 300 },
+      { parameter: 'decay', label: 'Decay', max: 150 },
+      { parameter: 'hold', label: 'Hold', max: 150 },
+      { parameter: 'release', label: 'Release', max: 450 },
+      { parameter: 'velocity', label: 'Velocity', max: 1 },
+    ] as const
+    parameters.forEach(({ parameter, label, max }) => {
+      add(`envelope:${index}:${parameter}`, `Envelope ${index + 1} / ${label}`, 0, max, (value) => {
+        updateEnvelopeSettings(index, { [parameter]: parameter === 'velocity' ? value : Math.round(value) })
+      })
+    })
+  })
   oscillators.value.forEach((_, index) => {
     add(`oscillator:${index}:detune`, `Oscillator ${index + 1} / Detune`, -1200, 1200, (value) => updateOscillatorSettings(index, { detune: Math.round(value) }))
     add(`oscillator:${index}:glide`, `Oscillator ${index + 1} / Glide`, 0, 2000, (value) => updateOscillatorSettings(index, { glide: Math.round(value) }))
@@ -637,6 +652,7 @@ function currentMidiParameterValue(targetId: string): number | null {
     return typeof value === 'number' ? value : null
   }
   const collections: Record<string, Array<Record<string, unknown>>> = {
+    envelope: envelopes.value,
     oscillator: oscillators.value,
     noise: noises.value,
     filter: filters.value,
@@ -918,6 +934,10 @@ function midiMappingTargetLabel(mapping: MidiMapping): string {
     : mapping.targetId
 }
 
+const outputEnvelopeDestinations = [
+  { value: 'outputVolume', label: 'Volume' },
+  { value: 'outputPan', label: 'Pan' },
+] satisfies { value: EnvelopeDestination; label: string }[]
 const oscillatorEnvelopeDestinations = [
   { value: 'oscillatorLevel', label: 'Level' },
   { value: 'oscillatorPitch', label: 'Pitch' },
@@ -978,6 +998,7 @@ const midiService = new MidiService({
     const target = channels.value[channel - 1]
     if (!target) return
     target.synth.noteOn(note, velocity)
+    if (velocity > 0) masterSynth.triggerOutputEnvelopes(velocity / 127)
     activeVoices.value = channels.value.reduce((count, item) => count + item.synth.getActiveVoiceCount(), 0)
   },
   onNoteOff: ({ channel, note, velocity }) => {
@@ -1069,6 +1090,7 @@ function handleChannelChange(event: Event) {
 
 function handlePanic() {
   channels.value.forEach(({ synth }) => synth.stopAllNotes())
+  masterSynth.stopAllNotes()
   activeVoices.value = 0
 }
 
@@ -1697,6 +1719,7 @@ function generateSeed() {
     midiMappings: midiMappings.value,
   } satisfies SeedState)
   seedStatus.value = 'Seed generated.'
+  return seedInput.value
 }
 
 async function copySeed() {
@@ -1719,12 +1742,20 @@ async function copySeed() {
 }
 
 function loadSeed() {
+  try {
+    applySeed(seedInput.value)
+  } catch {
+    // applySeed sets the visible error; message callers also receive the failure.
+  }
+}
+
+function applySeed(seed: string) {
   const createdChannels: ChannelState[] = []
   let createdMaster: ChannelState | undefined
   const previousMasterSynth = masterSynth
 
   try {
-    const decoded = decodeSeed(seedInput.value.trim())
+    const decoded = decodeSeed(seed.trim())
     if (!isSeedState(decoded)) throw new Error('This seed has an invalid setup.')
 
     if (decoded.master) {
@@ -1743,6 +1774,7 @@ function loadSeed() {
     previousChannels.forEach(({ synth }) => synth.destroy())
     if (createdMaster) previousMasterSynth.destroy()
     activeVoices.value = 0
+    seedInput.value = seed
     seedStatus.value = 'Seed loaded.'
 
     if (audioEnabled) {
@@ -1757,8 +1789,14 @@ function loadSeed() {
       masterSynth = previousMasterSynth
     }
     seedStatus.value = error instanceof Error ? error.message : 'Failed to load the seed.'
+    throw error
   }
 }
+
+const handleSeedMessage = createSeedMessageHandler(window, {
+  generate: generateSeed,
+  load: applySeed,
+})
 
 function randomInteger(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min
@@ -2043,6 +2081,9 @@ function updateBpm(value: number) {
 
 function syncMidiClockTempo(value: number) {
   const tempo = normalizeBpm(value)
+  // Ignore clock updates that do not change the effective tempo, so jitter
+  // below one BPM never re-times the delays or flickers the UI.
+  if (tempo === bpm.value) return
   updateBpm(tempo)
 
   channels.value.forEach((channel) => {
@@ -2812,6 +2853,8 @@ function addModuleModulation(type: 'lfo' | 'env' | 'overdrive' | 'filter' | 'res
     else addEqEnvelope(module.index)
   } else if (type === 'lfo') {
     addLfo(module.type, module.index)
+  } else if (module.type === 'output') {
+    addEnvelope('outputVolume')
   } else {
     const destinations: Record<EnvelopeSourceType, EnvelopeDestination> = {
       oscillator: 'oscillatorLevel', noise: 'noiseLevel', filter: 'filterCutoff', delay: 'delayTime', overdrive: 'overdriveDrive',
@@ -2830,11 +2873,13 @@ onMounted(() => {
   midiService.setSelectedNoteInput(selectedNoteInputId.value)
   midiService.setChannel(selectedChannel.value)
   window.addEventListener('keydown', handleKeydown, true)
+  window.addEventListener('message', handleSeedMessage)
   document.addEventListener('visibilitychange', handleDocumentVisibilityChange)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown, true)
+  window.removeEventListener('message', handleSeedMessage)
   document.removeEventListener('visibilitychange', handleDocumentVisibilityChange)
   if (midiControllerActivityTimeout !== null) clearTimeout(midiControllerActivityTimeout)
   if (customSliderFrame !== null) cancelAnimationFrame(customSliderFrame)
@@ -2932,12 +2977,16 @@ onUnmounted(() => {
         :volume="output.volume"
         :pan="output.pan"
         :lfos="lfosForModule('output', 0)"
+        :envelopes="envelopesFor(outputEnvelopeDestinations)"
         @update:volume="updateOutputSettings({ volume: $event })"
         @update:pan="updateOutputSettings({ pan: $event })"
         @update-lfo="updateLfo($event.index, $event.settings)"
         @toggle-lfo-bypass="toggleLfoBypass"
         @remove-lfo="removeLfo"
-        @add-lfo="addLfo('output', 0)"
+        @update-envelope="updateEnvelopeSettings($event.index, $event.settings)"
+        @toggle-envelope-bypass="toggleEnvelopeBypass"
+        @remove-envelope="removeEnvelope"
+        @modulate="openModuleModulationDialog({ type: 'output', index: 0 })"
       />
       <CustomSliders
         :sliders="customSliders"
